@@ -122,11 +122,14 @@ export default function ProductActions({
 
     setIsAdding(true)
 
-    await addToCart({
+    const res = await addToCart({
       variantId: selectedVariant.id,
       quantity: 1,
-      countryCode,
+      countryCode: "bd",
     })
+    if (res && res.success === false) {
+      console.error("Add to cart error:", res.error)
+    }
     router.refresh()
     setIsAdding(false)
   }
@@ -139,7 +142,7 @@ export default function ProductActions({
       await addToCart({
         variantId: selectedVariant.id,
         quantity: 1,
-        countryCode,
+        countryCode: "bd",
       })
       router.push("/bd/checkout?step=address")
     } catch (err) {

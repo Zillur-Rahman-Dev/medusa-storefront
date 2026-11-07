@@ -44,14 +44,18 @@ export default function HoneyProductCard({
 
     setIsAdding(true)
     try {
-      await addToCart({
+      const res = await addToCart({
         variantId: product.variantId,
         quantity: 1,
-        countryCode,
+        countryCode: "bd",
       })
-      setIsAdded(true)
-      router.refresh()
-      setTimeout(() => setIsAdded(false), 2000)
+      if (res && res.success === false) {
+        console.error("Failed to add to cart:", res.error)
+      } else {
+        setIsAdded(true)
+        router.refresh()
+        setTimeout(() => setIsAdded(false), 2000)
+      }
     } catch (err) {
       console.error("Failed to add to cart:", err)
     } finally {
@@ -74,7 +78,7 @@ export default function HoneyProductCard({
       await addToCart({
         variantId: product.variantId,
         quantity: 1,
-        countryCode,
+        countryCode: "bd",
       })
       router.push("/bd/checkout?step=address")
     } catch (err) {

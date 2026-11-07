@@ -1,3 +1,31 @@
+import { HttpTypes } from "@medusajs/types"
+
+export const BANGLADESH_REGION_ID = "reg_01M6T7JZFBY9BWE8MMYG6HF4PM"
+
+export const BANGLADESH_REGION: HttpTypes.StoreRegion = {
+  id: BANGLADESH_REGION_ID,
+  name: "Bangladesh",
+  currency_code: "bdt",
+  created_at: "2026-11-07T05:27:03.416Z",
+  updated_at: "2026-11-07T05:27:03.416Z",
+  deleted_at: null,
+  metadata: null,
+  countries: [
+    {
+      iso_2: "bd",
+      iso_3: "bgd",
+      num_code: "050",
+      name: "BANGLADESH",
+      display_name: "Bangladesh",
+      region_id: BANGLADESH_REGION_ID,
+      metadata: null,
+      created_at: "2026-11-06T13:22:42.650Z",
+      updated_at: "2026-11-07T05:27:03.416Z",
+      deleted_at: null,
+    },
+  ],
+}
+
 import React from "react"
 import { CreditCard } from "@medusajs/icons"
 

@@ -32,14 +32,18 @@ export default function PreviewAddToCart({
 
     setIsAdding(true)
     try {
-      await addToCart({
+      const res = await addToCart({
         variantId,
         quantity: 1,
-        countryCode,
+        countryCode: "bd",
       })
-      setIsAdded(true)
-      router.refresh()
-      setTimeout(() => setIsAdded(false), 2000)
+      if (res && res.success === false) {
+        console.error("Failed to add to cart:", res.error)
+      } else {
+        setIsAdded(true)
+        router.refresh()
+        setTimeout(() => setIsAdded(false), 2000)
+      }
     } catch (err) {
       console.error("Failed to add to cart:", err)
       // Fallback: navigate to product page

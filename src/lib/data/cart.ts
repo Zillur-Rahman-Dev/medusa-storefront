@@ -14,6 +14,7 @@ import {
   setCartId,
 } from "./cookies"
 import { getRegion } from "./regions"
+import { BANGLADESH_REGION_ID } from "../constants"
 import { getLocale } from "@lib/data/locale-actions"
 
 const safeRevalidateTag = (tag?: string) => {
@@ -57,6 +58,10 @@ export async function retrieveCart(cartId?: string, fields?: string) {
         await removeCartId()
         return null
       }
+      if (cart && (cart.region_id !== BANGLADESH_REGION_ID || cart.currency_code !== "bdt")) {
+        await removeCartId()
+        return null
+      }
       return cart
     })
     .catch(async () => {
@@ -66,33 +71,21 @@ export async function retrieveCart(cartId?: string, fields?: string) {
 }
 
 export async function getOrSetCart(countryCode: string = "bd") {
-  const resolvedCountry = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
-  const region = await getRegion(resolvedCountry)
-
-  if (!region) {
-    throw new Error(`Region not found for country code: ${countryCode}`)
-  }
-
   let cart = await retrieveCart(undefined, "id,region_id,currency_code")
 
   const headers = {
     ...(await getAuthHeaders()),
   }
 
-  if (cart && (cart.region_id !== region.id || cart.currency_code !== "bdt")) {
-    try {
-      const updateRes = await sdk.store.cart.update(cart.id, { region_id: region.id }, {}, headers)
-      cart = updateRes.cart
-    } catch {
-      await removeCartId()
-      cart = null
-    }
+  if (cart && (cart.region_id !== BANGLADESH_REGION_ID || cart.currency_code !== "bdt")) {
+    await removeCartId()
+    cart = null
   }
 
   if (!cart) {
     const locale = await getLocale()
     const cartResp = await sdk.store.cart.create(
-      { region_id: region.id, locale: locale || undefined },
+      { region_id: BANGLADESH_REGION_ID, locale: locale || undefined },
       {},
       headers
     )
@@ -139,21 +132,14 @@ export async function addToCart({
 }: {
   variantId: string
   quantity: number
-  countryCode: string
+  countryCode?: string
 }) {
   try {
     if (!variantId) {
       throw new Error("Missing variant ID when adding to cart")
     }
 
-    const resolvedCountry = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
-    const region = await getRegion(resolvedCountry)
-
-    if (!region) {
-      throw new Error(`Region not found for country code: ${countryCode}`)
-    }
-
-    let cart = await getOrSetCart(resolvedCountry)
+    let cart = await getOrSetCart("bd")
 
     if (!cart) {
       throw new Error("Error retrieving or creating cart")
@@ -173,12 +159,12 @@ export async function addToCart({
         {},
         headers
       )
-    } catch (err) {
-      console.warn("createLineItem failed, creating fresh cart...", err)
+    } catch (err: any) {
+      console.warn("createLineItem failed on existing cart, creating fresh cart...", err?.message)
       await removeCartId()
       const locale = await getLocale()
       const freshCartResp = await sdk.store.cart.create(
-        { region_id: region.id, locale: locale || undefined },
+        { region_id: BANGLADESH_REGION_ID, locale: locale || undefined },
         {},
         headers
       )

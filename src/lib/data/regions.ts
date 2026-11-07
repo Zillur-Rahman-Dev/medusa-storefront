@@ -1,46 +1,55 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
-import { getCacheOptions } from "./cookies"
+import { BANGLADESH_REGION_ID, BANGLADESH_REGION } from "../constants"
 
 export const listRegions = async () => {
-  const next = {
-    ...(await getCacheOptions("regions")),
+  try {
+    const res = await sdk.client.fetch<{ regions: HttpTypes.StoreRegion[] }>(
+      `/store/regions`,
+      {
+        method: "GET",
+        cache: "no-store",
+      }
+    )
+    if (res?.regions && res.regions.length > 0) {
+      return res.regions
+    }
+  } catch (err) {
+    console.warn("listRegions fetch error, returning fallback region:", err)
   }
 
-  return sdk.client
-    .fetch<{ regions: HttpTypes.StoreRegion[] }>(`/store/regions`, {
-      method: "GET",
-      next,
-      cache: "force-cache",
-    })
-    .then(({ regions }) => regions)
-    .catch(medusaError)
+  return [BANGLADESH_REGION]
 }
 
 export const retrieveRegion = async (id: string) => {
-  const next = {
-    ...(await getCacheOptions(["regions", id].join("-"))),
+  try {
+    const res = await sdk.client.fetch<{ region: HttpTypes.StoreRegion }>(
+      `/store/regions/${id}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      }
+    )
+    if (res?.region) {
+      return res.region
+    }
+  } catch (err) {
+    console.warn("retrieveRegion fetch error, returning fallback region:", err)
   }
 
-  return sdk.client
-    .fetch<{ region: HttpTypes.StoreRegion }>(`/store/regions/${id}`, {
-      method: "GET",
-      next,
-      cache: "force-cache",
-    })
-    .then(({ region }) => region)
-    .catch(medusaError)
+  return BANGLADESH_REGION
 }
 
 const regionMap = new Map<string, HttpTypes.StoreRegion>()
 
-export const getRegion = async (countryCode: string) => {
+export const getRegion = async (countryCode: string = "bd") => {
   try {
-    if (regionMap.has(countryCode)) {
-      return regionMap.get(countryCode)
+    const code = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
+
+    if (regionMap.has(code)) {
+      return regionMap.get(code)!
     }
 
     const regions = await listRegions()
@@ -48,39 +57,27 @@ export const getRegion = async (countryCode: string) => {
     if (regions && regions.length > 0) {
       regions.forEach((region) => {
         region.countries?.forEach((c) => {
-          regionMap.set(c?.iso_2?.toLowerCase() ?? "", region)
+          if (c?.iso_2) {
+            regionMap.set(c.iso_2.toLowerCase(), region)
+          }
         })
       })
     }
 
-    const code = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
-    const region =
+    const matchedRegion =
       regionMap.get(code) ||
       regionMap.get("bd") ||
+      (regions && regions.find((r) => r.id === BANGLADESH_REGION_ID)) ||
       (regions && regions[0]) ||
-      null
+      BANGLADESH_REGION
 
-    if (region) {
-      return region
+    if (matchedRegion) {
+      regionMap.set(code, matchedRegion)
+      return matchedRegion
     }
   } catch (e: any) {
     console.error("getRegion error:", e)
   }
 
-  // Guaranteed fallback for Bangladesh region
-  return {
-    id: "reg_01M6T7JZFBY9BWE8MMYG6HF4PM",
-    name: "Bangladesh",
-    currency_code: "bdt",
-    countries: [
-      {
-        iso_2: "bd",
-        iso_3: "bgd",
-        num_code: "050",
-        name: "BANGLADESH",
-        display_name: "Bangladesh",
-        region_id: "reg_01M6T7JZFBY9BWE8MMYG6HF4PM",
-      }
-    ]
-  } as HttpTypes.StoreRegion
+  return BANGLADESH_REGION
 }
