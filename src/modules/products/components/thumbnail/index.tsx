@@ -26,7 +26,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   return (
     <div
       className={clx(
-        "relative w-full overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/80 shadow-sm transition-all duration-300 group-hover:shadow-md",
+        "relative w-full overflow-hidden rounded-2xl bg-transparent transition-all duration-300",
         className,
         {
           "aspect-[11/14]": isFeatured,
@@ -40,7 +40,6 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
       )}
       data-testid={dataTestid}
     >
-
       {primaryImage ? (
         <>
           {/* Primary Image */}
@@ -48,7 +47,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
             src={primaryImage}
             alt="Product"
             className={clx(
-              "absolute inset-0 object-cover object-center transition-all duration-500 group-hover:scale-105",
+              "absolute inset-0 object-contain object-center p-2 transition-all duration-500 group-hover:scale-105",
               secondaryImage && "group-hover:opacity-0"
             )}
             draggable={false}
@@ -62,7 +61,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
             <Image
               src={secondaryImage}
               alt="Product Alternate"
-              className="absolute inset-0 object-cover object-center opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-105"
+              className="absolute inset-0 object-contain object-center p-2 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-105"
               draggable={false}
               quality={75}
               sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
