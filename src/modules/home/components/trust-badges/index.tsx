@@ -3,44 +3,44 @@ import { ShieldCheck, Truck, RotateCcw, Award } from "lucide-react"
 export default function TrustBadges() {
   const badges = [
     {
-      icon: <Award className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+      icon: <Award className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />,
       title: "১০০% খাঁটি ও প্রাকৃতিক",
-      description: "কোনো ধরনের প্রসেসিং বা চিনি ছাড়া একদম অরিজিনাল মধু",
+      description: "কোনো প্রকার চিনি, প্রিজারভেটিভ বা হিটিং ছাড়াই খাঁটি কাঁচা মধু",
     },
     {
-      icon: <ShieldCheck className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
-      title: "সরাসরি মৌচাক থেকে সংগৃহীত",
-      description: "সুন্দরবন ও প্রত্যন্ত অঞ্চলের বিশ্বস্ত মৌয়ালদের থেকে সংগ্রহ",
+      icon: <Truck className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />,
+      title: "সারা দেশে ক্যাশ অন ডেলিভারি",
+      description: "পার্সেল হাতে পেয়ে টেস্ট করে নিশ্চিন্তে মূল্য পরিশোধ করুন",
     },
     {
-      icon: <Truck className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
-      title: "ক্যাশ অন ডেলিভারি",
-      description: "আগে পণ্য হাতে পেয়ে দেখে বুঝে মূল্য পরিশোধ করার সুযোগ",
+      icon: <ShieldCheck className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />,
+      title: "কাচের জারে নিরাপদ সিলিং",
+      description: "ফুড-গ্রেড বায়ুরোধী কাচের জারে সুরক্ষিতভাবে প্যাকেজিং",
     },
     {
-      icon: <RotateCcw className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
-      title: "১০০% ক্যাশব্যাক গ্যারান্টি",
-      description: "কোনো কারণে ভেজাল বা অসন্তুষ্ট হলে সম্পূর্ণ টাকা ফেরত",
+      icon: <RotateCcw className="w-6 h-6 text-emerald-700 dark:text-emerald-400" />,
+      title: "সহজ রিটার্ন বা রিপ্লেসমেন্ট",
+      description: "পরিবহনে ক্ষতি বা অসন্তুষ্টি হলে সাথে সাথে ফ্রি রিপ্লেসমেন্ট",
     },
   ]
 
   return (
-    <section className="border-y border-zinc-200 dark:border-zinc-800 bg-amber-50/50 dark:bg-zinc-900/50 py-10 transition-colors duration-300">
+    <section className="border-y border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 py-8 sm:py-10 transition-colors">
       <div className="content-container">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {badges.map((badge, idx) => (
             <div
               key={idx}
-              className="flex items-start gap-4 p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+              className="flex items-start gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm hover:border-emerald-600/60 dark:hover:border-emerald-500/60 transition-all duration-200"
             >
-              <div className="p-3 rounded-lg bg-amber-100 dark:bg-amber-950/60 shrink-0">
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 shrink-0">
                 {badge.icon}
               </div>
               <div>
-                <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">
+                <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base">
                   {badge.title}
                 </h4>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                   {badge.description}
                 </p>
               </div>

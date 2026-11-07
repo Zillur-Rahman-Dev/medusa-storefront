@@ -3,7 +3,6 @@
 import { addToCart } from "@lib/data/cart"
 import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
-import { Button } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { isEqual } from "lodash"
@@ -12,6 +11,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
+import QuickOrderModal from "@modules/common/components/quick-order-modal"
+import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle } from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -38,6 +39,7 @@ export default function ProductActions({
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false)
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
@@ -67,7 +69,7 @@ export default function ProductActions({
     }))
   }
 
-  //check if the selected options produce a valid variant
+  // check if the selected options produce a valid variant
   const isValidVariant = useMemo(() => {
     return product.variants?.some((v) => {
       const variantOptions = optionsAsKeymap(v.options)
@@ -94,17 +96,14 @@ export default function ProductActions({
 
   // check if the selected variant is in stock
   const inStock = useMemo(() => {
-    // If we don't manage inventory, we can always add to cart
     if (selectedVariant && !selectedVariant.manage_inventory) {
       return true
     }
 
-    // If we allow back orders on the variant, we can add to cart
     if (selectedVariant?.allow_backorder) {
       return true
     }
 
-    // If there is inventory available, we can add to cart
     if (
       selectedVariant?.manage_inventory &&
       (selectedVariant?.inventory_quantity || 0) > 0
@@ -112,12 +111,10 @@ export default function ProductActions({
       return true
     }
 
-    // Otherwise, we can't add to cart
     return false
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
-
   const inView = useIntersection(actionsRef, "0px")
 
   // add the selected variant to the cart
@@ -135,9 +132,26 @@ export default function ProductActions({
     setIsAdding(false)
   }
 
+  const rawPrice =
+    selectedVariant?.calculated_price?.calculated_amount ??
+    product.variants?.[0]?.calculated_price?.calculated_amount ??
+    750
+
   return (
     <>
-      <div className="flex flex-col gap-y-2" ref={actionsRef}>
+      <div className="flex flex-col gap-y-4" ref={actionsRef}>
+        {/* Stock Badge */}
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>স্টকে আছে (ইন স্টক)</span>
+          </span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            • ১০০% খাঁটি কাঁচা মধু
+          </span>
+        </div>
+
+        {/* Variant / Weight Selector */}
         <div>
           {(product.variants?.length ?? 0) > 1 && (
             <div className="flex flex-col gap-y-4">
@@ -160,28 +174,74 @@ export default function ProductActions({
           )}
         </div>
 
-        <ProductPrice product={product} variant={selectedVariant} />
+        {/* Product Price */}
+        <div className="py-2">
+          <ProductPrice product={product} variant={selectedVariant} />
+        </div>
 
-        <Button
-          onClick={handleAddToCart}
-          disabled={
-            !inStock ||
-            !selectedVariant ||
-            !!disabled ||
-            isAdding ||
-            !isValidVariant
-          }
-          variant="primary"
-          className="w-full h-10"
-          isLoading={isAdding}
-          data-testid="add-product-button"
-        >
-          {!selectedVariant && !options
-            ? "Select variant"
-            : !inStock || !isValidVariant
-            ? "Out of stock"
-            : "Add to cart"}
-        </Button>
+        {/* GhorerBazar High Converting Action Buttons */}
+        <div className="space-y-3 pt-2">
+          {/* 1. Quick COD Order Button (Primary Emerald Green) */}
+          <button
+            type="button"
+            onClick={() => setIsQuickOrderOpen(true)}
+            className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
+          >
+            <Truck className="w-5 h-5" />
+            <span>সরাসরি অর্ডার করুন (ক্যাশ অন ডেলিভারি)</span>
+          </button>
+
+          {/* 2. Add To Cart Button */}
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={
+              !inStock ||
+              !selectedVariant ||
+              !!disabled ||
+              isAdding ||
+              !isValidVariant
+            }
+            className="w-full py-3 px-6 rounded-2xl font-bold text-sm bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <ShoppingBag className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+            <span>{isAdding ? "কার্টে যোগ হচ্ছে..." : "কার্ট-এ যোগ করুন"}</span>
+          </button>
+
+          {/* 3. WhatsApp Direct Order */}
+          <a
+            href={`https://wa.me/8801700000000?text=আসসালামু%20আলাইকুম,%20আমি%20${encodeURIComponent(product.title)}%20অর্ডার%20করতে%20চাই।`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 px-6 rounded-2xl font-semibold text-xs sm:text-sm bg-white dark:bg-zinc-900 border border-emerald-500/60 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-center gap-2"
+          >
+            <PhoneCall className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>হোয়াটসঅ্যাপে সরাসরি অর্ডার করুন</span>
+          </a>
+        </div>
+
+        {/* GhorerBazar Delivery & Trust Box */}
+        <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2.5 text-xs text-zinc-700 dark:text-zinc-300">
+          <div className="flex items-center gap-2.5">
+            <Truck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            <span>
+              <strong>ডেলিভারি চার্জ:</strong> ঢাকার মধ্যে ৳৭০, ঢাকার বাইরে ৳১৩০
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            <span>
+              <strong>১০০% ক্যাশ অন ডেলিভারি:</strong> পার্সেল হাতে পেয়ে টেস্ট করে পেমেন্ট করুন
+            </span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <RefreshCw className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            <span>
+              <strong>রিটার্ন পলিসি:</strong> ভেঙে গেলে বা ক্ষতিগ্রস্ত হলে সাথে সাথে নতুন জার প্রদান
+            </span>
+          </div>
+        </div>
+
         <MobileActions
           product={product}
           variant={selectedVariant}
@@ -194,6 +254,18 @@ export default function ProductActions({
           optionsDisabled={!!disabled || isAdding}
         />
       </div>
+
+      {/* 1-Click Quick Order Modal */}
+      <QuickOrderModal
+        isOpen={isQuickOrderOpen}
+        onClose={() => setIsQuickOrderOpen(false)}
+        product={{
+          title: product.title,
+          price: rawPrice,
+          thumbnail: product.thumbnail,
+          size: selectedVariant?.title,
+        }}
+      />
     </>
   )
 }

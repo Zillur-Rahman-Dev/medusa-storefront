@@ -2,15 +2,15 @@ import React, { Suspense } from "react"
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
-import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductActionsWrapper from "./product-actions-wrapper"
+import { ChevronRight, Home, Star } from "lucide-react"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -30,42 +30,94 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   }
 
   return (
-    <>
-      <div
-        className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
-        data-testid="product-container"
-      >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-          <ProductInfo product={product} />
+    <div className="bg-white dark:bg-zinc-950 transition-colors">
+      <div className="content-container py-6">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium">
+          <LocalizedClientLink href="/" className="hover:text-emerald-700 dark:hover:text-emerald-400 flex items-center gap-1">
+            <Home className="w-3.5 h-3.5" />
+            <span>হোম</span>
+          </LocalizedClientLink>
+          <ChevronRight className="w-3 h-3 text-zinc-400" />
+          <LocalizedClientLink href="/store" className="hover:text-emerald-700 dark:hover:text-emerald-400">
+            সকল মধু
+          </LocalizedClientLink>
+          <ChevronRight className="w-3 h-3 text-zinc-400" />
+          <span className="text-zinc-900 dark:text-zinc-100 truncate font-semibold">
+            {product.title}
+          </span>
+        </nav>
+
+        {/* 2-Column GhorerBazar Layout */}
+        <div
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start"
+          data-testid="product-container"
+        >
+          {/* Left Column (Image Gallery - 6 cols) */}
+          <div className="lg:col-span-6 lg:sticky lg:top-28">
+            <div className="bg-zinc-50 dark:bg-zinc-900/60 rounded-3xl p-4 sm:p-6 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+              <ImageGallery images={images} />
+            </div>
+          </div>
+
+          {/* Right Column (Info + Actions + COD - 6 cols) */}
+          <div className="lg:col-span-6 space-y-5">
+            {/* Rating Stars Summary */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center text-amber-500">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              </div>
+              <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                ৫.০ (৪৮টি ভেরিফাইড রিভিউ)
+              </span>
+            </div>
+
+            {/* Product Title & Info */}
+            <ProductInfo product={product} />
+
+            {/* Actions: Price, Variants, COD Order, WhatsApp, Delivery Card */}
+            <Suspense
+              fallback={
+                <ProductActions
+                  disabled={true}
+                  product={product}
+                  region={region}
+                />
+              }
+            >
+              <ProductActionsWrapper id={product.id} region={region} />
+            </Suspense>
+          </div>
+        </div>
+
+        {/* Detailed Tabs: Description, Benefits, Usage */}
+        <div className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800">
           <ProductTabs product={product} />
         </div>
-        <div className="block w-full relative">
-          <ImageGallery images={images} />
-        </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
-          <ProductOnboardingCta />
-          <Suspense
-            fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
-            }
-          >
-            <ProductActionsWrapper id={product.id} region={region} />
+
+        {/* Related Products Carousel/Grid */}
+        <div
+          className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800"
+          data-testid="related-products-container"
+        >
+          <div className="mb-8">
+            <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+              আরও অন্যান্য ফুলের মধু
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              আমাদের সংগ্রহের অন্যান্য খাঁটি প্রাকৃতিক মধুর ভ্যারাইটিগুলো দেখুন।
+            </p>
+          </div>
+          <Suspense fallback={<SkeletonRelatedProducts />}>
+            <RelatedProducts product={product} countryCode={countryCode} />
           </Suspense>
         </div>
       </div>
-      <div
-        className="content-container my-16 small:my-32"
-        data-testid="related-products-container"
-      >
-        <Suspense fallback={<SkeletonRelatedProducts />}>
-          <RelatedProducts product={product} countryCode={countryCode} />
-        </Suspense>
-      </div>
-    </>
+    </div>
   )
 }
 
