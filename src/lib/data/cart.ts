@@ -34,7 +34,7 @@ export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields =
     fields ||
-    "-promotions.application_method.target_rules,-promotions.application_method.buy_rules"
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, +items.original_total, *promotions, +shipping_methods.name"
 
   if (!id) {
     return null

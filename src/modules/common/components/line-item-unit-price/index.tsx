@@ -3,7 +3,7 @@ import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
 
 type LineItemUnitPriceProps = {
-  item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem
+  item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem | any
   style?: "default" | "tight"
   currencyCode: string
 }
@@ -13,12 +13,25 @@ const LineItemUnitPrice = ({
   style = "default",
   currencyCode,
 }: LineItemUnitPriceProps) => {
-  const { total, original_total } = item
-  const hasReducedPrice = total < original_total
+  const qty = typeof item.quantity === "number" && item.quantity > 0 ? item.quantity : 1
+  const unitPrice =
+    typeof item.unit_price === "number"
+      ? item.unit_price
+      : typeof item.total === "number" && !isNaN(item.total)
+      ? item.total / qty
+      : 0
 
-  const percentage_diff = Math.round(
-    ((original_total - total) / original_total) * 100
-  )
+  const originalUnitPrice =
+    typeof item.original_total === "number" && !isNaN(item.original_total)
+      ? item.original_total / qty
+      : unitPrice
+
+  const hasReducedPrice = unitPrice < originalUnitPrice
+
+  const percentage_diff =
+    originalUnitPrice > 0
+      ? Math.round(((originalUnitPrice - unitPrice) / originalUnitPrice) * 100)
+      : 0
 
   return (
     <div className="flex flex-col text-ui-fg-muted justify-center h-full">
@@ -33,7 +46,7 @@ const LineItemUnitPrice = ({
               data-testid="product-unit-original-price"
             >
               {convertToLocale({
-                amount: original_total / item.quantity,
+                amount: originalUnitPrice,
                 currency_code: currencyCode,
               })}
             </span>
@@ -50,7 +63,7 @@ const LineItemUnitPrice = ({
         data-testid="product-unit-price"
       >
         {convertToLocale({
-          amount: total / item.quantity,
+          amount: unitPrice,
           currency_code: currencyCode,
         })}
       </span>

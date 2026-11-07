@@ -1,8 +1,8 @@
 import { isEmpty } from "./isEmpty"
 
 type ConvertToLocaleParams = {
-  amount: number
-  currency_code: string
+  amount?: number | null | undefined
+  currency_code?: string
   minimumFractionDigits?: number
   maximumFractionDigits?: number
   locale?: string
@@ -15,10 +15,12 @@ export const convertToLocale = ({
   maximumFractionDigits,
   locale = "bn-BD",
 }: ConvertToLocaleParams) => {
+  const num = typeof amount === "number" && !isNaN(amount) ? amount : Number(amount) || 0
   const code = (currency_code || "bdt").toLowerCase()
+
   // Format BDT with Taka symbol ৳
   if (code === "bdt" || code === "eur") {
-    return `৳${Math.round(amount)}`
+    return `৳${Math.round(num)}`
   }
 
   return currency_code && !isEmpty(currency_code)
@@ -27,6 +29,6 @@ export const convertToLocale = ({
         currency: currency_code,
         minimumFractionDigits,
         maximumFractionDigits,
-      }).format(amount)
-    : `৳${Math.round(amount)}`
+      }).format(num)
+    : `৳${Math.round(num)}`
 }

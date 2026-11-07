@@ -4,7 +4,7 @@ import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
 
 type LineItemPriceProps = {
-  item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem
+  item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem | any
   style?: "default" | "tight"
   currencyCode: string
 }
@@ -14,9 +14,23 @@ const LineItemPrice = ({
   style = "default",
   currencyCode,
 }: LineItemPriceProps) => {
-  const { total, original_total } = item
-  const originalPrice = original_total
-  const currentPrice = total
+  const qty = typeof item.quantity === "number" && item.quantity > 0 ? item.quantity : 1
+  const unitPrice = typeof item.unit_price === "number" ? item.unit_price : 0
+
+  const calculatedTotal =
+    typeof item.total === "number" && !isNaN(item.total)
+      ? item.total
+      : typeof item.subtotal === "number" && !isNaN(item.subtotal)
+      ? item.subtotal
+      : unitPrice * qty
+
+  const calculatedOriginalTotal =
+    typeof item.original_total === "number" && !isNaN(item.original_total)
+      ? item.original_total
+      : calculatedTotal
+
+  const originalPrice = calculatedOriginalTotal
+  const currentPrice = calculatedTotal
   const hasReducedPrice = currentPrice < originalPrice
 
   return (
