@@ -165,7 +165,7 @@ export default function ProductActions({
             <span>স্টকে আছে (ইন স্টক)</span>
           </span>
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            • ১০০% খাঁটি কাঁচা মধু
+            • {((product.metadata as Record<string, any>)?.badge) || "১০০% খাঁটি কাঁচা মধু"}
           </span>
         </div>
 

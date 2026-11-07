@@ -67,7 +67,10 @@ export const listProducts = async ({
           ...queryParams,
         },
         headers,
-        next,
+        next: {
+          ...next,
+          revalidate: 60,
+        },
         cache: "force-cache",
       }
     )

@@ -5,6 +5,8 @@ import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
 
+export const revalidate = 60
+
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
   searchParams: Promise<{ v_id?: string }>
@@ -111,7 +113,7 @@ export default async function ProductPage(props: Props) {
 
   const pricedProduct = await listProducts({
     countryCode: params.countryCode,
-    queryParams: { handle: params.handle },
+    queryParams: { handle: params.handle, fields: "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags" },
   }).then(({ response }) => response.products[0])
 
   const images = getImagesForVariant(pricedProduct, selectedVariantId)
