@@ -1,14 +1,20 @@
-import { listCategories } from "@lib/data/categories"
-import { listCollections } from "@lib/data/collections"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { PhoneCall, Mail, MapPin } from "lucide-react"
 
-export default async function Footer() {
-  const { collections } = await listCollections({
-    fields: "*products",
-  })
-  const productCategories = await listCategories()
+const honeyList = [
+  "খলিশা ও সুন্দরবনের ফুল",
+  "বনের খাঁটি মধু (সুন্দরবন)",
+  "সরিষা ফুলের মধু",
+  "লিচু ফুলের মধু",
+  "কালোজিরা ফুলের মধু",
+  "ধনে ফুলের মধু",
+  "পাহাড়ে মৌচাকের মধু",
+  "বাবলা ও কুল (বরই) মধু",
+  "কুসুম, তিসি ও সূর্যমুখী ফুল",
+  "বুনো ফুলের মধু",
+]
 
+export default function Footer() {
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/80 transition-colors duration-300 w-full mt-auto">
       <div className="content-container flex flex-col w-full py-14 sm:py-20">
@@ -25,7 +31,7 @@ export default async function Footer() {
               </span>
             </LocalizedClientLink>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              সরাসরি সুন্দরবন ও প্রাকৃতিক খামার থেকে সংগৃহীত শতভাগ খাঁটি ও ভেজালমুক্ত প্রাকৃতিক মধুর বিশ্বস্ত ঠিকানা।
+              সরাসরি সুন্দরবনের ম্যানগ্রোভ ও গ্রামবাংলার সেরা প্রাকৃতিক মৌচাক থেকে সংগৃহীত শতভাগ খাঁটি ও কাঁচা মধুর বিশ্বস্ত অনলাইন ঠিকানা।
             </p>
             <div className="pt-2 space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-medium">
               <div className="flex items-center gap-2">
@@ -43,47 +49,23 @@ export default async function Footer() {
             </div>
           </div>
 
-          {/* Categories */}
+          {/* Honey Varieties List */}
           <div className="space-y-3">
             <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm tracking-wide">
-              ক্যাটাগরি
+              আমাদের মধুর কালেকশন
             </h4>
-            <ul className="space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-              {productCategories && productCategories?.length > 0 ? (
-                productCategories.slice(0, 6).map((c) => (
-                  <li key={c.id}>
-                    <LocalizedClientLink
-                      className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                      href={`/categories/${c.handle}`}
-                    >
-                      {c.name}
-                    </LocalizedClientLink>
-                  </li>
-                ))
-              ) : (
-                <>
-                  <li>
-                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      সুন্দরবনের মধু
-                    </LocalizedClientLink>
-                  </li>
-                  <li>
-                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      সরিষা ফুলের মধু
-                    </LocalizedClientLink>
-                  </li>
-                  <li>
-                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      কালোজিরা মধু
-                    </LocalizedClientLink>
-                  </li>
-                  <li>
-                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                      গাওয়া ঘি ও অন্যান্য
-                    </LocalizedClientLink>
-                  </li>
-                </>
-              )}
+            <ul className="grid grid-cols-1 gap-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+              {honeyList.map((item, idx) => (
+                <li key={idx}>
+                  <LocalizedClientLink
+                    href="/store"
+                    className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors flex items-center gap-1.5"
+                  >
+                    <span className="text-amber-500 text-xs">•</span>
+                    <span>{item}</span>
+                  </LocalizedClientLink>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -98,7 +80,7 @@ export default async function Footer() {
                   className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                   href="/store"
                 >
-                  সকল পণ্য
+                  সকল ফুলের মধু
                 </LocalizedClientLink>
               </li>
               <li>
@@ -106,7 +88,7 @@ export default async function Footer() {
                   className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                   href="/about"
                 >
-                  আমাদের সম্পর্কে
+                  আমাদের সম্পর্কে ও মধুর গল্প
                 </LocalizedClientLink>
               </li>
               <li>
@@ -141,11 +123,12 @@ export default async function Footer() {
             <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm tracking-wide">
               গ্রাহক সেবা ও নিশ্চয়তা
             </h4>
-            <ul className="space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+            <ul className="space-y-2.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
               <li>🚚 সারা দেশে ক্যাশ অন ডেলিভারি</li>
-              <li>🛡️ ১০০% খাঁটি পণ্য ও ল্যাব টেস্টেড</li>
-              <li>🔄 ৭ দিনের সহজ রিপ্লেসমেন্ট পলিসি</li>
-              <li>💬 সার্বক্ষণিক হোয়াটসঅ্যাপ সাপোর্ট</li>
+              <li>🍯 শতভাগ খাঁটি ও ল্যাব টেস্টেড কাঁচা মধু</li>
+              <li>🫙 বায়ুরোধী কাচের জারে নিরাপদ প্যাকেজিং</li>
+              <li>🔄 পছন্দ না হলে সম্পূর্ণ মানি-ব্যাক গ্যারান্টি</li>
+              <li>💬 ২৪/৭ সার্বক্ষণিক হোয়াটসঅ্যাপ হেল্পলাইন</li>
             </ul>
           </div>
         </div>
@@ -156,7 +139,7 @@ export default async function Footer() {
           <p className="flex items-center gap-1">
             <span>Made with</span>
             <span className="text-amber-500">❤️</span>
-            <span>for natural & organic lifestyle</span>
+            <span>for 100% pure & raw natural lifestyle</span>
           </p>
         </div>
       </div>
