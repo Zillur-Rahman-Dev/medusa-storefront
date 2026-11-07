@@ -1,103 +1,132 @@
-import { ArrowRight, Star, CheckCircle, ShieldCheck } from "lucide-react"
+"use client"
+
+import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { ArrowRight, ShieldCheck, Sparkles, PhoneCall, Award, CheckCircle2 } from "lucide-react"
+import QuickOrderModal from "@modules/common/components/quick-order-modal"
 
-const heroHoneyTags = [
-  { name: "খলিশা ও সুন্দরবনের ফুল", icon: "🌸" },
-  { name: "সরিষা ফুল", icon: "🌼" },
-  { name: "কালোজিরা ফুল", icon: "🌿" },
-  { name: "লিচু ফুল", icon: "🍯" },
-  { name: "ধনে ফুল", icon: "🌱" },
-  { name: "বাবলা ও কুল (বরই)", icon: "🍒" },
-  { name: "পাহাড়ে মৌচাকের মধু", icon: "⛰️" },
-  { name: "বনের খাঁটি মধু", icon: "🌳" },
-  { name: "কুসুম, তিসি ও সূর্যমুখী", icon: "🌻" },
-  { name: "বুনো ফুলের মধু", icon: "🌾" },
-]
+export default function Hero() {
+  const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false)
 
-const Hero = () => {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-emerald-50/60 via-white to-white dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-950 transition-colors duration-300 py-12 sm:py-20 border-b border-zinc-200 dark:border-zinc-800">
-      {/* Decorative Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-emerald-500/10 dark:bg-emerald-500/5 blur-3xl pointer-events-none rounded-full" />
+    <section className="py-4 sm:py-6 bg-zinc-50 dark:bg-zinc-950 transition-colors">
+      <div className="content-container">
+        {/* GhorerBazar Exact Dual-Banner Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
+          {/* Left Banner (8 Cols - Main Hero Banner) */}
+          <div className="lg:col-span-8 relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white p-6 sm:p-10 lg:p-12 shadow-md flex flex-col justify-between min-h-[340px] sm:min-h-[400px]">
+            {/* Ambient Background Glow */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-72 h-72 rounded-full bg-white/15 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-72 h-72 rounded-full bg-black/10 blur-3xl pointer-events-none" />
 
-      <div className="content-container relative z-10">
-        <div className="max-w-4xl mx-auto text-center flex flex-col items-center">
-          {/* Trust Rating Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-300 text-xs sm:text-sm font-semibold mb-6 shadow-sm">
-            <div className="flex items-center text-amber-500">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <div className="relative z-10 max-w-xl space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-white/20 backdrop-blur-md text-white border border-white/30">
+                <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                <span>সবার জন্য সেরা • ১০০% খাঁটি কাঁচা মধু</span>
+              </div>
+
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-[1.15] text-white">
+                প্রকৃতির খাঁটি মধু <br />
+                <span className="text-amber-100">সরাসরি মৌচাক থেকে</span>
+              </h1>
+
+              <p className="text-xs sm:text-base text-amber-50/95 leading-relaxed">
+                সুন্দরবনের খলিশা, গ্রামবাংলার সরিষা, কালোজিরা, লিচু, ধনে ও পাহাড়ি বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধু পৌঁছে দিচ্ছি সারা বাংলাদেশে।
+              </p>
+
+              {/* Badges */}
+              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-amber-100 font-semibold">
+                <span className="flex items-center gap-1.5 bg-black/10 px-2.5 py-1 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                  জিরো সুগার ফিডিং
+                </span>
+                <span className="flex items-center gap-1.5 bg-black/10 px-2.5 py-1 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                  ক্যাশ অন ডেলিভারি
+                </span>
+              </div>
             </div>
-            <span>৪.৯/৫ রেটিং • ৫,০০০+ পরিবারের বিশ্বস্ত কাঁচা মধু</span>
-          </div>
 
-          {/* Main Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-zinc-900 dark:text-white leading-[1.15]">
-            গ্রামবাংলা ও সুন্দরবনের <br className="hidden sm:inline" />
-            <span className="text-emerald-700 dark:text-emerald-400">খাঁটি ফুলের মধু</span> সরাসরি আপনার টেবিলে
-          </h1>
-
-          {/* Subtitle */}
-          <p className="mt-4 text-sm sm:text-lg text-zinc-600 dark:text-zinc-300 max-w-2xl leading-relaxed">
-            সুন্দরবনের খলিশা, উত্তরের সরিষা ও লিচু, পদ্মাপাড়ের কালোজিরা ও ধনে ফুল, বরেন্দ্রের কুল-বাবলা এবং পাহাড়ি বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধুর নির্ভরযোগ্য অনলাইন শপ।
-          </p>
-
-          {/* 10 Honey Variety Quick Chips / Badges */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 max-w-3xl">
-            {heroHoneyTags.map((tag, idx) => (
-              <LocalizedClientLink
-                key={idx}
-                href="/store"
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-600 dark:hover:border-emerald-500 text-zinc-700 dark:text-zinc-300 hover:text-emerald-700 dark:hover:text-emerald-400 shadow-sm transition-all"
+            {/* CTAs */}
+            <div className="relative z-10 mt-6 pt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsQuickOrderOpen(true)}
+                className="py-3 px-6 sm:px-8 rounded-2xl font-black text-sm bg-zinc-950 text-white hover:bg-zinc-800 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98] flex items-center gap-2"
               >
-                <span>{tag.icon}</span>
-                <span>{tag.name}</span>
+                <span>এখনই অর্ডার করুন</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <LocalizedClientLink
+                href="/store"
+                className="py-3 px-5 sm:px-6 rounded-2xl font-bold text-sm bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/40 transition-colors"
+              >
+                সকল মধু দেখুন
               </LocalizedClientLink>
-            ))}
+            </div>
           </div>
 
-          {/* Key Quick Bullet Points */}
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              কোনো চিনি বা প্রিজারভেটিভ নেই
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              টেস্ট করে মূল্য পরিশোধের সুবিধা
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              ফুড-গ্রেড কাচের জারে নিরাপদ প্যাকেজিং
-            </span>
-          </div>
+          {/* Right Banner (4 Cols - Quality & Purity Card matching screenshot) */}
+          <div className="lg:col-span-4 relative overflow-hidden rounded-3xl bg-zinc-900 text-white p-6 sm:p-8 shadow-md flex flex-col justify-between border border-zinc-800">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                <Award className="w-4 h-4" />
+                <span>বিশুদ্ধতার নিশ্চয়তা</span>
+              </div>
 
-          {/* GhorerBazar CTA Buttons */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
-            <LocalizedClientLink
-              href="/store"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl font-bold text-white bg-emerald-700 hover:bg-emerald-800 shadow-lg shadow-emerald-700/25 transition-all duration-200 active:scale-[0.98] text-base"
-            >
-              <span>সকল ফুলের মধু দেখুন</span>
-              <ArrowRight className="w-4 h-4" />
-            </LocalizedClientLink>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-snug">
+                যে কারণে আমাদের মধু সবচেয়ে খাঁটি
+              </h2>
 
-            <a
-              href="https://wa.me/8801700000000?text=আসসালামু%20আলাইকুম,%20আমি%20খাঁটি%20মধু%20অর্ডার%20করতে%20চাই।"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl font-bold text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200 text-base shadow-sm"
-            >
-              <span>হোয়াটসঅ্যাপে সরাসরি অর্ডার</span>
-            </a>
+              <ul className="space-y-2.5 text-xs sm:text-sm text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-400 font-black">✓</span>
+                  <span><strong>কোল্ড ফিল্ট্রেশন:</strong> কোনো তাপ বা হিটিং ছাড়াই ছাঁকা হয়</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-400 font-black">✓</span>
+                  <span><strong>এনজাইম অক্ষত:</strong> প্রাকৃতিক পরাগ ও অ্যান্টিঅক্সিডেন্ট সুরক্ষিত</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-400 font-black">✓</span>
+                  <span><strong>ফুড-গ্রেড কাচের জার:</strong> প্লাস্টিকের ক্ষতিকর রাসায়নিকমুক্ত</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-400 font-black">✓</span>
+                  <span><strong>টেস্ট করে পেমেন্ট:</strong> পার্সেল খুলে দেখে মূল্য পরিশোধের সুবিধা</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between">
+              <div>
+                <div className="text-[11px] text-zinc-400">হোয়াটসঅ্যাপে দ্রুত অর্ডার</div>
+                <div className="text-sm font-bold text-emerald-400">+৮৮০ ১৭১১-XXXXXX</div>
+              </div>
+              <a
+                href="https://wa.me/8801700000000?text=আসসালামু%20আলাইকুম,%20আমি%20খাঁটি%20মধু%20অর্ডার%20করতে%20চাই।"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center transition-colors shadow-sm"
+              >
+                <PhoneCall className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Quick COD Order Modal */}
+      <QuickOrderModal
+        isOpen={isQuickOrderOpen}
+        onClose={() => setIsQuickOrderOpen(false)}
+        product={{
+          title: "সুন্দরবনের খাঁটি খলিশা ফুলের মধু (১ কেজি কাচের জার)",
+          price: 1350,
+          size: "১ কেজি",
+        }}
+      />
+    </section>
   )
 }
-
-export default Hero
