@@ -33,16 +33,28 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
     <div className="bg-white dark:bg-zinc-950 transition-colors">
       <div className="content-container py-6">
         {/* Breadcrumb Navigation */}
-        <nav className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium">
-          <LocalizedClientLink href="/" className="hover:text-emerald-700 dark:hover:text-emerald-400 flex items-center gap-1">
+        {/* Dynamic Breadcrumb Navigation */}
+        <nav className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-medium flex-wrap">
+          <LocalizedClientLink href="/" className="hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 transition-colors">
             <Home className="w-3.5 h-3.5" />
             <span>হোম</span>
           </LocalizedClientLink>
-          <ChevronRight className="w-3 h-3 text-zinc-400" />
-          <LocalizedClientLink href="/store" className="hover:text-emerald-700 dark:hover:text-emerald-400">
+          <ChevronRight className="w-3 h-3 text-zinc-400 shrink-0" />
+          <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
             সকল মধু
           </LocalizedClientLink>
-          <ChevronRight className="w-3 h-3 text-zinc-400" />
+          {product.categories && product.categories.length > 0 && (
+            <>
+              <ChevronRight className="w-3 h-3 text-zinc-400 shrink-0" />
+              <LocalizedClientLink
+                href={`/categories/${product.categories[0].handle}`}
+                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+              >
+                {product.categories[0].name.trim()}
+              </LocalizedClientLink>
+            </>
+          )}
+          <ChevronRight className="w-3 h-3 text-zinc-400 shrink-0" />
           <span className="text-zinc-900 dark:text-zinc-100 truncate font-semibold">
             {product.title}
           </span>

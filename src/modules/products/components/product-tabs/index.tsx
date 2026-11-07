@@ -264,7 +264,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     {
       key: "honey_type",
       label: "পণ্যের ধরন",
-      value: product.type?.value || metadata.honey_type || "১০০% কাঁচা প্রাকৃতিক মধু",
+      value: product.type?.value || (product.categories && product.categories[0]?.name ? product.categories[0].name.trim() : metadata.honey_type) || "১০০% কাঁচা প্রাকৃতিক মধু",
     },
     {
       key: "material",
