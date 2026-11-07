@@ -32,11 +32,6 @@ export default async function ProductPreview({
             size="full"
             isFeatured={isFeatured}
           />
-          <div className="absolute top-2.5 left-2.5 z-10">
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-700 text-white shadow-sm">
-              খাঁটি কাঁচা মধু
-            </span>
-          </div>
         </div>
 
         <div className="mt-3.5 space-y-1.5">
@@ -59,10 +54,6 @@ export default async function ProductPreview({
           >
             {product.title}
           </h3>
-
-          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
-            ফুড-গ্রেড বায়ুরোধী কাচের জার
-          </div>
 
           {/* Price */}
           <div className="pt-1 flex items-baseline gap-2">
