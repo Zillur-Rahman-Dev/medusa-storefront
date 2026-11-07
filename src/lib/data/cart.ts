@@ -31,8 +31,9 @@ const safeRevalidateTag = (tag?: string) => {
  */
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
-  fields ??=
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name"
+  fields =
+    fields ||
+    "-promotions.application_method.target_rules,-promotions.application_method.buy_rules"
 
   if (!id) {
     return null
@@ -42,18 +43,13 @@ export async function retrieveCart(cartId?: string, fields?: string) {
     ...(await getAuthHeaders()),
   }
 
-  const next = {
-    ...(await getCacheOptions("carts")),
-  }
-
-  return await sdk.client
+  return sdk.client
     .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
       method: "GET",
       query: {
         fields,
       },
       headers,
-      next,
       cache: "no-store",
     })
     .then(async ({ cart }: { cart: HttpTypes.StoreCart }) => {
@@ -145,64 +141,71 @@ export async function addToCart({
   quantity: number
   countryCode: string
 }) {
-  if (!variantId) {
-    throw new Error("Missing variant ID when adding to cart")
-  }
-
-  const resolvedCountry = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
-  const region = await getRegion(resolvedCountry)
-
-  if (!region) {
-    throw new Error(`Region not found for country code: ${countryCode}`)
-  }
-
-  let cart = await getOrSetCart(resolvedCountry)
-
-  if (!cart) {
-    throw new Error("Error retrieving or creating cart")
-  }
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
   try {
-    await sdk.store.cart.createLineItem(
-      cart.id,
-      {
-        variant_id: variantId,
-        quantity,
-      },
-      {},
-      headers
-    )
-  } catch (err) {
-    console.warn("createLineItem failed, creating fresh cart...", err)
-    await removeCartId()
-    const locale = await getLocale()
-    const freshCartResp = await sdk.store.cart.create(
-      { region_id: region.id, locale: locale || undefined },
-      {},
-      headers
-    )
-    cart = freshCartResp.cart
-    await setCartId(cart.id)
-    await sdk.store.cart.createLineItem(
-      cart.id,
-      {
-        variant_id: variantId,
-        quantity,
-      },
-      {},
-      headers
-    )
+    if (!variantId) {
+      throw new Error("Missing variant ID when adding to cart")
+    }
+
+    const resolvedCountry = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
+    const region = await getRegion(resolvedCountry)
+
+    if (!region) {
+      throw new Error(`Region not found for country code: ${countryCode}`)
+    }
+
+    let cart = await getOrSetCart(resolvedCountry)
+
+    if (!cart) {
+      throw new Error("Error retrieving or creating cart")
+    }
+
+    const headers = {
+      ...(await getAuthHeaders()),
+    }
+
+    try {
+      await sdk.store.cart.createLineItem(
+        cart.id,
+        {
+          variant_id: variantId,
+          quantity,
+        },
+        {},
+        headers
+      )
+    } catch (err) {
+      console.warn("createLineItem failed, creating fresh cart...", err)
+      await removeCartId()
+      const locale = await getLocale()
+      const freshCartResp = await sdk.store.cart.create(
+        { region_id: region.id, locale: locale || undefined },
+        {},
+        headers
+      )
+      cart = freshCartResp.cart
+      await setCartId(cart.id)
+      await sdk.store.cart.createLineItem(
+        cart.id,
+        {
+          variant_id: variantId,
+          quantity,
+        },
+        {},
+        headers
+      )
+    }
+
+    const cartCacheTag = await getCacheTag("carts")
+    safeRevalidateTag(cartCacheTag)
+
+    const fulfillmentCacheTag = await getCacheTag("fulfillment")
+    safeRevalidateTag(fulfillmentCacheTag)
+
+    return { success: true, cartId: cart.id }
+  } catch (err: any) {
+    console.error("addToCart error:", err)
+    return { success: false, error: err?.message || String(err) }
   }
-
-  const cartCacheTag = await getCacheTag("carts")
-  safeRevalidateTag(cartCacheTag)
-
-  const fulfillmentCacheTag = await getCacheTag("fulfillment")
-  safeRevalidateTag(fulfillmentCacheTag)
 }
 
 export async function updateLineItem({
