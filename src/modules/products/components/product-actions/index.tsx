@@ -11,8 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
-import QuickOrderModal from "@modules/common/components/quick-order-modal"
-import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle } from "lucide-react"
+import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2 } from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -39,7 +38,7 @@ export default function ProductActions({
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
-  const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false)
+  const [isOrdering, setIsOrdering] = useState(false)
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
@@ -132,6 +131,25 @@ export default function ProductActions({
     setIsAdding(false)
   }
 
+  // direct checkout: add to cart and immediately route to /checkout
+  const handleDirectCheckout = async () => {
+    if (!selectedVariant?.id) return
+    setIsOrdering(true)
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
+      router.push(`/${countryCode}/checkout`)
+    } catch (err) {
+      console.error("Direct checkout add to cart error:", err)
+      router.push(`/${countryCode}/checkout`)
+    } finally {
+      setIsOrdering(false)
+    }
+  }
+
   const rawPrice =
     selectedVariant?.calculated_price?.calculated_amount ??
     product.variants?.[0]?.calculated_price?.calculated_amount ??
@@ -179,16 +197,25 @@ export default function ProductActions({
           <ProductPrice product={product} variant={selectedVariant} />
         </div>
 
-        {/* GhorerBazar High Converting Action Buttons */}
+        {/* High Converting Action Buttons */}
         <div className="space-y-3 pt-2">
-          {/* 1. Quick COD Order Button (Primary Emerald Green) */}
+          {/* 1. Direct Checkout Order Button (Amber / Orange) */}
           <button
             type="button"
-            onClick={() => setIsQuickOrderOpen(true)}
-            className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
+            onClick={handleDirectCheckout}
+            disabled={!inStock || !selectedVariant || isOrdering || isAdding}
+            className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/25 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
           >
-            <Truck className="w-5 h-5" />
-            <span>সরাসরি অর্ডার করুন (ক্যাশ অন ডেলিভারি)</span>
+            {isOrdering ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Truck className="w-5 h-5" />
+            )}
+            <span>
+              {isOrdering
+                ? "চেকআউটে নেওয়া হচ্ছে..."
+                : "সরাসরি অর্ডার করুন (ক্যাশ অন ডেলিভারি)"}
+            </span>
           </button>
 
           {/* 2. Add To Cart Button */}
@@ -200,11 +227,16 @@ export default function ProductActions({
               !selectedVariant ||
               !!disabled ||
               isAdding ||
+              isOrdering ||
               !isValidVariant
             }
             className="w-full py-3 px-6 rounded-2xl font-bold text-sm bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <ShoppingBag className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+            {isAdding ? (
+              <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+            ) : (
+              <ShoppingBag className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            )}
             <span>{isAdding ? "কার্টে যোগ হচ্ছে..." : "কার্ট-এ যোগ করুন"}</span>
           </button>
 
@@ -220,10 +252,10 @@ export default function ProductActions({
           </a>
         </div>
 
-        {/* GhorerBazar Delivery & Trust Box */}
+        {/* Delivery & Trust Box */}
         <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2.5 text-xs text-zinc-700 dark:text-zinc-300">
           <div className="flex items-center gap-2.5">
-            <Truck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            <Truck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>
               <strong>ডেলিভারি চার্জ:</strong> ঢাকার মধ্যে ৳৭০, ঢাকার বাইরে ৳১৩০
             </span>
@@ -254,18 +286,6 @@ export default function ProductActions({
           optionsDisabled={!!disabled || isAdding}
         />
       </div>
-
-      {/* 1-Click Quick Order Modal */}
-      <QuickOrderModal
-        isOpen={isQuickOrderOpen}
-        onClose={() => setIsQuickOrderOpen(false)}
-        product={{
-          title: product.title,
-          price: rawPrice,
-          thumbnail: product.thumbnail,
-          size: selectedVariant?.title,
-        }}
-      />
     </>
   )
 }

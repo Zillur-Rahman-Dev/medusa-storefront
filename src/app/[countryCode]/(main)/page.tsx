@@ -4,6 +4,7 @@ import Hero from "@modules/home/components/hero"
 import FeaturedCategories from "@modules/home/components/featured-categories"
 import TopSelling from "@modules/home/components/top-selling"
 import TrustBadges from "@modules/home/components/trust-badges"
+import NaturalHoneySlider from "@modules/home/components/natural-honey-slider"
 import HoneyShelves from "@modules/home/components/honey-shelves"
 import PanoramaBanner from "@modules/home/components/panorama-banner"
 import AllHoneyGrid from "@modules/home/components/all-honey-grid"
@@ -43,7 +44,10 @@ export default async function Home(props: {
       {/* 4. Quality Trust & Certification Bar */}
       <TrustBadges />
 
-      {/* 5. Categorized Product Shelves (সুন্দরবন ও বন, ফুলভিত্তিক, এবং পাহাড়ি বুনো মধু) */}
+      {/* 5. "All Natural Honey" Interactive Auto-Slide Carousel matching screenshot */}
+      <NaturalHoneySlider />
+
+      {/* 6. Categorized Product Shelves (সুন্দরবন ও বন, ফুলভিত্তিক, এবং পাহাড়ি বুনো মধু) */}
       <HoneyShelves />
 
       {/* 6. Mid-Page Panorama Visual Banner */}

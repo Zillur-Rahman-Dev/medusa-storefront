@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { ArrowRight } from "lucide-react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
-import QuickOrderModal from "@modules/common/components/quick-order-modal"
 
 const justForYouProducts: HoneyProductItem[] = [
   {
@@ -114,8 +112,6 @@ const justForYouProducts: HoneyProductItem[] = [
 ]
 
 export default function AllHoneyGrid() {
-  const [selectedProduct, setSelectedProduct] = useState<HoneyProductItem | null>(null)
-
   return (
     <section className="py-12 sm:py-16 bg-white dark:bg-zinc-950 transition-colors">
       <div className="content-container">
@@ -128,13 +124,14 @@ export default function AllHoneyGrid() {
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight mt-0.5">
               Just For You
             </h2>
+            <div className="w-12 h-1 bg-amber-500 rounded-full mt-1.5" />
           </div>
 
           <LocalizedClientLink
             href="/store"
-            className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
           >
-            <span>View All</span>
+            <span>VIEW ALL ITEMS</span>
             <ArrowRight className="w-4 h-4" />
           </LocalizedClientLink>
         </div>
@@ -142,27 +139,10 @@ export default function AllHoneyGrid() {
         {/* 4 Products per row grid matching user screenshot */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
           {justForYouProducts.map((prod) => (
-            <HoneyProductCard
-              key={prod.id}
-              product={prod}
-              onQuickOrder={(p) => setSelectedProduct(p)}
-            />
+            <HoneyProductCard key={prod.id} product={prod} />
           ))}
         </div>
       </div>
-
-      {/* Quick Order Modal */}
-      {selectedProduct && (
-        <QuickOrderModal
-          isOpen={!!selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          product={{
-            title: selectedProduct.title,
-            price: selectedProduct.price,
-            size: selectedProduct.weight,
-          }}
-        />
-      )}
     </section>
   )
 }

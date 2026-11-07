@@ -1,12 +1,32 @@
 "use client"
 
 import { useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ArrowRight, ShieldCheck, Sparkles, PhoneCall, Award, CheckCircle2 } from "lucide-react"
-import QuickOrderModal from "@modules/common/components/quick-order-modal"
+import { ArrowRight, Sparkles, Award, CheckCircle2, Loader2 } from "lucide-react"
+import { addToCart } from "@lib/data/cart"
 
 export default function Hero() {
-  const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false)
+  const router = useRouter()
+  const params = useParams()
+  const countryCode = (params?.countryCode as string) || "bd"
+  const [isOrdering, setIsOrdering] = useState(false)
+
+  const handleHeroOrder = async () => {
+    setIsOrdering(true)
+    try {
+      await addToCart({
+        variantId: "variant_01M6T7P1X2GXF203D2N3YKY6KV",
+        quantity: 1,
+        countryCode,
+      })
+      router.push(`/${countryCode}/checkout`)
+    } catch {
+      router.push(`/${countryCode}/checkout`)
+    } finally {
+      setIsOrdering(false)
+    }
+  }
 
   return (
     <section className="py-4 sm:py-6 bg-zinc-50 dark:bg-zinc-950 transition-colors">
@@ -51,11 +71,16 @@ export default function Hero() {
             <div className="relative z-10 mt-6 pt-2 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsQuickOrderOpen(true)}
-                className="py-3 px-6 sm:px-8 rounded-2xl font-black text-sm bg-zinc-950 text-white hover:bg-zinc-800 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98] flex items-center gap-2"
+                onClick={handleHeroOrder}
+                disabled={isOrdering}
+                className="py-3 px-6 sm:px-8 rounded-2xl font-black text-sm bg-zinc-950 text-white hover:bg-zinc-800 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98] flex items-center gap-2 disabled:opacity-80"
               >
-                <span>এখনই অর্ডার করুন</span>
-                <ArrowRight className="w-4 h-4" />
+                {isOrdering ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
+                <span>{isOrdering ? "চেকআউটে নেওয়া হচ্ছে..." : "এখনই অর্ডার করুন"}</span>
               </button>
 
               <LocalizedClientLink
@@ -116,17 +141,6 @@ export default function Hero() {
           </div>
         </div>
       </div>
-
-      {/* Quick COD Order Modal */}
-      <QuickOrderModal
-        isOpen={isQuickOrderOpen}
-        onClose={() => setIsQuickOrderOpen(false)}
-        product={{
-          title: "সুন্দরবনের খাঁটি খলিশা ফুলের মধু (১ কেজি কাচের জার)",
-          price: 1350,
-          size: "১ কেজি",
-        }}
-      />
     </section>
   )
 }

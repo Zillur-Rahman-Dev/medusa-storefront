@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { ArrowRight } from "lucide-react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
-import QuickOrderModal from "@modules/common/components/quick-order-modal"
 
 type HoneyShelfSection = {
   title: string
@@ -190,8 +188,6 @@ const shelvesData: HoneyShelfSection[] = [
 ]
 
 export default function HoneyShelves() {
-  const [selectedProduct, setSelectedProduct] = useState<HoneyProductItem | null>(null)
-
   return (
     <div className="space-y-12 sm:space-y-16 py-8 sm:py-12 bg-white dark:bg-zinc-950 transition-colors">
       {shelvesData.map((shelf, shelfIdx) => (
@@ -202,6 +198,7 @@ export default function HoneyShelves() {
               <h2 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
                 {shelf.title}
               </h2>
+              <div className="w-12 h-1 bg-amber-500 rounded-full mt-1.5" />
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 hidden sm:block">
                 {shelf.subtitle}
               </p>
@@ -209,9 +206,9 @@ export default function HoneyShelves() {
 
             <LocalizedClientLink
               href="/store"
-              className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
             >
-              <span>View All</span>
+              <span>VIEW ALL ITEMS</span>
               <ArrowRight className="w-4 h-4" />
             </LocalizedClientLink>
           </div>
@@ -219,28 +216,11 @@ export default function HoneyShelves() {
           {/* Exactly 4 Products Grid matching user screenshot */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             {shelf.products.map((prod) => (
-              <HoneyProductCard
-                key={prod.id}
-                product={prod}
-                onQuickOrder={(p) => setSelectedProduct(p)}
-              />
+              <HoneyProductCard key={prod.id} product={prod} />
             ))}
           </div>
         </section>
       ))}
-
-      {/* Quick COD Order Modal */}
-      {selectedProduct && (
-        <QuickOrderModal
-          isOpen={!!selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          product={{
-            title: selectedProduct.title,
-            price: selectedProduct.price,
-            size: selectedProduct.weight,
-          }}
-        />
-      )}
     </div>
   )
 }

@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { Star, ShoppingCart, Truck, Check } from "lucide-react"
+import { Star, ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
 import { addToCart } from "@lib/data/cart"
 
 export type HoneyProductItem = {
@@ -22,18 +22,20 @@ export type HoneyProductItem = {
 
 type HoneyProductCardProps = {
   product: HoneyProductItem
-  onQuickOrder: (prod: HoneyProductItem) => void
+  onQuickOrder?: (prod: HoneyProductItem) => void
 }
 
 export default function HoneyProductCard({
   product,
-  onQuickOrder,
 }: HoneyProductCardProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [isAdded, setIsAdded] = useState(false)
+  const [isOrdering, setIsOrdering] = useState(false)
+  const router = useRouter()
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
+  // 1. Add to Cart (updates line items in Medusa backend & header cart count)
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -56,10 +58,30 @@ export default function HoneyProductCard({
     }
   }
 
-  const handleOrderNow = (e: React.MouseEvent) => {
+  // 2. Direct Medusa Checkout (adds item to cart and immediately navigates to /checkout)
+  const handleOrderNow = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    onQuickOrder(product)
+
+    if (!product.variantId) {
+      router.push(`/${countryCode}/checkout`)
+      return
+    }
+
+    setIsOrdering(true)
+    try {
+      await addToCart({
+        variantId: product.variantId,
+        quantity: 1,
+        countryCode,
+      })
+      router.push(`/${countryCode}/checkout`)
+    } catch (err) {
+      console.error("Failed to add to cart for direct checkout:", err)
+      router.push(`/${countryCode}/checkout`)
+    } finally {
+      setIsOrdering(false)
+    }
   }
 
   return (
@@ -123,7 +145,7 @@ export default function HoneyProductCard({
         <button
           type="button"
           onClick={handleAddToCart}
-          disabled={isAdding}
+          disabled={isAdding || isOrdering}
           className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
             isAdded
               ? "bg-emerald-50 text-emerald-700 border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-300"
@@ -137,20 +159,29 @@ export default function HoneyProductCard({
             </>
           ) : (
             <>
-              <ShoppingCart className="w-3.5 h-3.5" />
+              {isAdding ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ShoppingCart className="w-3.5 h-3.5" />
+              )}
               <span>{isAdding ? "যোগ হচ্ছে..." : "কার্ট-এ যোগ"}</span>
             </>
           )}
         </button>
 
-        {/* Button 2: অর্ডার করুন */}
+        {/* Button 2: অর্ডার করুন (Direct to Medusa Checkout) */}
         <button
           type="button"
           onClick={handleOrderNow}
-          className="flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5"
+          disabled={isOrdering || isAdding}
+          className="flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80"
         >
-          <Truck className="w-3.5 h-3.5" />
-          <span>অর্ডার করুন</span>
+          {isOrdering ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Truck className="w-3.5 h-3.5" />
+          )}
+          <span>{isOrdering ? "অর্ডার হচ্ছে..." : "অর্ডার করুন"}</span>
         </button>
       </div>
     </div>

@@ -1,8 +1,6 @@
 "use client"
 
-import { useState } from "react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
-import QuickOrderModal from "@modules/common/components/quick-order-modal"
 
 const topSellingHoneys: HoneyProductItem[] = [
   {
@@ -60,8 +58,6 @@ const topSellingHoneys: HoneyProductItem[] = [
 ]
 
 export default function TopSelling() {
-  const [selectedProduct, setSelectedProduct] = useState<HoneyProductItem | null>(null)
-
   return (
     <section className="py-10 sm:py-14 bg-white dark:bg-zinc-950 transition-colors">
       <div className="content-container">
@@ -76,27 +72,10 @@ export default function TopSelling() {
         {/* Exactly 4 Products in a Row matching user screenshot */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
           {topSellingHoneys.map((prod) => (
-            <HoneyProductCard
-              key={prod.id}
-              product={prod}
-              onQuickOrder={(p) => setSelectedProduct(p)}
-            />
+            <HoneyProductCard key={prod.id} product={prod} />
           ))}
         </div>
       </div>
-
-      {/* Quick Order Modal */}
-      {selectedProduct && (
-        <QuickOrderModal
-          isOpen={!!selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          product={{
-            title: selectedProduct.title,
-            price: selectedProduct.price,
-            size: selectedProduct.weight,
-          }}
-        />
-      )}
     </section>
   )
 }
