@@ -3,7 +3,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
-import { ShoppingBag, Star, Truck } from "lucide-react"
+import { Star, Truck } from "lucide-react"
 
 export default async function ProductPreview({
   product,
@@ -19,7 +19,7 @@ export default async function ProductPreview({
   })
 
   return (
-    <div className="group flex flex-col justify-between h-full bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-emerald-600/80 dark:hover:border-emerald-500/60 transition-all duration-300">
+    <div className="group flex flex-col justify-between h-full bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-amber-500/80 dark:hover:border-amber-500/60 transition-all duration-300">
       <LocalizedClientLink
         href={`/products/${product.handle}`}
         className="block"
@@ -49,7 +49,7 @@ export default async function ProductPreview({
 
           {/* Product Title */}
           <h3
-            className="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors"
+            className="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
             data-testid="product-title"
           >
             {product.title}
@@ -70,9 +70,9 @@ export default async function ProductPreview({
       <div className="mt-4 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
         <LocalizedClientLink
           href={`/products/${product.handle}`}
-          className="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm transition-all active:scale-[0.98]"
+          className="flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-all active:scale-[0.98]"
         >
-          <ShoppingBag className="w-3.5 h-3.5" />
+          <Truck className="w-3.5 h-3.5" />
           <span>অর্ডার করুন</span>
         </LocalizedClientLink>
       </div>

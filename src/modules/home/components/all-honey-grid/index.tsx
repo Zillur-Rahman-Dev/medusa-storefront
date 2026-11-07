@@ -2,34 +2,119 @@
 
 import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ArrowRight, Truck } from "lucide-react"
+import { ArrowRight } from "lucide-react"
+import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
 import QuickOrderModal from "@modules/common/components/quick-order-modal"
 
-type HoneyItem = {
-  id: string
-  title: string
-  weight: string
-  price: number
-  regularPrice: number
-  icon: string
-  discountBadge: string
-}
-
-const allTenHoneys: HoneyItem[] = [
-  { id: "h-1", title: "সুন্দরবনের খাঁটি খলিশা মধু", weight: "১ কেজি কাচের জার", price: 1350, regularPrice: 1550, icon: "🌸", discountBadge: "Save ৳200" },
-  { id: "h-2", title: "সরিষা ফুলের প্রাকৃতিক মধু", weight: "১ কেজি কাচের জার", price: 750, regularPrice: 850, icon: "🌼", discountBadge: "Save ৳100" },
-  { id: "h-3", title: "কালোজিরা ফুলের ঔষধি মধু", weight: "১ কেজি কাচের জার", price: 1100, regularPrice: 1250, icon: "🌿", discountBadge: "Save ৳150" },
-  { id: "h-4", title: "লিচু ফুলের মিষ্টি মধু", weight: "১ কেজি কাচের জার", price: 950, regularPrice: 1100, icon: "🍯", discountBadge: "Save ৳150" },
-  { id: "h-5", title: "ধনে ফুলের সুবাসিত মধু", weight: "১ কেজি কাচের জার", price: 980, regularPrice: 1150, icon: "🌱", discountBadge: "Save ৳170" },
-  { id: "h-6", title: "পাহাড়ে মৌচাকের মধু", weight: "১ কেজি কাচের জার", price: 1200, regularPrice: 1400, icon: "⛰️", discountBadge: "Save ৳200" },
-  { id: "h-7", title: "বাবলা ও কুল (বরই) ফুলের মধু", weight: "১ কেজি কাচের জার", price: 950, regularPrice: 1100, icon: "🍒", discountBadge: "Save ৳150" },
-  { id: "h-8", title: "কুসুম, তিসি ও সূর্যমুখী ফুল", weight: "১ কেজি কাচের জার", price: 900, regularPrice: 1050, icon: "🌻", discountBadge: "Save ৳150" },
-  { id: "h-9", title: "বনের খাঁটি মধু (সুন্দরবন)", weight: "১ কেজি কাচের জার", price: 1250, regularPrice: 1400, icon: "🌳", discountBadge: "Save ৳150" },
-  { id: "h-10", title: "বুনো ফুলের শত পরাগের মধু", weight: "১ কেজি কাচের জার", price: 850, regularPrice: 990, icon: "🌾", discountBadge: "Save ৳140" },
+const justForYouProducts: HoneyProductItem[] = [
+  {
+    id: "jfy-1",
+    title: "সুন্দরবনের খাঁটি খলিশা ফুলের মধু",
+    handle: "sundarban-kholisha-honey",
+    variantId: "variant_01M6T7P1X2GXF203D2N3YKY6KV",
+    weight: "১ কেজি কাচের জার",
+    price: 1350,
+    regularPrice: 1550,
+    rating: 5,
+    reviewCount: 64,
+    icon: "🌸",
+    badge: "BEST SELLING",
+  },
+  {
+    id: "jfy-2",
+    title: "খাঁটি সরিষা ফুলের প্রাকৃতিক মধু",
+    handle: "mustard-flower-honey",
+    variantId: "variant_01M6T7PWFFFFT9AVNKYCSWP601",
+    weight: "১ কেজি কাচের জার",
+    price: 750,
+    regularPrice: 850,
+    rating: 5,
+    reviewCount: 92,
+    icon: "🌼",
+    badge: "POPULAR",
+  },
+  {
+    id: "jfy-3",
+    title: "কালোজিরা ফুলের ঔষধি মধু",
+    handle: "black-seed-flower-honey",
+    variantId: "variant_01M6T7PYQB451QEXYV8F07D3EV",
+    weight: "১ কেজি কাচের জার",
+    price: 1100,
+    regularPrice: 1250,
+    rating: 5,
+    reviewCount: 58,
+    icon: "🌿",
+    badge: "RECOMMENDED",
+  },
+  {
+    id: "jfy-4",
+    title: "লিচু ফুলের মিষ্টি মধু",
+    handle: "litchi-flower-honey",
+    variantId: "variant_01M6T7Q2TTB94FMQ7H2V3YWEDV",
+    weight: "১ কেজি কাচের জার",
+    price: 950,
+    regularPrice: 1100,
+    rating: 5,
+    reviewCount: 51,
+    icon: "🍯",
+    badge: "SWEET TASTE",
+  },
+  {
+    id: "jfy-5",
+    title: "পাহাড়ে মৌচাকের বুনো মধু",
+    handle: "hill-wild-honey",
+    variantId: "variant_01M6T7Q7GE2EQJR2RCHV4XXZFX",
+    weight: "১ কেজি কাচের জার",
+    price: 1200,
+    regularPrice: 1400,
+    rating: 5,
+    reviewCount: 46,
+    icon: "⛰️",
+    badge: "HOT ITEM",
+  },
+  {
+    id: "jfy-6",
+    title: "বনের খাঁটি মধু (সুন্দরবনের মধু)",
+    handle: "wild-sundarban-forest-honey",
+    variantId: "variant_01M6T7QCP8C5N2HWG0JD2DBWJD",
+    weight: "১ কেজি কাচের জার",
+    price: 1250,
+    regularPrice: 1400,
+    rating: 5,
+    reviewCount: 42,
+    icon: "🌳",
+    badge: "১০০% খাঁটি",
+  },
+  {
+    id: "jfy-7",
+    title: "বাবলা ও কুল (বরই) ফুলের মধু",
+    handle: "babla-kool-flower-honey",
+    variantId: "variant_01M6T7Q95Z9P7TAKDJZB8C05PY",
+    weight: "১ কেজি কাচের জার",
+    price: 950,
+    regularPrice: 1100,
+    rating: 5,
+    reviewCount: 34,
+    icon: "🍒",
+    badge: "SPECIAL",
+  },
+  {
+    id: "jfy-8",
+    title: "ধনে ফুলের সুবাসিত মধু",
+    handle: "coriander-flower-honey",
+    variantId: "variant_01M6T7Q5EXN9XCHW9K53SAD4KT",
+    weight: "১ কেজি কাচের জার",
+    price: 980,
+    regularPrice: 1150,
+    rating: 5,
+    reviewCount: 36,
+    icon: "🌱",
+    badge: "NATURAL",
+  },
 ]
 
 export default function AllHoneyGrid() {
-  const [selectedHoney, setSelectedHoney] = useState<HoneyItem | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<HoneyProductItem | null>(null)
 
   return (
     <section className="py-12 sm:py-16 bg-white dark:bg-zinc-950 transition-colors">
@@ -54,76 +139,27 @@ export default function AllHoneyGrid() {
           </LocalizedClientLink>
         </div>
 
-        {/* 10 Items (2 Rows of 5) matching screenshot */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {allTenHoneys.map((honey) => (
-            <div
-              key={honey.id}
-              className="group relative flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/60 shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              {/* Discount Tag */}
-              <div className="absolute top-2.5 right-2.5 z-10">
-                <span className="px-2 py-0.5 text-[9px] font-bold rounded-md bg-amber-500 text-white shadow-sm">
-                  {honey.discountBadge}
-                </span>
-              </div>
-
-              <div>
-                {/* Product Image Box */}
-                <LocalizedClientLink
-                  href="/store"
-                  className="block aspect-square w-full rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 flex items-center justify-center text-5xl sm:text-6xl group-hover:scale-105 transition-transform"
-                >
-                  <span className="select-none">{honey.icon}</span>
-                </LocalizedClientLink>
-
-                {/* Title */}
-                <LocalizedClientLink href="/store" className="block mt-3">
-                  <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 line-clamp-2 transition-colors">
-                    {honey.title}
-                  </h3>
-                </LocalizedClientLink>
-
-                <div className="text-[11px] text-zinc-400 mt-0.5">
-                  {honey.weight}
-                </div>
-
-                {/* Price */}
-                <div className="mt-2 flex items-baseline gap-1.5">
-                  <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400">
-                    ৳{honey.price}
-                  </span>
-                  <span className="text-[11px] text-zinc-400 line-through">
-                    ৳{honey.regularPrice}
-                  </span>
-                </div>
-              </div>
-
-              {/* Order Button */}
-              <div className="mt-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setSelectedHoney(honey)}
-                  className="w-full py-2 px-3 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <Truck className="w-3.5 h-3.5" />
-                  <span>অর্ডার করুন</span>
-                </button>
-              </div>
-            </div>
+        {/* 4 Products per row grid matching user screenshot */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+          {justForYouProducts.map((prod) => (
+            <HoneyProductCard
+              key={prod.id}
+              product={prod}
+              onQuickOrder={(p) => setSelectedProduct(p)}
+            />
           ))}
         </div>
       </div>
 
       {/* Quick Order Modal */}
-      {selectedHoney && (
+      {selectedProduct && (
         <QuickOrderModal
-          isOpen={!!selectedHoney}
-          onClose={() => setSelectedHoney(null)}
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
           product={{
-            title: selectedHoney.title,
-            price: selectedHoney.price,
-            size: selectedHoney.weight,
+            title: selectedProduct.title,
+            price: selectedProduct.price,
+            size: selectedProduct.weight,
           }}
         />
       )}

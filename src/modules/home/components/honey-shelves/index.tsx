@@ -2,66 +2,199 @@
 
 import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ArrowRight, ShoppingBag, Truck } from "lucide-react"
+import { ArrowRight } from "lucide-react"
+import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
 import QuickOrderModal from "@modules/common/components/quick-order-modal"
 
-type ShelfProduct = {
-  id: string
-  title: string
-  size: string
-  price: number
-  regularPrice: number
-  icon: string
-}
-
-type Shelf = {
+type HoneyShelfSection = {
   title: string
   subtitle: string
-  products: ShelfProduct[]
+  products: HoneyProductItem[]
 }
 
-const shelves: Shelf[] = [
+const shelvesData: HoneyShelfSection[] = [
   {
     title: "সুন্দরবন ও বনের খাঁটি মধু",
-    subtitle: "সুন্দরবনের গভীর ম্যানগ্রোভ ও বুনো মৌচাকের কাঁচা মধু",
+    subtitle: "সুন্দরবনের গভীর ম্যানগ্রোভ ও বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধু",
     products: [
-      { id: "s-1", title: "সুন্দরবনের খলিশা মধু (১ কেজি)", size: "১ কেজি", price: 1350, regularPrice: 1550, icon: "🌸" },
-      { id: "s-2", title: "সুন্দরবনের খলিশা মধু (৫০০ গ্রাম)", size: "৫০০ গ্রাম", price: 720, regularPrice: 850, icon: "🌸" },
-      { id: "s-3", title: "বনের খাঁটি মধু (সুন্দরবনের মধু - ১ কেজি)", size: "১ কেজি", price: 1250, regularPrice: 1400, icon: "🌳" },
-      { id: "s-4", title: "বনের খাঁটি মধু (৫০০ গ্রাম)", size: "৫০০ গ্রাম", price: 680, regularPrice: 750, icon: "🌳" },
-      { id: "s-5", title: "সুন্দরবনের খলিশা মধু (২৫০ গ্রাম)", size: "২৫০ গ্রাম", price: 390, regularPrice: 450, icon: "🌸" },
+      {
+        id: "sh-1",
+        title: "সুন্দরবনের খাঁটি খলিশা ফুলের মধু",
+        handle: "sundarban-kholisha-honey",
+        variantId: "variant_01M6T7P1X2GXF203D2N3YKY6KV",
+        weight: "১ কেজি কাচের জার",
+        price: 1350,
+        regularPrice: 1550,
+        rating: 5,
+        reviewCount: 64,
+        icon: "🌸",
+        badge: "BEST SELLING",
+      },
+      {
+        id: "sh-2",
+        title: "বনের খাঁটি মধু (সুন্দরবনের মধু)",
+        handle: "wild-sundarban-forest-honey",
+        variantId: "variant_01M6T7QCP8C5N2HWG0JD2DBWJD",
+        weight: "১ কেজি কাচের জার",
+        price: 1250,
+        regularPrice: 1400,
+        rating: 5,
+        reviewCount: 42,
+        icon: "🌳",
+        badge: "১০০% বুনো",
+      },
+      {
+        id: "sh-3",
+        title: "সুন্দরবনের খাঁটি খলিশা মধু (৫০০ গ্রাম)",
+        handle: "sundarban-kholisha-honey",
+        variantId: "variant_01M6T7P1X2GXF203D2N3YKY6KV",
+        weight: "৫০০ গ্রাম কাচের জার",
+        price: 720,
+        regularPrice: 850,
+        rating: 5,
+        reviewCount: 38,
+        icon: "🌸",
+        badge: "জনপ্রিয়",
+      },
+      {
+        id: "sh-4",
+        title: "বনের খাঁটি মধু (৫০০ গ্রাম)",
+        handle: "wild-sundarban-forest-honey",
+        variantId: "variant_01M6T7QCP8C5N2HWG0JD2DBWJD",
+        weight: "৫০০ গ্রাম কাচের জার",
+        price: 680,
+        regularPrice: 780,
+        rating: 5,
+        reviewCount: 29,
+        icon: "🌳",
+        badge: "ন্যাচারাল",
+      },
     ],
   },
   {
     title: "ফুলভিত্তিক প্রাকৃতিক মধু",
-    subtitle: "সরিষা, লিচু, কালোজিরা ও ধনে ফুলের খাঁটি মধু",
+    subtitle: "সরিষা, লিচু, কালোজিরা ও ধনে ফুলের প্রাকৃতিক মধু",
     products: [
-      { id: "s-6", title: "খাঁটি সরিষা ফুলের মধু (১ কেজি)", size: "১ কেজি", price: 750, regularPrice: 850, icon: "🌼" },
-      { id: "s-7", title: "লিচু ফুলের মিষ্টি মধু (১ কেজি)", size: "১ কেজি", price: 950, regularPrice: 1100, icon: "🍯" },
-      { id: "s-8", title: "কালোজিরা ফুলের ঔষধি মধু (১ কেজি)", size: "১ কেজি", price: 1100, regularPrice: 1250, icon: "🌿" },
-      { id: "s-9", title: "ধনে ফুলের সুবাসিত মধু (১ কেজি)", size: "১ কেজি", price: 980, regularPrice: 1150, icon: "🌱" },
-      { id: "s-10", title: "সরিষা ফুলের মধু (৫০০ গ্রাম)", size: "৫০০ গ্রাম", price: 400, regularPrice: 480, icon: "🌼" },
+      {
+        id: "sh-5",
+        title: "খাঁটি সরিষা ফুলের প্রাকৃতিক মধু",
+        handle: "mustard-flower-honey",
+        variantId: "variant_01M6T7PWFFFFT9AVNKYCSWP601",
+        weight: "১ কেজি কাচের জার",
+        price: 750,
+        regularPrice: 850,
+        rating: 5,
+        reviewCount: 92,
+        icon: "🌼",
+        badge: "BEST SELLING",
+      },
+      {
+        id: "sh-6",
+        title: "কালোজিরা ফুলের ঔষধি মধু",
+        handle: "black-seed-flower-honey",
+        variantId: "variant_01M6T7PYQB451QEXYV8F07D3EV",
+        weight: "১ কেজি কাচের জার",
+        price: 1100,
+        regularPrice: 1250,
+        rating: 5,
+        reviewCount: 58,
+        icon: "🌿",
+        badge: "ঔষধি গুণ",
+      },
+      {
+        id: "sh-7",
+        title: "লিচু ফুলের মিষ্টি মধু",
+        handle: "litchi-flower-honey",
+        variantId: "variant_01M6T7Q2TTB94FMQ7H2V3YWEDV",
+        weight: "১ কেজি কাচের জার",
+        price: 950,
+        regularPrice: 1100,
+        rating: 5,
+        reviewCount: 51,
+        icon: "🍯",
+        badge: "বাচ্চাদের প্রিয়",
+      },
+      {
+        id: "sh-8",
+        title: "ধনে ফুলের সুবাসিত মধু",
+        handle: "coriander-flower-honey",
+        variantId: "variant_01M6T7Q5EXN9XCHW9K53SAD4KT",
+        weight: "১ কেজি কাচের জার",
+        price: 980,
+        regularPrice: 1150,
+        rating: 5,
+        reviewCount: 36,
+        icon: "🌱",
+        badge: "হজমবান্ধব",
+      },
     ],
   },
   {
     title: "পাহাড়ি বুনো ও বিরল ফুলের মধু",
-    subtitle: "পাহাড়ের মৌচাক, বাবলা-কুল এবং কুসুম ও সূর্যমুখী ফুল",
+    subtitle: "পাহাড়ের মৌচাক, বাবলা-কুল এবং কুসুম ও সূর্যমুখী ফুল",
     products: [
-      { id: "s-11", title: "পাহাড়ে মৌচাকের মধু (১ কেজি)", size: "১ কেজি", price: 1200, regularPrice: 1400, icon: "⛰️" },
-      { id: "s-12", title: "বাবলা ও কুল (বরই) ফুলের মধু (১ কেজি)", size: "১ কেজি", price: 950, regularPrice: 1100, icon: "🍒" },
-      { id: "s-13", title: "কুসুম, তিসি ও সূর্যমুখী মধু (১ কেজি)", size: "১ কেজি", price: 900, regularPrice: 1050, icon: "🌻" },
-      { id: "s-14", title: "বুনো ফুলের শত পরাগের মধু (১ কেজি)", size: "১ কেজি", price: 850, regularPrice: 990, icon: "🌾" },
-      { id: "s-15", title: "পাহাড়ে মৌচাকের মধু (৫০০ গ্রাম)", size: "৫০০ গ্রাম", price: 650, regularPrice: 750, icon: "⛰️" },
+      {
+        id: "sh-9",
+        title: "পাহাড়ে মৌচাকের বুনো মধু",
+        handle: "hill-wild-honey",
+        variantId: "variant_01M6T7Q7GE2EQJR2RCHV4XXZFX",
+        weight: "১ কেজি কাচের জার",
+        price: 1200,
+        regularPrice: 1400,
+        rating: 5,
+        reviewCount: 46,
+        icon: "⛰️",
+        badge: "BEST SELLING",
+      },
+      {
+        id: "sh-10",
+        title: "বাবলা ও কুল (বরই) ফুলের মধু",
+        handle: "babla-kool-flower-honey",
+        variantId: "variant_01M6T7Q95Z9P7TAKDJZB8C05PY",
+        weight: "১ কেজি কাচের জার",
+        price: 950,
+        regularPrice: 1100,
+        rating: 5,
+        reviewCount: 34,
+        icon: "🍒",
+        badge: "গাঢ় লালচে",
+      },
+      {
+        id: "sh-11",
+        title: "কুসুম, তিসি ও সূর্যমুখী ফুল",
+        handle: "sunflower-kusum-honey",
+        variantId: "variant_01M6T7QB6DG33BBCNXXPRW9SW7",
+        weight: "১ কেজি কাচের জার",
+        price: 900,
+        regularPrice: 1050,
+        rating: 5,
+        reviewCount: 28,
+        icon: "🌻",
+        badge: "অ্যান্টিঅক্সিডেন্ট",
+      },
+      {
+        id: "sh-12",
+        title: "বুনো ফুলের শত পরাগের মধু",
+        handle: "wildflower-honey",
+        variantId: "variant_01M6T7QE2CE9N5DTSG5G1S78NP",
+        weight: "১ কেজি কাচের জার",
+        price: 850,
+        regularPrice: 990,
+        rating: 5,
+        reviewCount: 41,
+        icon: "🌾",
+        badge: "শতফুল",
+      },
     ],
   },
 ]
 
 export default function HoneyShelves() {
-  const [selectedProduct, setSelectedProduct] = useState<ShelfProduct | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<HoneyProductItem | null>(null)
 
   return (
     <div className="space-y-12 sm:space-y-16 py-8 sm:py-12 bg-white dark:bg-zinc-950 transition-colors">
-      {shelves.map((shelf, shelfIdx) => (
+      {shelvesData.map((shelf, shelfIdx) => (
         <section key={shelfIdx} className="content-container">
           {/* Header Row matching screenshot */}
           <div className="flex items-end justify-between mb-6 pb-3 border-b border-zinc-200 dark:border-zinc-800">
@@ -83,62 +216,14 @@ export default function HoneyShelves() {
             </LocalizedClientLink>
           </div>
 
-          {/* 5-Column Grid matching screenshot */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {/* Exactly 4 Products Grid matching user screenshot */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
             {shelf.products.map((prod) => (
-              <div
+              <HoneyProductCard
                 key={prod.id}
-                className="group relative flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/60 shadow-sm hover:shadow-md transition-all duration-200"
-              >
-                {/* In Stock Badge */}
-                <div className="absolute top-2.5 right-2.5 z-10">
-                  <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    ইন স্টক
-                  </span>
-                </div>
-
-                <div>
-                  {/* Image Container */}
-                  <LocalizedClientLink
-                    href="/store"
-                    className="block aspect-square w-full rounded-xl bg-zinc-50 dark:bg-zinc-800/50 p-4 flex items-center justify-center text-5xl sm:text-6xl group-hover:scale-105 transition-transform"
-                  >
-                    <span className="select-none">{prod.icon}</span>
-                  </LocalizedClientLink>
-
-                  {/* Title & Size */}
-                  <LocalizedClientLink href="/store" className="block mt-3">
-                    <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 line-clamp-2 transition-colors">
-                      {prod.title}
-                    </h3>
-                  </LocalizedClientLink>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">
-                    {prod.size}
-                  </div>
-
-                  {/* Price */}
-                  <div className="mt-2 flex items-baseline gap-1.5">
-                    <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400">
-                      ৳{prod.price}
-                    </span>
-                    <span className="text-[11px] text-zinc-400 line-through">
-                      ৳{prod.regularPrice}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Single Full-width Orange "অর্ডার করুন" Button */}
-                <div className="mt-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProduct(prod)}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <Truck className="w-3.5 h-3.5" />
-                    <span>অর্ডার করুন</span>
-                  </button>
-                </div>
-              </div>
+                product={prod}
+                onQuickOrder={(p) => setSelectedProduct(p)}
+              />
             ))}
           </div>
         </section>
@@ -152,7 +237,7 @@ export default function HoneyShelves() {
           product={{
             title: selectedProduct.title,
             price: selectedProduct.price,
-            size: selectedProduct.size,
+            size: selectedProduct.weight,
           }}
         />
       )}
