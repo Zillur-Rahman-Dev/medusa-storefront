@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function middleware(request: NextRequest) {
   // Check if the url is a static asset or API
+  // Let Server Action POST requests or static/API requests proceed directly
   if (
+    request.method !== "GET" && request.method !== "HEAD" ||
     request.nextUrl.pathname.includes(".") ||
     request.nextUrl.pathname.startsWith("/api")
   ) {

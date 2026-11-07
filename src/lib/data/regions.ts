@@ -45,26 +45,42 @@ export const getRegion = async (countryCode: string) => {
 
     const regions = await listRegions()
 
-    if (!regions || regions.length === 0) {
-      return null
-    }
-
-    regions.forEach((region) => {
-      region.countries?.forEach((c) => {
-        regionMap.set(c?.iso_2?.toLowerCase() ?? "", region)
+    if (regions && regions.length > 0) {
+      regions.forEach((region) => {
+        region.countries?.forEach((c) => {
+          regionMap.set(c?.iso_2?.toLowerCase() ?? "", region)
+        })
       })
-    })
+    }
 
     const code = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
     const region =
       regionMap.get(code) ||
       regionMap.get("bd") ||
-      regionMap.get("dk") ||
-      regions[0] ||
+      (regions && regions[0]) ||
       null
 
-    return region
+    if (region) {
+      return region
+    }
   } catch (e: any) {
-    return null
+    console.error("getRegion error:", e)
   }
+
+  // Guaranteed fallback for Bangladesh region
+  return {
+    id: "reg_01M6T7JZFBY9BWE8MMYG6HF4PM",
+    name: "Bangladesh",
+    currency_code: "bdt",
+    countries: [
+      {
+        iso_2: "bd",
+        iso_3: "bgd",
+        num_code: "050",
+        name: "BANGLADESH",
+        display_name: "Bangladesh",
+        region_id: "reg_01M6T7JZFBY9BWE8MMYG6HF4PM",
+      }
+    ]
+  } as HttpTypes.StoreRegion
 }
