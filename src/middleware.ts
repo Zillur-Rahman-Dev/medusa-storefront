@@ -18,11 +18,10 @@ export async function middleware(request: NextRequest) {
   // For this pure Bangladesh Honey store, force all routes to /bd!
   // If someone enters /dk or any other country code, redirect to /bd
   if (firstSegment && firstSegment !== "bd") {
-    const remainingSegments = segments.slice(1).join("/")
-    const targetPath = `/bd${remainingSegments ? `/${remainingSegments}` : ""}`
-    const queryString = request.nextUrl.search || ""
-    const redirectUrl = new URL(`${targetPath}${queryString}`, request.nextUrl.origin)
-    const response = NextResponse.redirect(redirectUrl, 307)
+    const url = request.nextUrl.clone()
+    const remaining = segments.slice(1).join("/")
+    url.pathname = `/bd${remaining ? `/${remaining}` : ""}`
+    const response = NextResponse.redirect(url, 307)
     if (!cacheIdCookie) {
       response.cookies.set("_medusa_cache_id", cacheId, {
         maxAge: 60 * 60 * 24,
@@ -33,9 +32,9 @@ export async function middleware(request: NextRequest) {
 
   // If root "/" (no country code), redirect to /bd
   if (!firstSegment) {
-    const queryString = request.nextUrl.search || ""
-    const redirectUrl = new URL(`/bd${queryString}`, request.nextUrl.origin)
-    const response = NextResponse.redirect(redirectUrl, 307)
+    const url = request.nextUrl.clone()
+    url.pathname = "/bd"
+    const response = NextResponse.redirect(url, 307)
     if (!cacheIdCookie) {
       response.cookies.set("_medusa_cache_id", cacheId, {
         maxAge: 60 * 60 * 24,

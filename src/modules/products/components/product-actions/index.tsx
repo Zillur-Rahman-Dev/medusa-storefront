@@ -127,7 +127,7 @@ export default function ProductActions({
       quantity: 1,
       countryCode,
     })
-
+    router.refresh()
     setIsAdding(false)
   }
 

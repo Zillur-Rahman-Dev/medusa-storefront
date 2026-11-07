@@ -4,13 +4,21 @@ import PaymentWrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 export const metadata: Metadata = {
   title: "Checkout",
 }
 
-export default async function Checkout() {
+type Props = {
+  params: Promise<{ countryCode: string }>
+}
+
+export default async function Checkout(props: Props) {
+  const { countryCode } = await props.params
+  if (countryCode && countryCode.toLowerCase() !== "bd") {
+    redirect("/bd/checkout?step=address")
+  }
   const cart = await retrieveCart()
 
   if (!cart) {

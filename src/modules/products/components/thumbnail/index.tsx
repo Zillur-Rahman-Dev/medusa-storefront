@@ -70,8 +70,11 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
           )}
         </>
       ) : (
-        <div className="w-full h-full absolute inset-0 flex items-center justify-center text-zinc-400 dark:text-zinc-600">
-          <PlaceholderImage size={size === "small" ? 16 : 24} />
+        <div className="w-full h-full absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 via-amber-100/60 to-orange-50 dark:from-zinc-800/80 dark:to-zinc-900 rounded-xl select-none group-hover:scale-105 transition-transform duration-300">
+          <span className="text-5xl sm:text-6xl drop-shadow-sm">🍯</span>
+          <span className="text-[11px] font-black tracking-wider uppercase text-amber-800/80 dark:text-amber-400 mt-2">
+            ১০০% খাঁটি মধু
+          </span>
         </div>
       )}
     </div>

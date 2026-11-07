@@ -38,6 +38,7 @@ export default function PreviewAddToCart({
         countryCode,
       })
       setIsAdded(true)
+      router.refresh()
       setTimeout(() => setIsAdded(false), 2000)
     } catch (err) {
       console.error("Failed to add to cart:", err)
