@@ -55,7 +55,7 @@ export const getRegion = async (countryCode: string) => {
       })
     })
 
-    const code = countryCode ? countryCode.toLowerCase() : "bd"
+    const code = (countryCode && countryCode.toLowerCase() !== "dk") ? countryCode.toLowerCase() : "bd"
     const region =
       regionMap.get(code) ||
       regionMap.get("bd") ||

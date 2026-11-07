@@ -20,9 +20,9 @@ export default function Hero() {
         quantity: 1,
         countryCode,
       })
-      router.push(`/${countryCode}/checkout?step=address`)
+      router.push("/bd/checkout?step=address")
     } catch {
-      router.push(`/${countryCode}/checkout?step=address`)
+      router.push("/bd/checkout?step=address")
     } finally {
       setIsOrdering(false)
     }

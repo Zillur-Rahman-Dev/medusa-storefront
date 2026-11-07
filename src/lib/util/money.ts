@@ -13,8 +13,14 @@ export const convertToLocale = ({
   currency_code,
   minimumFractionDigits,
   maximumFractionDigits,
-  locale = "en-US",
+  locale = "bn-BD",
 }: ConvertToLocaleParams) => {
+  const code = (currency_code || "bdt").toLowerCase()
+  // Format BDT with Taka symbol ৳
+  if (code === "bdt" || code === "eur") {
+    return `৳${Math.round(amount)}`
+  }
+
   return currency_code && !isEmpty(currency_code)
     ? new Intl.NumberFormat(locale, {
         style: "currency",
@@ -22,5 +28,5 @@ export const convertToLocale = ({
         minimumFractionDigits,
         maximumFractionDigits,
       }).format(amount)
-    : amount.toString()
+    : `৳${Math.round(amount)}`
 }

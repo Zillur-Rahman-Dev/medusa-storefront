@@ -18,7 +18,7 @@ export default function PreviewAddToCart({
   const [isAdded, setIsAdded] = useState(false)
   const router = useRouter()
   const params = useParams()
-  const countryCode = (params?.countryCode as string) || "bd"
+  const countryCode = "bd"
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault()

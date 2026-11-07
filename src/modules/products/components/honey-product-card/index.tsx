@@ -64,7 +64,7 @@ export default function HoneyProductCard({
     e.stopPropagation()
 
     if (!product.variantId) {
-      router.push(`/${countryCode}/checkout?step=address`)
+      router.push("/bd/checkout?step=address")
       return
     }
 
@@ -75,10 +75,10 @@ export default function HoneyProductCard({
         quantity: 1,
         countryCode,
       })
-      router.push(`/${countryCode}/checkout?step=address`)
+      router.push("/bd/checkout?step=address")
     } catch (err) {
       console.error("Failed to add to cart for direct checkout:", err)
-      router.push(`/${countryCode}/checkout?step=address`)
+      router.push("/bd/checkout?step=address")
     } finally {
       setIsOrdering(false)
     }
