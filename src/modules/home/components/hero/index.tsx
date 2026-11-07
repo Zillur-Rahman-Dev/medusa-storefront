@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ArrowRight, Sparkles, Award, CheckCircle2, Loader2 } from "lucide-react"
+import { ArrowRight, Sparkles, Award, CheckCircle2, Loader2, PhoneCall } from "lucide-react"
 import { addToCart } from "@lib/data/cart"
 
 export default function Hero() {
