@@ -39,6 +39,19 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
       >
         {subtitle}
       </p>
+
+      {product.tags && product.tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+          {product.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/50"
+            >
+              #{tag.value}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

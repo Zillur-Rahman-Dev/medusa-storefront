@@ -264,7 +264,12 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     {
       key: "honey_type",
       label: "পণ্যের ধরন",
-      value: metadata.honey_type || "১০০% কাঁচা প্রাকৃতিক মধু",
+      value: product.type?.value || metadata.honey_type || "১০০% কাঁচা প্রাকৃতিক মধু",
+    },
+    {
+      key: "material",
+      label: "মূল উপাদান",
+      value: product.material || metadata.material || "১০০% অপরিশোধিত খাঁটি সরিষা ফুলের নেক্টার",
     },
     {
       key: "origin_area",

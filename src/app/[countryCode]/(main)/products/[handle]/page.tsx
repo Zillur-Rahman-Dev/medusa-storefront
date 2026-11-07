@@ -113,7 +113,7 @@ export default async function ProductPage(props: Props) {
 
   const pricedProduct = await listProducts({
     countryCode: params.countryCode,
-    queryParams: { handle: params.handle, fields: "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags" },
+    queryParams: { handle: params.handle, fields: "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,*type,*collection,*categories" },
   }).then(({ response }) => response.products[0])
 
   const images = getImagesForVariant(pricedProduct, selectedVariantId)
