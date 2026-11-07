@@ -58,13 +58,13 @@ export default function HoneyProductCard({
     }
   }
 
-  // 2. Direct Medusa Checkout (adds item to cart and immediately navigates to /checkout)
+  // 2. Direct Medusa Checkout (adds item to cart and immediately navigates to /checkout?step=address)
   const handleOrderNow = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
     if (!product.variantId) {
-      router.push(`/${countryCode}/checkout`)
+      router.push(`/${countryCode}/checkout?step=address`)
       return
     }
 
@@ -75,10 +75,10 @@ export default function HoneyProductCard({
         quantity: 1,
         countryCode,
       })
-      router.push(`/${countryCode}/checkout`)
+      router.push(`/${countryCode}/checkout?step=address`)
     } catch (err) {
       console.error("Failed to add to cart for direct checkout:", err)
-      router.push(`/${countryCode}/checkout`)
+      router.push(`/${countryCode}/checkout?step=address`)
     } finally {
       setIsOrdering(false)
     }

@@ -160,7 +160,7 @@ export default function CategoryGrid() {
             href="/store"
             className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 group self-start md:self-auto shrink-0"
           >
-            <span>সবগুলো অর্ডার করুন</span>
+            <span>সবগুলো মধু দেখুন</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </LocalizedClientLink>
         </div>
@@ -209,7 +209,7 @@ export default function CategoryGrid() {
                   {honey.crystallizationNote}
                 </div>
                 <div className="flex items-center justify-between text-xs font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-amber-600 dark:group-hover:text-amber-400">
-                  <span>অর্ডার করুন</span>
+                  <span>মধু দেখুন</span>
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
