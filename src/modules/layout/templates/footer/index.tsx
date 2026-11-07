@@ -1,6 +1,5 @@
 import { listCategories } from "@lib/data/categories"
 import { listCollections } from "@lib/data/collections"
-import { clx } from "@medusajs/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { PhoneCall, Mail, MapPin } from "lucide-react"
 
@@ -63,10 +62,26 @@ export default async function Footer() {
                 ))
               ) : (
                 <>
-                  <li>সুন্দরবনের মধু</li>
-                  <li>সরিষা ফুলের মধু</li>
-                  <li>কালোজিরা মধু</li>
-                  <li>লিচু ফুলের মধু</li>
+                  <li>
+                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      সুন্দরবনের মধু
+                    </LocalizedClientLink>
+                  </li>
+                  <li>
+                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      সরিষা ফুলের মধু
+                    </LocalizedClientLink>
+                  </li>
+                  <li>
+                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      কালোজিরা মধু
+                    </LocalizedClientLink>
+                  </li>
+                  <li>
+                    <LocalizedClientLink href="/store" className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                      গাওয়া ঘি ও অন্যান্য
+                    </LocalizedClientLink>
+                  </li>
                 </>
               )}
             </ul>
@@ -84,6 +99,22 @@ export default async function Footer() {
                   href="/store"
                 >
                   সকল পণ্য
+                </LocalizedClientLink>
+              </li>
+              <li>
+                <LocalizedClientLink
+                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                  href="/about"
+                >
+                  আমাদের সম্পর্কে
+                </LocalizedClientLink>
+              </li>
+              <li>
+                <LocalizedClientLink
+                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                  href="/contact"
+                >
+                  যোগাযোগ ও কাস্টমার সাপোর্ট
                 </LocalizedClientLink>
               </li>
               <li>
@@ -113,14 +144,14 @@ export default async function Footer() {
             <ul className="space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
               <li>🚚 সারা দেশে ক্যাশ অন ডেলিভারি</li>
               <li>🛡️ ১০০% খাঁটি পণ্য ও ল্যাব টেস্টেড</li>
-              <li>🔄 ৭ দিনের সহজ রিটার্ন পলিসি</li>
-              <li>💬 ২৪/৭ কাস্টমার সাপোর্ট</li>
+              <li>🔄 ৭ দিনের সহজ রিপ্লেসমেন্ট পলিসি</li>
+              <li>💬 সার্বক্ষণিক হোয়াটসঅ্যাপ সাপোর্ট</li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Copyright */}
-        <div className="mt-14 pt-6 border-t border-zinc-200 dark:border-zinc-850 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-500">
+        <div className="mt-14 pt-6 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-500">
           <p>© {new Date().getFullYear()} PURE HONEY. সর্বস্বত্ব সংরক্ষিত।</p>
           <p className="flex items-center gap-1">
             <span>Made with</span>

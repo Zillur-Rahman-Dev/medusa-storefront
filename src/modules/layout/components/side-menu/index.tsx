@@ -12,10 +12,12 @@ import { HttpTypes } from "@medusajs/types"
 import { Locale } from "@lib/data/locales"
 
 const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Account: "/account",
-  Cart: "/cart",
+  হোম: "/",
+  "সকল পণ্য": "/store",
+  "আমাদের সম্পর্কে": "/about",
+  যোগাযোগ: "/contact",
+  অ্যাকাউন্ট: "/account",
+  কার্ট: "/cart",
 }
 
 type SideMenuProps = {
@@ -64,20 +66,20 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                 <PopoverPanel className="flex flex-col absolute w-full pr-4 sm:pr-0 sm:w-1/3 2xl:w-1/4 sm:min-w-min h-[calc(100vh-1rem)] z-[51] inset-x-0 text-sm text-ui-fg-on-color m-2 backdrop-blur-2xl">
                   <div
                     data-testid="nav-menu-popup"
-                    className="flex flex-col h-full bg-[rgba(3,7,18,0.5)] rounded-rounded justify-between p-6"
+                    className="flex flex-col h-full bg-[rgba(3,7,18,0.7)] backdrop-blur-xl border border-zinc-800 rounded-2xl justify-between p-6 shadow-2xl"
                   >
                     <div className="flex justify-end" id="xmark">
-                      <button data-testid="close-menu-button" onClick={close}>
+                      <button data-testid="close-menu-button" onClick={close} className="p-1 hover:text-amber-400 transition-colors">
                         <XMark />
                       </button>
                     </div>
-                    <ul className="flex flex-col gap-6 items-start justify-start">
+                    <ul className="flex flex-col gap-5 items-start justify-start">
                       {Object.entries(SideMenuItems).map(([name, href]) => {
                         return (
                           <li key={name}>
                             <LocalizedClientLink
                               href={href}
-                              className="text-3xl leading-10 hover:text-ui-fg-disabled"
+                              className="text-2xl font-bold tracking-tight text-white hover:text-amber-400 transition-colors"
                               onClick={close}
                               data-testid={`${name.toLowerCase()}-link`}
                             >
@@ -125,9 +127,8 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                           )}
                         />
                       </div>
-                      <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
-                        reserved.
+                      <Text className="flex justify-between txt-compact-small text-zinc-400 text-xs">
+                        © {new Date().getFullYear()} PURE HONEY. All rights reserved.
                       </Text>
                     </div>
                   </div>

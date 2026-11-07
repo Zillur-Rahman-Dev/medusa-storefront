@@ -41,6 +41,18 @@ export default async function Nav() {
               >
                 সকল পণ্য
               </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/about"
+                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+              >
+                আমাদের সম্পর্কে
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/contact"
+                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+              >
+                যোগাযোগ
+              </LocalizedClientLink>
             </div>
           </div>
 

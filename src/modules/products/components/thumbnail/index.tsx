@@ -40,12 +40,6 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
       )}
       data-testid={dataTestid}
     >
-      {/* Badge Overlay */}
-      <div className="absolute top-3 left-3 z-20">
-        <span className="px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-500/95 text-white shadow-sm tracking-wide">
-          ১০০% খাঁটি
-        </span>
-      </div>
 
       {primaryImage ? (
         <>
