@@ -45,19 +45,23 @@ export const getRegion = async (countryCode: string) => {
 
     const regions = await listRegions()
 
-    if (!regions) {
+    if (!regions || regions.length === 0) {
       return null
     }
 
     regions.forEach((region) => {
       region.countries?.forEach((c) => {
-        regionMap.set(c?.iso_2 ?? "", region)
+        regionMap.set(c?.iso_2?.toLowerCase() ?? "", region)
       })
     })
 
-    const region = countryCode
-      ? regionMap.get(countryCode)
-      : regionMap.get("us")
+    const code = countryCode ? countryCode.toLowerCase() : "bd"
+    const region =
+      regionMap.get(code) ||
+      regionMap.get("bd") ||
+      regionMap.get("dk") ||
+      regions[0] ||
+      null
 
     return region
   } catch (e: any) {

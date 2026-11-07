@@ -11,7 +11,6 @@ import AllHoneyGrid from "@modules/home/components/all-honey-grid"
 import HoneyGuide from "@modules/home/components/honey-guide"
 import Testimonials from "@modules/home/components/testimonials"
 import FAQ from "@modules/home/components/faq"
-import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
   title: "PURE HONEY • সুন্দরবন ও গ্রামবাংলার খাঁটি প্রাকৃতিক মধুর সমাহার",
@@ -19,17 +18,7 @@ export const metadata: Metadata = {
     "সুন্দরবনের খলিশা, সরিষা, কালোজিরা, লিচু, ধনে, কুসুম, বরই-বাবলা ও পাহাড়ি বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধু। ল্যাব টেস্টেড ও কোনো চিনি ছাড়া শতভাগ প্রাকৃতিক।",
 }
 
-export default async function Home(props: {
-  params: Promise<{ countryCode: string }>
-}) {
-  const params = await props.params
-  const { countryCode } = params
-  const region = await getRegion(countryCode)
-
-  if (!region) {
-    return null
-  }
-
+export default async function Home() {
   return (
     <>
       {/* 1. Dual-Banner Hero Section (সবার জন্য সেরা & যে কারণে আমাদের মধু সবচেয়ে খাঁটি) */}
