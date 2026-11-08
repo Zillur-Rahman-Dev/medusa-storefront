@@ -3,7 +3,6 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
-import { Star } from "lucide-react"
 import PreviewAddToCart from "./add-to-cart"
 
 export default async function ProductPreview({
@@ -38,19 +37,7 @@ export default async function ProductPreview({
           />
         </div>
 
-        <div className="mt-3.5 space-y-1.5">
-          {/* Star Rating preview */}
-          <div className="flex items-center gap-1 text-xs text-amber-500">
-            <div className="flex items-center">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">(৫.০)</span>
-          </div>
-
+        <div className="mt-3.5 space-y-2">
           {/* Product Title */}
           <h3
             className="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
@@ -59,12 +46,17 @@ export default async function ProductPreview({
             {product.title}
           </h3>
 
-          {/* Price */}
-          <div className="pt-1 flex items-baseline gap-2">
+          {/* Compact Single Row: Price on LEFT, Weight badge on RIGHT (if available) */}
+          <div className="pt-0.5 flex items-center justify-between gap-2">
             {cheapestPrice && (
               <div className="text-zinc-900 dark:text-zinc-100 font-black text-base sm:text-lg">
                 <PreviewPrice price={cheapestPrice} />
               </div>
+            )}
+            {((product.metadata?.weight as string) || (product.weight ? `${product.weight}g` : null)) && (
+              <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+                {(product.metadata?.weight as string) || `${product.weight}g`}
+              </span>
             )}
           </div>
         </div>

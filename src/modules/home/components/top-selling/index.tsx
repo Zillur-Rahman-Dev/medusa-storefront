@@ -14,7 +14,7 @@ const topSellingHoneys: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 64,
     icon: "🌸",
-    badge: "BEST SELLING",
+    badge: "সেরা বিক্রি",
   },
   {
     id: "top-2",
@@ -27,7 +27,7 @@ const topSellingHoneys: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 92,
     icon: "🌼",
-    badge: "BEST SELLING",
+    badge: "সেরা বিক্রি",
   },
   {
     id: "top-3",
@@ -40,7 +40,7 @@ const topSellingHoneys: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 58,
     icon: "🌿",
-    badge: "BEST SELLING",
+    badge: "সেরা বিক্রি",
   },
   {
     id: "top-4",
@@ -53,7 +53,7 @@ const topSellingHoneys: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 46,
     icon: "⛰️",
-    badge: "BEST SELLING",
+    badge: "সেরা বিক্রি",
   },
 ]
 
@@ -63,8 +63,11 @@ export default function TopSelling() {
       <div className="content-container">
         {/* Section Header matching screenshot */}
         <div className="text-center mb-8 sm:mb-10">
+          <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1">
+            জনপ্রিয় পছন্দ
+          </div>
           <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
-            Top Selling Products
+            সর্বাধিক বিক্রিত সেরা মধু
           </h2>
           <div className="w-14 h-1 bg-amber-500 rounded-full mx-auto mt-2" />
         </div>

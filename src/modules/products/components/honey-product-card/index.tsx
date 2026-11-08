@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { Star, ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
+import { ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
 import { addToCart } from "@lib/data/cart"
 
 export type HoneyProductItem = {
@@ -109,38 +109,31 @@ export default function HoneyProductCard({
           <span>{product.icon}</span>
         </LocalizedClientLink>
 
-        {/* 5-Star Rating & Review Count */}
-        <div className="mt-4 flex items-center gap-1.5 text-xs text-amber-500">
-          <div className="flex items-center">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            ))}
-          </div>
-          <span className="text-[11px] text-zinc-400 font-medium">
-            ({product.reviewCount || 48})
-          </span>
-        </div>
-
         {/* Product Title */}
-        <LocalizedClientLink href={`/products/${product.handle}`} className="block mt-2">
+        <LocalizedClientLink href={`/products/${product.handle}`} className="block mt-3">
           <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
             {product.title}
           </h3>
         </LocalizedClientLink>
 
-        {/* Pack Size / Weight */}
-        <div className="text-xs text-zinc-400 mt-1">
-          {product.weight}
-        </div>
+        {/* Compact Single Row: Price on LEFT, Weight / Kg on RIGHT */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
+              ৳{product.price}
+            </span>
+            {product.regularPrice && (
+              <span className="text-xs text-zinc-400 line-through">
+                ৳{product.regularPrice}
+              </span>
+            )}
+          </div>
 
-        {/* Price (Bold Amber Price + Regular strikethrough price) */}
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
-            ৳{product.price}
-          </span>
-          <span className="text-xs sm:text-sm text-zinc-400 line-through">
-            ৳{product.regularPrice}
-          </span>
+          {product.weight && (
+            <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+              {product.weight}
+            </span>
+          )}
         </div>
       </div>
 

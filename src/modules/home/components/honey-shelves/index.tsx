@@ -12,7 +12,7 @@ type HoneyShelfSection = {
 
 const shelvesData: HoneyShelfSection[] = [
   {
-    title: "সুন্দরবন ও বনের খাঁটি মধু",
+    title: "সুন্দরবন ও ম্যানগ্রোভের খাঁটি মধু",
     subtitle: "সুন্দরবনের গভীর ম্যানগ্রোভ ও বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধু",
     products: [
       {
@@ -26,7 +26,7 @@ const shelvesData: HoneyShelfSection[] = [
         rating: 5,
         reviewCount: 64,
         icon: "🌸",
-        badge: "BEST SELLING",
+        badge: "সেরা বিক্রি",
       },
       {
         id: "sh-2",
@@ -84,7 +84,7 @@ const shelvesData: HoneyShelfSection[] = [
         rating: 5,
         reviewCount: 92,
         icon: "🌼",
-        badge: "BEST SELLING",
+        badge: "সেরা বিক্রি",
       },
       {
         id: "sh-6",
@@ -128,7 +128,7 @@ const shelvesData: HoneyShelfSection[] = [
     ],
   },
   {
-    title: "পাহাড়ি বুনো ও বিরল ফুলের মধু",
+    title: "পাহাড়ি ও বুনো মৌচাকের মধু",
     subtitle: "পাহাড়ের মৌচাক, বাবলা-কুল এবং কুসুম ও সূর্যমুখী ফুল",
     products: [
       {
@@ -142,7 +142,7 @@ const shelvesData: HoneyShelfSection[] = [
         rating: 5,
         reviewCount: 46,
         icon: "⛰️",
-        badge: "BEST SELLING",
+        badge: "সেরা বিক্রি",
       },
       {
         id: "sh-10",
@@ -208,7 +208,7 @@ export default function HoneyShelves() {
               href="/store"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
             >
-              <span>VIEW ALL ITEMS</span>
+              <span>সকল মধু দেখুন</span>
               <ArrowRight className="w-4 h-4" />
             </LocalizedClientLink>
           </div>

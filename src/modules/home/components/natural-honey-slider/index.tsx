@@ -17,7 +17,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 68,
     icon: "🌿",
-    badge: "Save 12%",
+    badge: "১২% ছাড়",
   },
   {
     id: "nat-2",
@@ -30,7 +30,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 54,
     icon: "🍯",
-    badge: "Save 14%",
+    badge: "১৪% ছাড়",
   },
   {
     id: "nat-3",
@@ -43,7 +43,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 47,
     icon: "🌳",
-    badge: "Best Seller",
+    badge: "সেরা বিক্রি",
   },
   {
     id: "nat-4",
@@ -56,7 +56,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 82,
     icon: "🌸",
-    badge: "New Arrival",
+    badge: "নতুন মধু",
   },
   {
     id: "nat-5",
@@ -69,7 +69,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 96,
     icon: "🌼",
-    badge: "Save 12%",
+    badge: "১২% ছাড়",
   },
   {
     id: "nat-6",
@@ -82,7 +82,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 46,
     icon: "⛰️",
-    badge: "Special",
+    badge: "বিশেষ বাছাই",
   },
   {
     id: "nat-7",
@@ -95,7 +95,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 39,
     icon: "🌱",
-    badge: "Natural",
+    badge: "১০০% খাঁটি",
   },
   {
     id: "nat-8",
@@ -108,7 +108,7 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 35,
     icon: "🍒",
-    badge: "Save 14%",
+    badge: "১৪% ছাড়",
   },
 ]
 
@@ -142,8 +142,11 @@ export default function NaturalHoneySlider() {
         {/* Section Header matching exact user screenshot */}
         <div className="flex items-end justify-between mb-6 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
+            <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1">
+              প্রকৃতির সেরা উপহার
+            </div>
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
-              All Natural Honey
+              ১০০% খাঁটি ও প্রাকৃতিক মধু
             </h2>
             <div className="w-14 h-1 bg-amber-500 rounded-full mt-2" />
           </div>
@@ -153,7 +156,7 @@ export default function NaturalHoneySlider() {
             href="/store"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
           >
-            <span>VIEW ALL ITEMS</span>
+            <span>সকল মধু দেখুন</span>
             <ArrowRight className="w-4 h-4" />
           </LocalizedClientLink>
         </div>

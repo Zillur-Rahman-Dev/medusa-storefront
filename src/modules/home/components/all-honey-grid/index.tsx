@@ -16,7 +16,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 64,
     icon: "🌸",
-    badge: "BEST SELLING",
+    badge: "সেরা বিক্রি",
   },
   {
     id: "jfy-2",
@@ -29,7 +29,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 92,
     icon: "🌼",
-    badge: "POPULAR",
+    badge: "জনপ্রিয়",
   },
   {
     id: "jfy-3",
@@ -42,7 +42,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 58,
     icon: "🌿",
-    badge: "RECOMMENDED",
+    badge: "পছন্দের",
   },
   {
     id: "jfy-4",
@@ -55,7 +55,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 51,
     icon: "🍯",
-    badge: "SWEET TASTE",
+    badge: "মিষ্টি স্বাদ",
   },
   {
     id: "jfy-5",
@@ -68,7 +68,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 46,
     icon: "⛰️",
-    badge: "HOT ITEM",
+    badge: "হট আইটেম",
   },
   {
     id: "jfy-6",
@@ -94,7 +94,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 34,
     icon: "🍒",
-    badge: "SPECIAL",
+    badge: "বিশেষ",
   },
   {
     id: "jfy-8",
@@ -107,7 +107,7 @@ const justForYouProducts: HoneyProductItem[] = [
     rating: 5,
     reviewCount: 36,
     icon: "🌱",
-    badge: "NATURAL",
+    badge: "১০০% খাঁটি",
   },
 ]
 
@@ -122,7 +122,7 @@ export default function AllHoneyGrid() {
               সম্পূর্ণ মধুর সমাহার
             </div>
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight mt-0.5">
-              Just For You
+              আপনার জন্য বিশেষ বাছাই
             </h2>
             <div className="w-12 h-1 bg-amber-500 rounded-full mt-1.5" />
           </div>
@@ -131,7 +131,7 @@ export default function AllHoneyGrid() {
             href="/store"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
           >
-            <span>VIEW ALL ITEMS</span>
+            <span>সকল মধু দেখুন</span>
             <ArrowRight className="w-4 h-4" />
           </LocalizedClientLink>
         </div>
