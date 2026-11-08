@@ -52,6 +52,7 @@ export default function ImageGallery({ images }: ImageGalleryProps) {
                     fill
                     sizes="80px"
                     className="object-cover object-center p-1"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-zinc-400">
@@ -81,6 +82,7 @@ export default function ImageGallery({ images }: ImageGalleryProps) {
             priority
             sizes="(max-width: 768px) 100vw, 600px"
             className="object-contain p-4 sm:p-8 transition-transform duration-300 group-hover:scale-105"
+            unoptimized
           />
         ) : (
           <div className="text-center p-8 text-zinc-400">

@@ -54,6 +54,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
             quality={75}
             sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
             fill
+            unoptimized
           />
 
           {/* Secondary Image on Hover (if available) */}
@@ -66,6 +67,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
               quality={75}
               sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
               fill
+              unoptimized
             />
           )}
         </>
