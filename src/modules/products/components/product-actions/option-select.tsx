@@ -20,25 +20,34 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
   disabled,
 }) => {
   const filteredOptions = (option.values ?? []).map((v) => v.value)
+  const displayTitle =
+    title?.toLowerCase() === "size"
+      ? "প্যাক সাইজ / ওজন নির্বাচন করুন:"
+      : `Select ${title}:`
 
   return (
-    <div className="flex flex-col gap-y-3">
-      <span className="text-sm">Select {title}</span>
+    <div className="flex flex-col gap-y-2.5">
+      <span className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
+        {displayTitle}
+      </span>
       <div
-        className="flex flex-wrap justify-between gap-2"
+        className="flex flex-wrap gap-2.5"
         data-testid={dataTestId}
       >
         {filteredOptions.map((v) => {
+          const isSelected = v === current
           return (
             <button
+              type="button"
               onClick={() => updateOption(option.id, v)}
               key={v}
               className={clx(
-                "border-ui-border-base bg-ui-bg-subtle border text-small-regular h-10 rounded-rounded p-2 flex-1 ",
+                "h-11 px-4 rounded-xl text-sm font-bold border-2 transition-all flex items-center justify-center min-w-[90px]",
                 {
-                  "border-ui-border-interactive": v === current,
-                  "hover:shadow-elevation-card-rest transition-shadow ease-in-out duration-150":
-                    v !== current,
+                  "border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 shadow-sm ring-2 ring-amber-400/30":
+                    isSelected,
+                  "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:border-amber-400 hover:text-amber-600":
+                    !isSelected,
                 }
               )}
               disabled={disabled}
