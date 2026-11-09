@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
-import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2, Package } from "lucide-react"
+import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2, Package, MessageCircle } from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -222,46 +222,27 @@ export default function ProductActions({
             </div>
           )}
 
-          {/* Dynamic Packaging Badge */}
-          <div className="mt-3 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center gap-2.5 text-xs text-amber-950 dark:text-amber-200 shadow-sm transition-all">
-            <Package className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="leading-relaxed">
+          {/* Dynamic Packaging Badge (Compact & Sleek) */}
+          <div className="mt-2 py-1.5 px-3 rounded-lg bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center gap-2 text-xs text-amber-950 dark:text-amber-200 shadow-sm transition-all">
+            <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="leading-snug">
               <strong className="text-amber-800 dark:text-amber-300">প্যাকেজিং:</strong> {packagingText}
             </span>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-2.5">
             <Divider />
           </div>
         </div>
 
         {/* Product Price */}
-        <div className="py-2">
+        <div className="py-1">
           <ProductPrice product={product} variant={selectedVariant} />
         </div>
 
-        {/* High Converting Action Buttons */}
-        <div className="space-y-3 pt-2">
-          {/* 1. Direct Checkout Order Button (Amber / Orange) */}
-          <button
-            type="button"
-            onClick={handleDirectCheckout}
-            disabled={!inStock || !selectedVariant || isOrdering || isAdding}
-            className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/25 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
-          >
-            {isOrdering ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Truck className="w-5 h-5" />
-            )}
-            <span>
-              {isOrdering
-                ? "চেকআউটে নেওয়া হচ্ছে..."
-                : "সরাসরি অর্ডার করুন (ক্যাশ অন ডেলিভারি)"}
-            </span>
-          </button>
-
-          {/* 2. Add To Cart Button */}
+        {/* 4-Button Grid (Exact match with reference design) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          {/* 1. Add To Cart Button (Top-Left: White with black border) */}
           <button
             type="button"
             onClick={handleAddToCart}
@@ -273,25 +254,47 @@ export default function ProductActions({
               isOrdering ||
               !isValidVariant
             }
-            className="w-full py-3 px-6 rounded-2xl font-bold text-sm bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
           >
             {isAdding ? (
-              <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-            ) : (
-              <ShoppingBag className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            )}
-            <span>{isAdding ? "কার্টে যোগ হচ্ছে..." : "কার্ট-এ যোগ করুন"}</span>
+              <Loader2 className="w-4 h-4 animate-spin text-zinc-900 dark:text-zinc-100" />
+            ) : null}
+            <span>{isAdding ? "যোগ হচ্ছে..." : "কার্টে যোগ করুন"}</span>
           </button>
 
-          {/* 3. WhatsApp Direct Order */}
+          {/* 2. Direct Order Button (Top-Right: Crimson Red with ShoppingBag icon) */}
+          <button
+            type="button"
+            onClick={handleDirectCheckout}
+            disabled={!inStock || !selectedVariant || isOrdering || isAdding}
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-[#d32f2f] hover:bg-[#b71c1c] text-white shadow-md shadow-red-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+          >
+            {isOrdering ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <ShoppingBag className="w-4 h-4 text-white" />
+            )}
+            <span>{isOrdering ? "অর্ডার হচ্ছে..." : "অর্ডার করুন"}</span>
+          </button>
+
+          {/* 3. WhatsApp Order Button (Bottom-Left: WhatsApp Vibrant Green) */}
           <a
-            href={`https://wa.me/8801700000000?text=আসসালামু%20আলাইকুম,%20আমি%20${encodeURIComponent(product.title)}%20অর্ডার%20করতে%20চাই।`}
+            href={`https://wa.me/8801700000000?text=আসসালামু%20আলাইকুম,%20আমি%20${encodeURIComponent(product.title)}%20(${selectedVariant?.title || ""})%20অর্ডার%20করতে%20চাই।`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3 px-6 rounded-2xl font-semibold text-xs sm:text-sm bg-white dark:bg-zinc-900 border border-emerald-500/60 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors flex items-center justify-center gap-2"
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
           >
-            <PhoneCall className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>হোয়াটসঅ্যাপে সরাসরি অর্ডার করুন</span>
+            <MessageCircle className="w-4 h-4 fill-white shrink-0" />
+            <span>হোয়াটসঅ্যাপে অর্ডার করুন</span>
+          </a>
+
+          {/* 4. Call Order Button (Bottom-Right: White with black border) */}
+          <a
+            href={`tel:${((product.metadata as Record<string, any>)?.call_phone) || "09678812525"}`}
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
+          >
+            <PhoneCall className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
+            <span>কল অর্ডার: {((product.metadata as Record<string, any>)?.call_phone) || "09678812525"}</span>
           </a>
         </div>
 
