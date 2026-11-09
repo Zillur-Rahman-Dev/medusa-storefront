@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
-import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2 } from "lucide-react"
+import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2, Package } from "lucide-react"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -26,6 +26,19 @@ const optionsAsKeymap = (
     acc[varopt.option_id] = varopt.value
     return acc
   }, {})
+}
+
+const formatSizeInBengali = (sizeStr: string = "") => {
+  const bnDigits: Record<string, string> = {
+    "0": "০", "1": "১", "2": "২", "3": "৩", "4": "৪",
+    "5": "৫", "6": "৬", "7": "৭", "8": "৮", "9": "৯",
+  }
+  let converted = sizeStr.replace(/\d/g, (d) => bnDigits[d] || d)
+  converted = converted
+    .replace(/kg/gi, " কেজি")
+    .replace(/\b(gm|g)\b/gi, " গ্রাম")
+    .trim()
+  return converted
 }
 
 export default function ProductActions({
@@ -158,6 +171,22 @@ export default function ProductActions({
     product.variants?.[0]?.calculated_price?.calculated_amount ??
     750
 
+  const packagingText = useMemo(() => {
+    const metaPackaging =
+      (selectedVariant?.metadata as Record<string, any>)?.packaging ||
+      (product?.metadata as Record<string, any>)?.packaging
+    if (metaPackaging) return metaPackaging
+
+    if (selectedVariant?.material?.trim()) {
+      return selectedVariant.material.trim()
+    }
+
+    const currentTitle =
+      selectedVariant?.title || product.variants?.[0]?.title || ""
+    const sizeBn = formatSizeInBengali(currentTitle) || "১ কেজি"
+    return `১টি একক ${sizeBn} ফুড-গ্রেড পাত্রে সুরক্ষিত ডেলিভারি`
+  }, [selectedVariant, product])
+
   return (
     <>
       <div className="flex flex-col gap-y-4" ref={actionsRef}>
@@ -190,9 +219,20 @@ export default function ProductActions({
                   </div>
                 )
               })}
-              <Divider />
             </div>
           )}
+
+          {/* Dynamic Packaging Badge */}
+          <div className="mt-3 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center gap-2.5 text-xs text-amber-950 dark:text-amber-200 shadow-sm transition-all">
+            <Package className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="leading-relaxed">
+              <strong className="text-amber-800 dark:text-amber-300">প্যাকেজিং:</strong> {packagingText}
+            </span>
+          </div>
+
+          <div className="mt-4">
+            <Divider />
+          </div>
         </div>
 
         {/* Product Price */}
@@ -260,19 +300,25 @@ export default function ProductActions({
           <div className="flex items-center gap-2.5">
             <Truck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>
-              <strong>ডেলিভারি চার্জ:</strong> ঢাকার মধ্যে ৳৭০, ঢাকার বাইরে ৳১৩০
+              <strong>ডেলিভারি চার্জ:</strong>{" "}
+              {((product.metadata as Record<string, any>)?.delivery_charge) ||
+                "ঢাকার মধ্যে ৳৭০, ঢাকার বাইরে ৳১৩০"}
             </span>
           </div>
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <span>
-              <strong>১০০% ক্যাশ অন ডেলিভারি:</strong> পার্সেল হাতে পেয়ে টেস্ট করে পেমেন্ট করুন
+              <strong>১০০% ক্যাশ অন ডেলিভারি:</strong>{" "}
+              {((product.metadata as Record<string, any>)?.cod_note) ||
+                "পার্সেল হাতে পেয়ে টেস্ট করে পেমেন্ট করুন"}
             </span>
           </div>
           <div className="flex items-center gap-2.5">
             <RefreshCw className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <span>
-              <strong>রিটার্ন পলিসি:</strong> ভেঙে গেলে বা ক্ষতিগ্রস্ত হলে সাথে সাথে নতুন জার প্রদান
+              <strong>রিটার্ন ও রিপ্লেসমেন্ট:</strong>{" "}
+              {((product.metadata as Record<string, any>)?.return_policy) ||
+                "ডেলিভারির সময় পাত্রে কোনো ক্ষতি বা লিক পরিলক্ষিত হলে সাথে সাথে সম্পূর্ণ ফ্রিতে নতুন মধু প্রদান"}
             </span>
           </div>
         </div>
