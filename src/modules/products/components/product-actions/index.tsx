@@ -301,12 +301,12 @@ export default function ProductActions({
             <span>{isAdding ? "যোগ হচ্ছে..." : "কার্টে যোগ করুন"}</span>
           </button>
 
-          {/* 2. Direct Order Button (Top-Right: Crimson Red with ShoppingBag icon) */}
+          {/* 2. Direct Order Button (Top-Right: Warm Amber matching "পণ্যের বিবরণ ও তথ্য" tab) */}
           <button
             type="button"
             onClick={handleDirectCheckout}
             disabled={!inStock || !selectedVariant || isOrdering || isAdding}
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-[#d32f2f] hover:bg-[#b71c1c] text-white shadow-md shadow-red-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
           >
             {isOrdering ? (
               <Loader2 className="w-4 h-4 animate-spin text-white" />
