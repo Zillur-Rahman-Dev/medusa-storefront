@@ -112,10 +112,15 @@ const naturalHoneyProducts: HoneyProductItem[] = [
   },
 ]
 
-export default function NaturalHoneySlider() {
+type NaturalHoneySliderProps = {
+  products?: HoneyProductItem[]
+}
+
+export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps) {
+  const displayProducts = products && products.length > 0 ? products : naturalHoneyProducts
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
-  const totalDots = 5 // Exactly 5 pagination dots matching reference screenshot: o o [===] o o
+  const totalDots = Math.min(Math.max(displayProducts.length - 3, 1), 6)
 
   // Auto-slide every 3.5 seconds with pause-on-hover
   useEffect(() => {
@@ -194,7 +199,7 @@ export default function NaturalHoneySlider() {
                 transform: `translateX(calc(-1 * ${currentIndex} * (100% / var(--items-per-view))))`,
               }}
             >
-              {naturalHoneyProducts.map((prod) => (
+              {displayProducts.map((prod) => (
                 <div
                   key={prod.id}
                   className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 shrink-0 px-2 sm:px-3"

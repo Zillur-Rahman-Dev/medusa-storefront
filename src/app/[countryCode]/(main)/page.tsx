@@ -12,6 +12,9 @@ import HoneyGuide from "@modules/home/components/honey-guide"
 import Testimonials from "@modules/home/components/testimonials"
 import FAQ from "@modules/home/components/faq"
 
+import { listProducts } from "@lib/data/products"
+import { mapMedusaProductToHoneyItem } from "@lib/util/honey-product"
+
 export const metadata: Metadata = {
   title: "PURE HONEY • সুন্দরবন ও গ্রামবাংলার খাঁটি প্রাকৃতিক মধুর সমাহার",
   description:
@@ -19,31 +22,124 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
+  // 1. Fetch live products from Medusa backend with categories, collections, and prices
+  let allHoneyItems: any[] = []
+  let featuredProducts: any[] = []
+  let topSellingProducts: any[] = []
+  let shelves: any[] = []
+
+  try {
+    const {
+      response: { products: allRawProducts },
+    } = await listProducts({
+      countryCode: "bd",
+      queryParams: {
+        limit: 100,
+        fields:
+          "*categories,*collection,*thumbnail,*images,*variants,*variants.calculated_price",
+      },
+    })
+
+    if (allRawProducts && allRawProducts.length > 0) {
+      allHoneyItems = allRawProducts.map((p) =>
+        mapMedusaProductToHoneyItem(p)
+      )
+
+      // 1. Featured Collection (Slider: "১০০% খাঁটি ও প্রাকৃতিক মধু" -> collection: featured-honey)
+      const featuredRaw = allRawProducts.filter(
+        (p) =>
+          p.collection?.handle === "featured-honey" ||
+          p.collection?.id === "pcol_01M6ZE4FSD4EBN2S7X6MSZWENT"
+      )
+      featuredProducts =
+        featuredRaw.length > 0
+          ? featuredRaw.map((p) => mapMedusaProductToHoneyItem(p, "প্রাকৃতিক"))
+          : allHoneyItems.slice(0, 8)
+
+      // 2. Top Selling (Category: "সর্বাধিক বিক্রিত সেরা মধু" -> category: top-selling)
+      const topSellingRaw = allRawProducts.filter((p) =>
+        p.categories?.some((c) => c.handle === "top-selling")
+      )
+      topSellingProducts =
+        topSellingRaw.length > 0
+          ? topSellingRaw
+              .slice(0, 4)
+              .map((p) => mapMedusaProductToHoneyItem(p, "সেরা বিক্রি"))
+          : allHoneyItems.slice(0, 4)
+
+      // 3. Shelves (Categories: sundarban-honey, flower-honey, wild-hill-honey)
+      const sundarbanRaw = allRawProducts.filter((p) =>
+        p.categories?.some((c) => c.handle === "sundarban-honey")
+      )
+      const flowerRaw = allRawProducts.filter((p) =>
+        p.categories?.some((c) => c.handle === "flower-honey")
+      )
+      const wildHillRaw = allRawProducts.filter((p) =>
+        p.categories?.some((c) => c.handle === "wild-hill-honey")
+      )
+
+      shelves = [
+        {
+          title: "সুন্দরবন ও ম্যানগ্রোভের খাঁটি মধু",
+          subtitle: "সুন্দরবনের গভীর ম্যানগ্রোভ ও বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধু",
+          handle: "sundarban-honey",
+          products: sundarbanRaw.map((p) =>
+            mapMedusaProductToHoneyItem(p, "সুন্দরবন")
+          ),
+        },
+        {
+          title: "ফুলভিত্তিক প্রাকৃতিক মধু",
+          subtitle: "সরিষা, লিচু, কালোজিরা ও ধনে ফুলের প্রাকৃতিক মধু",
+          handle: "flower-honey",
+          products: flowerRaw.map((p) =>
+            mapMedusaProductToHoneyItem(p, "ফুলভিত্তিক")
+          ),
+        },
+        {
+          title: "পাহাড়ি ও বুনো মৌচাকের মধু",
+          subtitle: "পাহাড়ের মৌচাক, বাবলা-কুল এবং কুসুম ও সূর্যমুখী ফুল",
+          handle: "wild-hill-honey",
+          products: wildHillRaw.map((p) =>
+            mapMedusaProductToHoneyItem(p, "বুনো পাহাড়ি")
+          ),
+        },
+      ].filter((s) => s.products.length > 0)
+    }
+  } catch (err) {
+    console.error("Failed to fetch live home products from Medusa backend:", err)
+  }
+
   return (
     <>
-      {/* 1. Dual-Banner Hero Section (সবার জন্য সেরা & যে কারণে আমাদের মধু সবচেয়ে খাঁটি) */}
+      {/* 1. Dual-Banner Hero Section */}
       <Hero />
 
-      {/* 2. Featured Categories (Round Icon Strip matching screenshot) */}
+      {/* 2. Featured Categories */}
       <FeaturedCategories />
 
-      {/* 3. Top Selling Products (4 Large Cards with Best Selling Badge & Dual Action Buttons) */}
-      <TopSelling />
+      {/* 3. Top Selling Products (Live from 'top-selling' category in Dashboard) */}
+      <TopSelling
+        products={topSellingProducts.length > 0 ? topSellingProducts : undefined}
+      />
 
       {/* 4. Quality Trust & Certification Bar */}
       <TrustBadges />
 
-      {/* 5. "All Natural Honey" Interactive Auto-Slide Carousel matching screenshot */}
-      <NaturalHoneySlider />
+      {/* 5. "১০০% খাঁটি ও প্রাকৃতিক মধু" (Live from 'featured-honey' collection in Dashboard) */}
+      <NaturalHoneySlider
+        products={featuredProducts.length > 0 ? featuredProducts : undefined}
+      />
 
-      {/* 6. Categorized Product Shelves (সুন্দরবন ও বন, ফুলভিত্তিক, এবং পাহাড়ি বুনো মধু) */}
-      <HoneyShelves />
+      {/* 6. Categorized Product Shelves (Live from sundarban-honey, flower-honey, wild-hill-honey in Dashboard) */}
+      <HoneyShelves shelves={shelves.length > 0 ? shelves : undefined} />
 
       {/* 6. Mid-Page Panorama Visual Banner */}
       <PanoramaBanner />
 
-      {/* 7. "Just For You" All 10 Honey Varieties Grid (2 Rows of 5 Cards with Discount Badges) */}
-      <AllHoneyGrid />
+      {/* 7. "আপনার জন্য বিশেষ বাছাই" All Products Grid (Live from Medusa Backend) */}
+      <AllHoneyGrid
+        products={allHoneyItems.length > 0 ? allHoneyItems : undefined}
+      />
 
       {/* 8. Honey Characteristics & Health Benefits Guide */}
       <HoneyGuide />

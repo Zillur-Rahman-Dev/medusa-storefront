@@ -4,9 +4,10 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { ArrowRight } from "lucide-react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
 
-type HoneyShelfSection = {
+export type HoneyShelfSection = {
   title: string
   subtitle: string
+  handle?: string
   products: HoneyProductItem[]
 }
 
@@ -187,10 +188,16 @@ const shelvesData: HoneyShelfSection[] = [
   },
 ]
 
-export default function HoneyShelves() {
+type HoneyShelvesProps = {
+  shelves?: HoneyShelfSection[]
+}
+
+export default function HoneyShelves({ shelves }: HoneyShelvesProps) {
+  const displayShelves = shelves && shelves.length > 0 ? shelves : shelvesData
+
   return (
     <div className="space-y-12 sm:space-y-16 py-8 sm:py-12 bg-white dark:bg-zinc-950 transition-colors">
-      {shelvesData.map((shelf, shelfIdx) => (
+      {displayShelves.map((shelf, shelfIdx) => (
         <section key={shelfIdx} className="content-container">
           {/* Header Row matching screenshot */}
           <div className="flex items-end justify-between mb-6 pb-3 border-b border-zinc-200 dark:border-zinc-800">
@@ -205,7 +212,7 @@ export default function HoneyShelves() {
             </div>
 
             <LocalizedClientLink
-              href="/store"
+              href={shelf.handle ? `/categories/${shelf.handle}` : "/store"}
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
             >
               <span>সকল মধু দেখুন</span>

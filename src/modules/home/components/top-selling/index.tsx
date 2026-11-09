@@ -57,7 +57,13 @@ const topSellingHoneys: HoneyProductItem[] = [
   },
 ]
 
-export default function TopSelling() {
+type TopSellingProps = {
+  products?: HoneyProductItem[]
+}
+
+export default function TopSelling({ products }: TopSellingProps) {
+  const displayProducts = products && products.length > 0 ? products : topSellingHoneys
+
   return (
     <section className="py-10 sm:py-14 bg-white dark:bg-zinc-950 transition-colors">
       <div className="content-container">
@@ -74,7 +80,7 @@ export default function TopSelling() {
 
         {/* Exactly 4 Products in a Row matching user screenshot */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-          {topSellingHoneys.map((prod) => (
+          {displayProducts.slice(0, 4).map((prod) => (
             <HoneyProductCard key={prod.id} product={prod} />
           ))}
         </div>

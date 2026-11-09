@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
 import { addToCart } from "@lib/data/cart"
@@ -11,10 +12,12 @@ export type HoneyProductItem = {
   title: string
   handle: string
   variantId: string
-  weight: string
+  weight?: string
   price: number
-  regularPrice: number
-  icon: string
+  regularPrice?: number
+  thumbnail?: string | null
+  images?: any[] | null
+  icon?: string
   badge?: string
   rating?: number
   reviewCount?: number
@@ -101,12 +104,32 @@ export default function HoneyProductCard({
       )}
 
       <div>
-        {/* Product Image without any outer border matching user request */}
+        {/* Product Real Image from Medusa Dashboard */}
         <LocalizedClientLink
           href={`/products/${product.handle}`}
-          className="block aspect-square w-full rounded-2xl bg-transparent p-6 flex items-center justify-center text-7xl select-none group-hover:scale-105 transition-transform"
+          className="relative block aspect-square w-full rounded-2xl overflow-hidden bg-gradient-to-b from-amber-50/40 to-transparent dark:from-zinc-800/30 dark:to-transparent p-2 sm:p-3 flex items-center justify-center transition-all duration-300"
         >
-          <span>{product.icon}</span>
+          {product.thumbnail ? (
+            <Image
+              src={product.thumbnail}
+              alt={product.title}
+              fill
+              unoptimized
+              sizes="(max-width: 640px) 240px, (max-width: 1024px) 300px, 360px"
+              className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : product.icon ? (
+            <span className="text-6xl drop-shadow-sm select-none transition-transform duration-300 group-hover:scale-110">
+              {product.icon}
+            </span>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50/80 via-amber-100/40 to-orange-50/60 dark:from-zinc-800/60 dark:to-zinc-900/60 rounded-xl select-none">
+              <span className="text-5xl sm:text-6xl drop-shadow-sm transition-transform duration-300 group-hover:scale-110">🍯</span>
+              <span className="text-[11px] font-black tracking-wider uppercase text-amber-800/80 dark:text-amber-400 mt-2">
+                ১০০% খাঁটি মধু
+              </span>
+            </div>
+          )}
         </LocalizedClientLink>
 
         {/* Product Title */}
