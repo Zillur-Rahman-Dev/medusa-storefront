@@ -54,13 +54,25 @@ export default function ProductActions({
   const [isOrdering, setIsOrdering] = useState(false)
   const countryCode = useParams().countryCode as string
 
-  // If there is only 1 variant, preselect the options
+  // Pre-select variant: Default to the 1st variant (or variant from URL `?v_id=...`)
   useEffect(() => {
-    if (product.variants?.length === 1) {
-      const variantOptions = optionsAsKeymap(product.variants[0].options)
-      setOptions(variantOptions ?? {})
+    if (!product.variants || product.variants.length === 0) return
+
+    const urlVariantId = searchParams.get("v_id")
+    const targetVariant =
+      product.variants.find((v) => v.id === urlVariantId) ||
+      product.variants[0]
+
+    if (targetVariant) {
+      const variantOptions = optionsAsKeymap(targetVariant.options)
+      if (variantOptions) {
+        setOptions((prev) => {
+          if (isEqual(prev, variantOptions)) return prev
+          return variantOptions
+        })
+      }
     }
-  }, [product.variants])
+  }, [product.variants, searchParams])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
@@ -183,6 +195,20 @@ export default function ProductActions({
 
     const currentTitle =
       selectedVariant?.title || product.variants?.[0]?.title || ""
+
+    // Check if the product or variant indicates size/weight
+    const hasSizeOption =
+      product.options?.some((opt) =>
+        ["size", "ওজন", "সাইজ", "ওজন/সাইজ"].includes(
+          opt.title?.toLowerCase() || ""
+        )
+      ) || /\d+\s*(kg|g|gm|ml|কেজি|গ্রাম|লিটার)/i.test(currentTitle)
+
+    // If no size option and no explicit packaging note, hide the badge
+    if (!hasSizeOption) {
+      return null
+    }
+
     const sizeBn = formatSizeInBengali(currentTitle) || "১ কেজি"
     return `১টি একক ${sizeBn} ফুড-গ্রেড পাত্রে সুরক্ষিত ডেলিভারি`
   }, [selectedVariant, product])
@@ -201,11 +227,22 @@ export default function ProductActions({
           </span>
         </div>
 
-        {/* Variant / Weight Selector */}
+        {/* Variant / Weight Selector (Shows even if 1 variant for design consistency) */}
         <div>
-          {(product.variants?.length ?? 0) > 1 && (
+          {(product.options || []).some(
+            (opt) =>
+              opt.title?.toLowerCase() !== "default option" &&
+              !opt.values?.some((v) => v.value === "Default Option Value")
+          ) && (
             <div className="flex flex-col gap-y-4">
               {(product.options || []).map((option) => {
+                if (
+                  option.title?.toLowerCase() === "default option" ||
+                  option.values?.some((v) => v.value === "Default Option Value")
+                ) {
+                  return null
+                }
+
                 return (
                   <div key={option.id}>
                     <OptionSelect
@@ -223,12 +260,14 @@ export default function ProductActions({
           )}
 
           {/* Dynamic Packaging Badge (Compact & Sleek) */}
-          <div className="mt-2 py-1.5 px-3 rounded-lg bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center gap-2 text-xs text-amber-950 dark:text-amber-200 shadow-sm transition-all">
-            <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="leading-snug">
-              <strong className="text-amber-800 dark:text-amber-300">প্যাকেজিং:</strong> {packagingText}
-            </span>
-          </div>
+          {packagingText && (
+            <div className="mt-2 py-1.5 px-3 rounded-lg bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center gap-2 text-xs text-amber-950 dark:text-amber-200 shadow-sm transition-all">
+              <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="leading-snug">
+                <strong className="text-amber-800 dark:text-amber-300">প্যাকেজিং:</strong> {packagingText}
+              </span>
+            </div>
+          )}
 
           <div className="mt-2.5">
             <Divider />
