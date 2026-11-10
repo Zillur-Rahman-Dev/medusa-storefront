@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-import { X, SlidersHorizontal, ListFilter } from "lucide-react"
+import { X, SlidersHorizontal, ListFilter, ArrowUpDown, Eye } from "lucide-react"
 
 import PriceRangeSlider from "../price-range-slider"
 import WeightFilter, { WEIGHT_OPTIONS } from "../weight-filter"
@@ -207,7 +207,7 @@ export default function ClientStoreView({
       return true
     })
 
-    // Sorting (matching Image 2)
+    // Sorting
     result.sort((a, b) => {
       if (sortBy === "price_asc") {
         return getProductMinPrice(a) - getProductMinPrice(b)
@@ -294,12 +294,45 @@ export default function ClientStoreView({
     return isNaN(limit) ? filteredProducts : filteredProducts.slice(0, limit)
   }, [filteredProducts, itemsPerPage])
 
+  // Mobile clean button label helpers so user never sees duplicate "Default ...":
+  const currentSortLabel = useMemo(() => {
+    switch (sortBy) {
+      case "latest":
+        return "নতুন মধু"
+      case "oldest":
+        return "পুরাতন"
+      case "price_asc":
+        return "কম দাম"
+      case "price_desc":
+        return "বেশি দাম"
+      case "offer":
+        return "অফার"
+      default:
+        return "সাজান"
+    }
+  }, [sortBy])
+
+  const currentLimitLabel = useMemo(() => {
+    switch (itemsPerPage) {
+      case "16":
+        return "১৬টি"
+      case "20":
+        return "২০টি"
+      case "24":
+        return "২৪টি"
+      case "36":
+        return "৩৬টি"
+      default:
+        return "সব মধু"
+    }
+  }, [itemsPerPage])
+
   return (
-    <div className="bg-zinc-50/50 dark:bg-zinc-950 min-h-screen py-6 sm:py-8">
+    <div className="bg-zinc-50/50 dark:bg-zinc-950 min-h-screen py-5 sm:py-8">
       <div className="content-container">
-        {/* Breadcrumb row matching image */}
-        <div className="flex items-center justify-between pb-4 text-xs text-zinc-500">
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+        {/* Breadcrumb row */}
+        <div className="flex items-center justify-between pb-3 sm:pb-4 text-xs text-zinc-500">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100">
             আমাদের সকল খাঁটি মধু
           </h1>
           <div className="hidden sm:flex items-center gap-1.5">
@@ -309,126 +342,238 @@ export default function ClientStoreView({
           </div>
         </div>
 
-        {/* MOBILE TOP CONTROLS BAR (Image 4): [ ≡ FILTERS ] [ Default Sorting ∨ ] [ Default ∨ ] */}
-        <div className="lg:hidden mb-4 flex items-center gap-2">
-          {/* 1. FILTERS Button (Image 4) */}
-          <button
-            type="button"
-            onClick={() => setIsMobileDrawerOpen(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border-2 border-orange-500 bg-white dark:bg-zinc-900 text-orange-500 font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
-          >
-            <ListFilter className="w-4 h-4 stroke-[2.5]" />
-            <span>FILTERS</span>
-            {activeFiltersCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-black ml-1">
-                {activeFiltersCount}
-              </span>
-            )}
-          </button>
-
-          {/* 2. Sort By Select (Image 4) */}
-          <div className="flex-1 relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as StoreSortOption)}
-              className="w-full py-2 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer truncate pr-6"
+        {/* MOBILE TOP CONTROLS BAR: Clear buttons so customer knows what each does! */}
+        <div className="lg:hidden mb-3">
+          <div className="grid grid-cols-3 gap-2">
+            {/* 1. FILTERS Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="flex items-center justify-center gap-1 py-2 px-2 rounded-lg border-2 border-orange-500 bg-white dark:bg-zinc-900 text-orange-500 font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
             >
-              <option value="default">Default Sorting</option>
-              <option value="latest">Sort by Latest</option>
-              <option value="oldest">Sort by Oldest</option>
-              <option value="price_asc">Price Low to High</option>
-              <option value="price_desc">Price High to Low</option>
-              <option value="offer">Offered Products</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-zinc-500 text-xs">
-              ▼
-            </div>
-          </div>
+              <ListFilter className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="truncate">ফিল্টার</span>
+              {activeFiltersCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-black ml-0.5 shrink-0">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
 
-          {/* 3. Items Limit Select (Image 4) */}
-          <div className="w-24 relative">
-            <select
-              value={itemsPerPage}
-              onChange={(e) => setItemsPerPage(e.target.value)}
-              className="w-full py-2 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold text-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer text-center pr-5"
-            >
-              <option value="default">Default</option>
-              <option value="16">Show 16</option>
-              <option value="20">Show 20</option>
-              <option value="24">Show 24</option>
-              <option value="36">Show 36</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-orange-500 text-xs">
-              ▼
-            </div>
-          </div>
-        </div>
-
-        {/* DESKTOP TOP BAR (Image 1 & 2): Sort By : [ Default Sorting ∨ ] ... [ Default ∨ ] */}
-        <div className="hidden lg:flex items-center justify-between py-3 px-4 mb-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
-          {/* Sort By controls */}
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-              Sort By :
-            </span>
+            {/* 2. Sorting Button (Clear label: "সাজান" with arrow) */}
             <div className="relative">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as StoreSortOption)}
-                className="py-1.5 pl-3 pr-8 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer"
+                className="w-full h-full py-2 pl-2 pr-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer truncate"
               >
-                <option value="default">Default Sorting</option>
-                <option value="latest">Sort by Latest</option>
-                <option value="oldest">Sort by Oldest</option>
-                <option value="price_asc">Price Low to High</option>
-                <option value="price_desc">Price High to Low</option>
-                <option value="offer">Offered Products</option>
+                <option value="default">সাধারণ সাজান (Default)</option>
+                <option value="latest">নতুন মধু (Latest)</option>
+                <option value="oldest">পুরাতন মধু (Oldest)</option>
+                <option value="price_asc">দাম: কম থেকে বেশি</option>
+                <option value="price_desc">দাম: বেশি থেকে কম</option>
+                <option value="offer">অফার প্রোডাক্ট</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-zinc-400 text-xs">
-                ▼
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 text-zinc-700 dark:text-zinc-300">
+                <span className="truncate text-xs font-bold flex items-center gap-1">
+                  <ArrowUpDown className="w-3 h-3 text-zinc-400 shrink-0" />
+                  <span className="truncate">{currentSortLabel}</span>
+                </span>
+                <span className="text-[10px] text-zinc-400">▼</span>
               </div>
             </div>
-          </div>
 
-          {/* Show count / items per page dropdown (Image 1) */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500">প্রদর্শন:</span>
+            {/* 3. Items Limit Button (Clear label: "প্রদর্শন / সব মধু") */}
             <div className="relative">
               <select
                 value={itemsPerPage}
                 onChange={(e) => setItemsPerPage(e.target.value)}
-                className="py-1.5 pl-3 pr-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-bold text-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer"
+                className="w-full h-full py-2 pl-2 pr-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold text-orange-600 dark:text-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer truncate"
               >
-                <option value="default">Default</option>
-                <option value="16">Show 16</option>
-                <option value="20">Show 20</option>
-                <option value="24">Show 24</option>
-                <option value="36">Show 36</option>
+                <option value="default">প্রদর্শন: সব মধু (All)</option>
+                <option value="16">১৬টি করে দেখুন (16)</option>
+                <option value="20">২০টি করে দেখুন (20)</option>
+                <option value="24">২৪টি করে দেখুন (24)</option>
+                <option value="36">৩৬টি করে দেখুন (36)</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-orange-500 text-xs">
-                ▼
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 text-orange-600 dark:text-orange-400">
+                <span className="truncate text-xs font-bold flex items-center gap-1">
+                  <Eye className="w-3 h-3 text-orange-400 shrink-0" />
+                  <span className="truncate">{currentLimitLabel}</span>
+                </span>
+                <span className="text-[10px] text-orange-500">▼</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Product Count & Active Filters */}
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5 text-xs">
+            <span className="text-zinc-600 dark:text-zinc-400 font-semibold">
+              মোট <span className="font-extrabold text-orange-600">{filteredProducts.length}টি</span> মধু পাওয়া গেছে
+            </span>
+            {activeFiltersCount > 0 && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-red-600 font-bold text-xs hover:underline cursor-pointer"
+              >
+                রিসেট করুন
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* DESKTOP TOP BAR:
+            LEFT SIDE: Product Count + সক্রিয় ফিল্টার tags
+            RIGHT SIDE: Sort By : [ ... ] and প্রদর্শন: [ ... ] */}
+        <div className="hidden lg:flex items-center justify-between py-2.5 px-4 mb-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+          {/* LEFT SIDE: Product Count + Active Filter Tags */}
+          <div className="flex items-center gap-3 flex-wrap min-w-0">
+            {/* Product Count Display */}
+            <span className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 px-3 py-1 rounded-lg shrink-0">
+              মোট {filteredProducts.length}টি মধু
+            </span>
+
+            {/* Active Filters row (Image 3) on the LEFT */}
+            {activeFiltersCount > 0 && (
+              <div className="flex items-center gap-2 flex-wrap border-l border-zinc-200 dark:border-zinc-800 pl-3">
+                <span className="text-xs text-zinc-500 font-medium shrink-0">
+                  সক্রিয় ফিল্টার:
+                </span>
+
+                {/* Search tag */}
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+                    <span>সার্চ: &ldquo;{searchQuery}&rdquo;</span>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="hover:text-red-500 p-0.5 cursor-pointer"
+                      aria-label="Remove search filter"
+                    >
+                      <X className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Category tag */}
+                {activeCategoryName && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+                    <span>ক্যাটেগরি: {activeCategoryName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategory("all")}
+                      className="hover:text-red-500 p-0.5 cursor-pointer"
+                      aria-label="Remove category filter"
+                    >
+                      <X className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Weight tag (Image 3: ওজন: ৫০০ গ্রাম ✕) */}
+                {activeWeightName && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+                    <span>ওজন: {activeWeightName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWeight("all")}
+                      className="hover:text-red-500 p-0.5 cursor-pointer"
+                      aria-label="Remove weight filter"
+                    >
+                      <X className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Price tag (Image 3: দাম: ৳০ - ৳১,৯৫০ ✕) */}
+                {(priceRange[0] > minPossiblePrice ||
+                  priceRange[1] < maxPossiblePrice) && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+                    <span>
+                      দাম: ৳{priceRange[0].toLocaleString()} - ৳
+                      {priceRange[1].toLocaleString()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPriceRange([minPossiblePrice, maxPossiblePrice])
+                      }
+                      className="hover:text-red-500 p-0.5 cursor-pointer"
+                      aria-label="Remove price filter"
+                    >
+                      <X className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT SIDE: Sort By and প্রদর্শন Dropdowns */}
+          <div className="flex items-center gap-4 shrink-0 ml-4">
+            {/* Sort By controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                Sort By :
+              </span>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as StoreSortOption)}
+                  className="py-1.5 pl-3 pr-8 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer"
+                >
+                  <option value="default">Default Sorting</option>
+                  <option value="latest">Sort by Latest</option>
+                  <option value="oldest">Sort by Oldest</option>
+                  <option value="price_asc">Price Low to High</option>
+                  <option value="price_desc">Price High to Low</option>
+                  <option value="offer">Offered Products</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-zinc-400 text-xs">
+                  ▼
+                </div>
+              </div>
+            </div>
+
+            {/* প্রদর্শন dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                প্রদর্শন :
+              </span>
+              <div className="relative">
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(e.target.value)}
+                  className="py-1.5 pl-3 pr-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-bold text-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer"
+                >
+                  <option value="default">Default</option>
+                  <option value="16">Show 16</option>
+                  <option value="20">Show 20</option>
+                  <option value="24">Show 24</option>
+                  <option value="36">Show 36</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-orange-500 text-xs">
+                  ▼
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ACTIVE FILTER TAGS ROW (Matching Image 3 exactly):
-            "সক্রিয় ফিল্টার: [ ওজন: ৫০০ গ্রাম ✕ ] [ দাম: ৳০ - ৳১,৯৫০ ✕ ]" */}
+        {/* MOBILE ACTIVE FILTER TAGS (Image 3) */}
         {activeFiltersCount > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-zinc-600 dark:text-zinc-400 font-medium">
-              সক্রিয় ফিল্টার:
-            </span>
+          <div className="lg:hidden mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-zinc-500 font-medium">সক্রিয় ফিল্টার:</span>
 
             {/* Search tag */}
             {searchQuery && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>সার্চ: &ldquo;{searchQuery}&rdquo;</span>
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
                   className="hover:text-red-500 p-0.5 cursor-pointer"
-                  aria-label="Remove search filter"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
                 </button>
@@ -437,38 +582,36 @@ export default function ClientStoreView({
 
             {/* Category tag */}
             {activeCategoryName && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>ক্যাটেগরি: {activeCategoryName}</span>
                 <button
                   type="button"
                   onClick={() => setSelectedCategory("all")}
                   className="hover:text-red-500 p-0.5 cursor-pointer"
-                  aria-label="Remove category filter"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
                 </button>
               </span>
             )}
 
-            {/* Weight tag (Image 3: ওজন: ৫০০ গ্রাম ✕) */}
+            {/* Weight tag */}
             {activeWeightName && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>ওজন: {activeWeightName}</span>
                 <button
                   type="button"
                   onClick={() => setSelectedWeight("all")}
                   className="hover:text-red-500 p-0.5 cursor-pointer"
-                  aria-label="Remove weight filter"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
                 </button>
               </span>
             )}
 
-            {/* Price tag (Image 3: দাম: ৳০ - ৳১,৯৫০ ✕) */}
+            {/* Price tag */}
             {(priceRange[0] > minPossiblePrice ||
               priceRange[1] < maxPossiblePrice) && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>
                   দাম: ৳{priceRange[0].toLocaleString()} - ৳
                   {priceRange[1].toLocaleString()}
@@ -479,7 +622,6 @@ export default function ClientStoreView({
                     setPriceRange([minPossiblePrice, maxPossiblePrice])
                   }
                   className="hover:text-red-500 p-0.5 cursor-pointer"
-                  aria-label="Remove price filter"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
                 </button>
@@ -504,7 +646,7 @@ export default function ClientStoreView({
               </button>
             )}
 
-            {/* 2. Price Range Slider (Image 1, 2, 5, 6) */}
+            {/* 2. Price Range Slider */}
             <PriceRangeSlider
               min={minPossiblePrice}
               max={maxPossiblePrice}
@@ -567,7 +709,7 @@ export default function ClientStoreView({
         </div>
       </div>
 
-      {/* MOBILE LEFT SLIDE-OVER DRAWER (Image 4 & 5) */}
+      {/* MOBILE LEFT SLIDE-OVER DRAWER (Image 5) */}
       {isMobileDrawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex justify-start">
           {/* Backdrop on the right */}
@@ -576,7 +718,7 @@ export default function ClientStoreView({
             onClick={() => setIsMobileDrawerOpen(false)}
           />
 
-          {/* Left Drawer Panel (slides from LEFT matching Image 5) */}
+          {/* Left Drawer Panel */}
           <div className="relative w-[85%] max-w-[320px] bg-white dark:bg-zinc-900 h-full overflow-y-auto p-4 shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-250">
             <div className="space-y-4">
               {/* Drawer Top Header */}
@@ -597,7 +739,7 @@ export default function ClientStoreView({
                 </button>
               </div>
 
-              {/* Red Clear All Filters Button inside drawer (Image 5) */}
+              {/* Red Clear All Filters Button inside drawer */}
               {activeFiltersCount > 0 && (
                 <button
                   type="button"
@@ -609,7 +751,7 @@ export default function ClientStoreView({
                 </button>
               )}
 
-              {/* Price Range Slider (Image 5) */}
+              {/* Price Range Slider */}
               <PriceRangeSlider
                 min={minPossiblePrice}
                 max={maxPossiblePrice}
