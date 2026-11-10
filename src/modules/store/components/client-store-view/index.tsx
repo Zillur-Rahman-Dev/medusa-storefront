@@ -8,6 +8,7 @@ import { X, SlidersHorizontal, ListFilter, ArrowUpDown, Eye } from "lucide-react
 import PriceRangeSlider from "../price-range-slider"
 import WeightFilter, { WEIGHT_OPTIONS } from "../weight-filter"
 import CategoryFilter from "../category-filter"
+import ProductFlagFilter from "../product-flag-filter"
 import ProductPreview from "@modules/products/components/product-preview"
 
 type ClientStoreViewProps = {
@@ -72,11 +73,13 @@ export default function ClientStoreView({
   const initialQ = searchParams?.get("q") || ""
   const initialCategory = searchParams?.get("category") || "all"
   const initialWeight = searchParams?.get("weight") || "all"
+  const initialFlag = searchParams?.get("flag") || "all"
   const initialSort = (searchParams?.get("sortBy") as StoreSortOption) || "default"
 
   const [searchQuery, setSearchQuery] = useState(initialQ)
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedWeight, setSelectedWeight] = useState(initialWeight)
+  const [selectedFlag, setSelectedFlag] = useState(initialFlag)
   const [priceRange, setPriceRange] = useState<[number, number]>([
     0,
     maxPossiblePrice,
@@ -99,6 +102,7 @@ export default function ClientStoreView({
     if (searchQuery.trim()) params.set("q", searchQuery.trim())
     if (selectedCategory !== "all") params.set("category", selectedCategory)
     if (selectedWeight !== "all") params.set("weight", selectedWeight)
+    if (selectedFlag !== "all") params.set("flag", selectedFlag)
     if (priceRange[0] > minPossiblePrice) params.set("minPrice", priceRange[0].toString())
     if (priceRange[1] < maxPossiblePrice) params.set("maxPrice", priceRange[1].toString())
     if (sortBy !== "default" && sortBy !== "created_at") params.set("sortBy", sortBy)
@@ -110,6 +114,7 @@ export default function ClientStoreView({
     searchQuery,
     selectedCategory,
     selectedWeight,
+    selectedFlag,
     priceRange,
     sortBy,
     countryCode,
@@ -117,10 +122,11 @@ export default function ClientStoreView({
     maxPossiblePrice,
   ])
 
-  // Dynamic counts for categories and weights
-  const { categoryCounts, weightCounts } = useMemo(() => {
+  // Dynamic counts for categories, weights, and flags
+  const { categoryCounts, weightCounts, flagCounts } = useMemo(() => {
     const catMap: Record<string, number> = { all: products.length }
     const weightMap: Record<string, number> = { all: products.length }
+    const fMap: Record<string, number> = { best_selling: 0, new_arrival: 0 }
 
     categories.forEach((c) => {
       catMap[c.id] = 0
@@ -131,12 +137,14 @@ export default function ClientStoreView({
       weightMap[w.id] = 0
     })
 
-    products.forEach((p) => {
+    products.forEach((p, idx) => {
+      // Categories
       p.categories?.forEach((c) => {
         catMap[c.id] = (catMap[c.id] || 0) + 1
         if (c.handle) catMap[c.handle] = (catMap[c.handle] || 0) + 1
       })
 
+      // Weights
       WEIGHT_OPTIONS.forEach((w) => {
         if (w.id === "all") return
         const hasMatchingVariant = p.variants?.some((v) =>
@@ -149,14 +157,32 @@ export default function ClientStoreView({
           weightMap[w.id] = (weightMap[w.id] || 0) + 1
         }
       })
+
+      // Flags
+      const isBest =
+        p.categories?.some(
+          (c) =>
+            c.handle?.includes("top-selling") ||
+            c.name?.includes("বিক্রিত") ||
+            c.name?.includes("সেরা")
+        ) ||
+        p.tags?.some((t) => t.value?.toLowerCase().includes("best")) ||
+        idx < 4
+
+      if (isBest) fMap.best_selling = (fMap.best_selling || 0) + 1
+
+      // New arrival (top 4 or tags)
+      if (idx < 5 || p.tags?.some((t) => t.value?.toLowerCase().includes("new"))) {
+        fMap.new_arrival = (fMap.new_arrival || 0) + 1
+      }
     })
 
-    return { categoryCounts: catMap, weightCounts: weightMap }
+    return { categoryCounts: catMap, weightCounts: weightMap, flagCounts: fMap }
   }, [products, categories])
 
   // In-Memory Filtering and Sorting (0ms, Zero Server Network Load)
   const filteredProducts = useMemo(() => {
-    let result = products.filter((product) => {
+    let result = products.filter((product, idx) => {
       // 1. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
@@ -194,7 +220,25 @@ export default function ClientStoreView({
         }
       }
 
-      // 4. Price Range Filter
+      // 4. Product Flag Filter (Best Selling / New Arrival)
+      if (selectedFlag === "best_selling") {
+        const isBest =
+          product.categories?.some(
+            (c) =>
+              c.handle?.includes("top-selling") ||
+              c.name?.includes("বিক্রিত") ||
+              c.name?.includes("সেরা")
+          ) ||
+          product.tags?.some((t) => t.value?.toLowerCase().includes("best")) ||
+          idx < 4
+        if (!isBest) return false
+      } else if (selectedFlag === "new_arrival") {
+        const isNew =
+          idx < 5 || product.tags?.some((t) => t.value?.toLowerCase().includes("new"))
+        if (!isNew) return false
+      }
+
+      // 5. Price Range Filter
       const [currentMin, currentMax] = priceRange
       const hasPriceInRange = product.variants?.some((v: any) => {
         const amt = v.calculated_price?.calculated_amount
@@ -242,6 +286,7 @@ export default function ClientStoreView({
     searchQuery,
     selectedCategory,
     selectedWeight,
+    selectedFlag,
     priceRange,
     sortBy,
   ])
@@ -251,12 +296,14 @@ export default function ClientStoreView({
     let count = 0
     if (selectedCategory !== "all") count++
     if (selectedWeight !== "all") count++
+    if (selectedFlag !== "all") count++
     if (priceRange[0] > minPossiblePrice || priceRange[1] < maxPossiblePrice) count++
     if (searchQuery.trim()) count++
     return count
   }, [
     selectedCategory,
     selectedWeight,
+    selectedFlag,
     priceRange,
     searchQuery,
     minPossiblePrice,
@@ -266,6 +313,7 @@ export default function ClientStoreView({
   const handleResetFilters = () => {
     setSelectedCategory("all")
     setSelectedWeight("all")
+    setSelectedFlag("all")
     setPriceRange([minPossiblePrice, maxPossiblePrice])
     setSearchQuery("")
     setSortBy("default")
@@ -286,6 +334,13 @@ export default function ClientStoreView({
     const found = WEIGHT_OPTIONS.find((w) => w.id === selectedWeight)
     return found ? found.label : selectedWeight
   }, [selectedWeight])
+
+  // Active Flag Name for chip
+  const activeFlagName = useMemo(() => {
+    if (selectedFlag === "best_selling") return "Best Selling"
+    if (selectedFlag === "new_arrival") return "New Arrival"
+    return null
+  }, [selectedFlag])
 
   // Pagination slice
   const displayedProducts = useMemo(() => {
@@ -342,7 +397,7 @@ export default function ClientStoreView({
           </div>
         </div>
 
-        {/* MOBILE TOP CONTROLS BAR: Clear buttons so customer knows what each does! */}
+        {/* MOBILE TOP CONTROLS BAR: 3 distinct buttons */}
         <div className="lg:hidden mb-3">
           <div className="grid grid-cols-3 gap-2">
             {/* 1. FILTERS Button */}
@@ -383,7 +438,7 @@ export default function ClientStoreView({
               </div>
             </div>
 
-            {/* 3. Items Limit Button (Clear label: "প্রদর্শন / সব মধু") */}
+            {/* 3. Items Limit Button (Clear label: "সব মধু") */}
             <div className="relative">
               <select
                 value={itemsPerPage}
@@ -471,7 +526,7 @@ export default function ClientStoreView({
                   </span>
                 )}
 
-                {/* Weight tag (Image 3: ওজন: ৫০০ গ্রাম ✕) */}
+                {/* Weight tag */}
                 {activeWeightName && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
                     <span>ওজন: {activeWeightName}</span>
@@ -486,7 +541,22 @@ export default function ClientStoreView({
                   </span>
                 )}
 
-                {/* Price tag (Image 3: দাম: ৳০ - ৳১,৯৫০ ✕) */}
+                {/* Flag tag */}
+                {activeFlagName && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
+                    <span>ফ্ল্যাগ: {activeFlagName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFlag("all")}
+                      className="hover:text-red-500 p-0.5 cursor-pointer"
+                      aria-label="Remove flag filter"
+                    >
+                      <X className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Price tag */}
                 {(priceRange[0] > minPossiblePrice ||
                   priceRange[1] < maxPossiblePrice) && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
@@ -608,6 +678,20 @@ export default function ClientStoreView({
               </span>
             )}
 
+            {/* Flag tag */}
+            {activeFlagName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
+                <span>ফ্ল্যাগ: {activeFlagName}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFlag("all")}
+                  className="hover:text-red-500 p-0.5 cursor-pointer"
+                >
+                  <X className="w-3 h-3 stroke-[2.5]" />
+                </button>
+              </span>
+            )}
+
             {/* Price tag */}
             {(priceRange[0] > minPossiblePrice ||
               priceRange[1] < maxPossiblePrice) && (
@@ -632,9 +716,9 @@ export default function ClientStoreView({
 
         {/* MAIN LAYOUT: Sidebar + Product Grid */}
         <div className="flex flex-col lg:flex-row lg:items-start gap-8">
-          {/* DESKTOP SIDEBAR */}
+          {/* DESKTOP SIDEBAR (Layout matching reference image) */}
           <aside className="hidden lg:block w-72 shrink-0 space-y-4 sticky top-20">
-            {/* 1. Red Clear All Filters Button (Matching Image 1 & 2) */}
+            {/* 1. Red Clear All Filters Button */}
             {activeFiltersCount > 0 && (
               <button
                 type="button"
@@ -646,7 +730,7 @@ export default function ClientStoreView({
               </button>
             )}
 
-            {/* 2. Price Range Slider */}
+            {/* 2. Price Range Slider (Centered thumb, matching Image 6) */}
             <PriceRangeSlider
               min={minPossiblePrice}
               max={maxPossiblePrice}
@@ -655,19 +739,26 @@ export default function ClientStoreView({
               step={50}
             />
 
-            {/* 3. Weight / Pack Size Filter */}
+            {/* 3. Categories Filter (With tick mark checkboxes, matching Image) */}
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onChange={setSelectedCategory}
+              productCounts={categoryCounts}
+            />
+
+            {/* 4. Weight / Pack Size Filter (Compact tag chips) */}
             <WeightFilter
               selectedWeight={selectedWeight}
               onChange={setSelectedWeight}
               productCounts={weightCounts}
             />
 
-            {/* 4. Categories Filter */}
-            <CategoryFilter
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onChange={setSelectedCategory}
-              productCounts={categoryCounts}
+            {/* 5. Product Flag Filter (Best Selling, New Arrival, matching Image 3rd card) */}
+            <ProductFlagFilter
+              selectedFlag={selectedFlag}
+              onChange={setSelectedFlag}
+              productCounts={flagCounts}
             />
           </aside>
 
@@ -760,19 +851,26 @@ export default function ClientStoreView({
                 step={50}
               />
 
-              {/* Weight Filter */}
+              {/* Categories Filter (Tick mark checkboxes) */}
+              <CategoryFilter
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onChange={setSelectedCategory}
+                productCounts={categoryCounts}
+              />
+
+              {/* Weight Filter (Compact tag chips) */}
               <WeightFilter
                 selectedWeight={selectedWeight}
                 onChange={setSelectedWeight}
                 productCounts={weightCounts}
               />
 
-              {/* Categories Filter */}
-              <CategoryFilter
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onChange={setSelectedCategory}
-                productCounts={categoryCounts}
+              {/* Product Flag Filter */}
+              <ProductFlagFilter
+                selectedFlag={selectedFlag}
+                onChange={setSelectedFlag}
+                productCounts={flagCounts}
               />
             </div>
 
@@ -781,14 +879,14 @@ export default function ClientStoreView({
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs"
+                className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs cursor-pointer"
               >
                 রিসেট
               </button>
               <button
                 type="button"
                 onClick={() => setIsMobileDrawerOpen(false)}
-                className="flex-2 py-2.5 px-4 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md"
+                className="flex-2 py-2.5 px-4 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md cursor-pointer"
               >
                 {filteredProducts.length}টি মধু দেখুন
               </button>

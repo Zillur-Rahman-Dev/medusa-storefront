@@ -30,7 +30,7 @@ export const WEIGHT_OPTIONS: WeightOption[] = [
     id: "1kg",
     label: "১ কেজি",
     sublabel: "1kg",
-    badge: "জনপ্রিয়",
+    badge: "সেরা",
     matches: (title: string, weight?: string) => {
       const t = `${title} ${weight || ""}`.toLowerCase()
       return (
@@ -113,7 +113,7 @@ export default function WeightFilter({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            className="p-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
             aria-label={isOpen ? "Collapse weight filter" : "Expand weight filter"}
           >
             {isOpen ? (
@@ -126,7 +126,7 @@ export default function WeightFilter({
       </div>
 
       {isOpen && (
-        <div className="pt-3 grid grid-cols-2 gap-2">
+        <div className="pt-3 flex flex-wrap gap-1.5">
           {WEIGHT_OPTIONS.map((opt) => {
             const isSelected = selectedWeight === opt.id
             const count = productCounts[opt.id]
@@ -135,36 +135,37 @@ export default function WeightFilter({
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => onChange(isSelected && opt.id !== "all" ? "all" : opt.id)}
-                className={`relative flex items-center justify-between p-2.5 rounded-lg border text-xs sm:text-sm font-semibold transition-all duration-200 ${
+                onClick={() =>
+                  onChange(isSelected && opt.id !== "all" ? "all" : opt.id)
+                }
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer ${
                   isSelected
-                    ? "bg-orange-500 border-orange-600 text-white shadow-sm ring-1 ring-orange-400"
-                    : "bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                    ? "bg-orange-500 text-white border border-orange-600 shadow-xs"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200/80 dark:border-zinc-700/80"
                 }`}
               >
-                <div className="flex items-center gap-1.5 truncate">
-                  {isSelected && <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" />}
-                  <span className="truncate">{opt.label}</span>
-                </div>
+                {isSelected && (
+                  <Check className="w-3 h-3 stroke-[3] shrink-0" />
+                )}
+                <span>{opt.label}</span>
 
-                <div className="flex items-center gap-1 shrink-0 ml-1">
-                  {opt.badge && !isSelected && (
-                    <span className="text-[10px] px-1 py-0.2 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 rounded font-bold">
-                      {opt.badge}
-                    </span>
-                  )}
-                  {typeof count === "number" && (
-                    <span
-                      className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                        isSelected
-                          ? "bg-orange-600 text-white"
-                          : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </div>
+                {opt.badge && !isSelected && (
+                  <span className="text-[9px] px-1 py-0.2 bg-amber-200/70 text-amber-900 dark:bg-amber-950 dark:text-amber-300 rounded font-bold">
+                    {opt.badge}
+                  </span>
+                )}
+
+                {typeof count === "number" && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isSelected
+                        ? "bg-orange-600 text-white"
+                        : "bg-zinc-200/80 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             )
           })}
