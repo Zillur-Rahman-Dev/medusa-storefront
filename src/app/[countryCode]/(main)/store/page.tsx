@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   description: "সুন্দরবন ও দেশের সেরা মৌচাক থেকে সংগৃহীত ১০০% খাঁটি প্রাকৃতিক মধু।",
 }
 
+// Revalidate store page every 60 seconds (ISR) so new products & categories auto-update
+export const revalidate = 60
+
 type Params = {
   params: Promise<{
     countryCode: string

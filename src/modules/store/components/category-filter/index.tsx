@@ -11,6 +11,8 @@ type CategoryFilterProps = {
   productCounts?: Record<string, number>
 }
 
+const IGNORED_HANDLES = new Set(["shirts", "sweatshirts", "pants", "merch"])
+
 export default function CategoryFilter({
   categories,
   selectedCategory,
@@ -19,21 +21,13 @@ export default function CategoryFilter({
 }: CategoryFilterProps) {
   const [isOpen, setIsOpen] = useState(true)
 
-  // Filter out default starter categories like Shirts/Sweatshirts/Pants/Merch if honey categories exist
-  const honeyCategories = categories.filter((c) => {
+  // Filter out only default starter apparel categories (Shirts/Sweatshirts/Pants/Merch)
+  // Any new category created in admin will automatically show up!
+  const displayCategories = categories.filter((c) => {
     const handle = c.handle?.toLowerCase() || ""
     const name = c.name?.toLowerCase() || ""
-    return (
-      handle.includes("honey") ||
-      handle.includes("মধু") ||
-      name.includes("মধু") ||
-      handle.includes("top-selling") ||
-      name.includes("বিক্রিত") ||
-      name.includes("প্রাকৃতিক")
-    )
+    return !IGNORED_HANDLES.has(handle) && !IGNORED_HANDLES.has(name)
   })
-
-  const displayCategories = honeyCategories.length > 0 ? honeyCategories : categories
 
   return (
     <div className="w-full bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">

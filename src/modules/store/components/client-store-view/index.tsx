@@ -326,11 +326,8 @@ export default function ClientStoreView({
               const h = c.handle?.toLowerCase() || ""
               const n = c.name?.toLowerCase() || ""
               return (
-                h.includes("honey") ||
-                h.includes("মধু") ||
-                n.includes("মধু") ||
-                h.includes("top-selling") ||
-                n.includes("প্রাকৃতিক")
+                !["shirts", "sweatshirts", "pants", "merch"].includes(h) &&
+                !["shirts", "sweatshirts", "pants", "merch"].includes(n)
               )
             })
             .map((c) => {
