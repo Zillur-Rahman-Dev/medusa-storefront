@@ -58,7 +58,7 @@ export default function PriceRangeSlider({
             <span className="text-xs sm:text-sm font-black tracking-wider text-zinc-900 dark:text-zinc-100 uppercase">
               PRICE RANGE
             </span>
-            {/* Orange underline matching the reference image */}
+            {/* Orange underline matching reference image */}
             <div className="absolute left-0 bottom-0 w-full h-[2.5px] bg-orange-500 rounded-full" />
           </div>
           <button
@@ -77,28 +77,28 @@ export default function PriceRangeSlider({
       </div>
 
       {isOpen && (
-        <div className="pt-4 space-y-4">
-          {/* Price values row matching reference image: ৳ 0 on left, ৳ 2,500 on right */}
+        <div className="pt-4 space-y-3">
+          {/* Price values row: ৳ 0 on left, ৳ 2,500 on right */}
           <div className="flex items-center justify-between text-sm sm:text-base font-bold text-zinc-800 dark:text-zinc-200">
             <span>৳ {minVal.toLocaleString()}</span>
             <span>৳ {maxVal.toLocaleString()}</span>
           </div>
 
-          {/* Slider track container */}
-          <div className="relative w-full h-6 flex items-center">
-            {/* Inactive gray track */}
-            <div className="absolute w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full" />
+          {/* Slider track container: Perfectly centered */}
+          <div className="relative w-full h-8 flex items-center justify-center">
+            {/* Inactive gray track line */}
+            <div className="absolute left-0 right-0 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full pointer-events-none" />
 
-            {/* Active orange track */}
+            {/* Active orange track line */}
             <div
-              className="absolute h-1.5 bg-orange-500 rounded-full"
+              className="absolute h-1.5 bg-orange-500 rounded-full pointer-events-none"
               style={{
                 left: `${minPercent}%`,
                 width: `${Math.max(0, maxPercent - minPercent)}%`,
               }}
             />
 
-            {/* Native Range Inputs with custom styled orange circular thumbs */}
+            {/* Native Range Inputs with circular thumbs mathematically centered at (32 - 20)/2 = 6px */}
             <input
               type="range"
               min={min}
@@ -106,7 +106,7 @@ export default function PriceRangeSlider({
               step={step}
               value={minVal}
               onChange={handleMinChange}
-              className="price-slider-thumb pointer-events-none absolute w-full h-1.5 appearance-none bg-transparent focus:outline-none z-20"
+              className="price-slider-input pointer-events-none absolute w-full h-8 appearance-none bg-transparent focus:outline-none z-20 m-0 p-0"
               aria-label="Minimum price"
             />
             <input
@@ -116,14 +116,14 @@ export default function PriceRangeSlider({
               step={step}
               value={maxVal}
               onChange={handleMaxChange}
-              className="price-slider-thumb pointer-events-none absolute w-full h-1.5 appearance-none bg-transparent focus:outline-none z-20"
+              className="price-slider-input pointer-events-none absolute w-full h-8 appearance-none bg-transparent focus:outline-none z-20 m-0 p-0"
               aria-label="Maximum price"
             />
           </div>
 
-          {/* Quick presets or reset if adjusted */}
+          {/* Active status & Reset */}
           {(minVal > min || maxVal < max) && (
-            <div className="pt-1 flex items-center justify-between text-[11px] text-zinc-500">
+            <div className="pt-1 flex items-center justify-between text-xs text-zinc-500">
               <span>ফিল্টার সক্রিয়</span>
               <button
                 type="button"
@@ -132,7 +132,7 @@ export default function PriceRangeSlider({
                   setMaxVal(max)
                   onChange([min, max])
                 }}
-                className="text-orange-600 hover:text-orange-700 font-semibold underline"
+                className="text-orange-600 hover:text-orange-700 font-bold underline cursor-pointer"
               >
                 রিসেট
               </button>
@@ -140,7 +140,48 @@ export default function PriceRangeSlider({
           )}
 
           <style jsx>{`
-            .price-slider-thumb::-webkit-slider-thumb {
+            .price-slider-input {
+              -webkit-appearance: none;
+              appearance: none;
+              background: transparent;
+              pointer-events: none;
+              height: 32px;
+              margin: 0;
+              padding: 0;
+            }
+            .price-slider-input::-webkit-slider-runnable-track {
+              -webkit-appearance: none;
+              background: transparent;
+              height: 32px;
+              border: none;
+            }
+            .price-slider-input::-webkit-slider-thumb {
+              pointer-events: auto;
+              -webkit-appearance: none;
+              appearance: none;
+              width: 20px;
+              height: 20px;
+              border-radius: 50%;
+              background-color: #f97316;
+              border: 2.5px solid #ffffff;
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+              cursor: pointer;
+              margin-top: 6px; /* Exactly (32px track - 20px thumb) / 2 = 6px! Perfectly centered on the horizontal line */
+              transition: transform 0.1s ease, box-shadow 0.1s ease;
+            }
+            .price-slider-input::-webkit-slider-thumb:hover {
+              transform: scale(1.15);
+              box-shadow: 0 2px 6px rgba(249, 115, 22, 0.5);
+            }
+            .price-slider-input::-webkit-slider-thumb:active {
+              transform: scale(1.2);
+            }
+            .price-slider-input::-moz-range-track {
+              background: transparent;
+              height: 32px;
+              border: none;
+            }
+            .price-slider-input::-moz-range-thumb {
               pointer-events: auto;
               appearance: none;
               width: 20px;
@@ -148,43 +189,16 @@ export default function PriceRangeSlider({
               border-radius: 50%;
               background-color: #f97316;
               border: 2.5px solid #ffffff;
-              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
               cursor: pointer;
               transition: transform 0.1s ease, box-shadow 0.1s ease;
             }
-            .price-slider-thumb::-webkit-slider-thumb:hover {
+            .price-slider-input::-moz-range-thumb:hover {
               transform: scale(1.15);
               box-shadow: 0 2px 6px rgba(249, 115, 22, 0.5);
             }
-            .price-slider-thumb::-webkit-slider-thumb:active {
+            .price-slider-input::-moz-range-thumb:active {
               transform: scale(1.2);
-            }
-            .price-slider-thumb::-moz-range-thumb {
-              pointer-events: auto;
-              appearance: none;
-              width: 20px;
-              height: 20px;
-              border-radius: 50%;
-              background-color: #f97316;
-              border: 2.5px solid #ffffff;
-              box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-              cursor: pointer;
-              transition: transform 0.1s ease, box-shadow 0.1s ease;
-            }
-            .price-slider-thumb::-moz-range-thumb:hover {
-              transform: scale(1.15);
-              box-shadow: 0 2px 6px rgba(249, 115, 22, 0.5);
-            }
-            .price-slider-thumb::-moz-range-thumb:active {
-              transform: scale(1.2);
-            }
-            .price-slider-thumb::-webkit-slider-runnable-track {
-              height: 6px;
-              background: transparent;
-            }
-            .price-slider-thumb::-moz-range-track {
-              height: 6px;
-              background: transparent;
             }
           `}</style>
         </div>
