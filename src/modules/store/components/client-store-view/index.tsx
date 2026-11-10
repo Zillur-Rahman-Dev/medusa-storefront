@@ -397,66 +397,72 @@ export default function ClientStoreView({
           </div>
         </div>
 
-        {/* MOBILE TOP CONTROLS BAR: 3 distinct buttons */}
+        {/* MOBILE TOP CONTROLS BAR: 3 distinct buttons without text overlap */}
         <div className="lg:hidden mb-3">
           <div className="grid grid-cols-3 gap-2">
             {/* 1. FILTERS Button */}
             <button
               type="button"
               onClick={() => setIsMobileDrawerOpen(true)}
-              className="flex items-center justify-center gap-1 py-2 px-2 rounded-lg border-2 border-orange-500 bg-white dark:bg-zinc-900 text-orange-500 font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1 py-2 px-1.5 rounded-lg border-2 border-orange-500 bg-white dark:bg-zinc-900 text-orange-500 font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
             >
-              <ListFilter className="w-3.5 h-3.5 stroke-[2.5]" />
+              <ListFilter className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
               <span className="truncate">ফিল্টার</span>
               {activeFiltersCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-black ml-0.5 shrink-0">
+                <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-black shrink-0 ml-0.5">
                   {activeFiltersCount}
                 </span>
               )}
             </button>
 
-            {/* 2. Sorting Button (Clear label: "সাজান" with arrow) */}
+            {/* 2. Sorting Button (Transparent select over custom styled button) */}
             <div className="relative">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as StoreSortOption)}
-                className="w-full h-full py-2 pl-2 pr-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer truncate"
+                className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                aria-label="Sort products"
               >
                 <option value="default">সাধারণ সাজান (Default)</option>
                 <option value="latest">নতুন মধু (Latest)</option>
                 <option value="oldest">পুরাতন মধু (Oldest)</option>
-                <option value="price_asc">দাম: কম থেকে বেশি</option>
-                <option value="price_desc">দাম: বেশি থেকে কম</option>
-                <option value="offer">অফার প্রোডাক্ট</option>
+                <option value="price_asc">দাম: কম থেকে বেশি (Low to High)</option>
+                <option value="price_desc">দাম: বেশি থেকে কম (High to Low)</option>
+                <option value="offer">অফার প্রোডাক্ট (Offers)</option>
               </select>
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 text-zinc-700 dark:text-zinc-300">
-                <span className="truncate text-xs font-bold flex items-center gap-1">
-                  <ArrowUpDown className="w-3 h-3 text-zinc-400 shrink-0" />
-                  <span className="truncate">{currentSortLabel}</span>
-                </span>
-                <span className="text-[10px] text-zinc-400">▼</span>
+              <div className="w-full h-full py-2 px-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-1 min-w-0 truncate">
+                  <ArrowUpDown className="w-3 h-3 text-zinc-500 shrink-0" />
+                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                    {currentSortLabel}
+                  </span>
+                </div>
+                <span className="text-[9px] text-zinc-400 shrink-0 ml-0.5">▼</span>
               </div>
             </div>
 
-            {/* 3. Items Limit Button (Clear label: "সব মধু") */}
+            {/* 3. Items Limit Button (Transparent select over custom styled button) */}
             <div className="relative">
               <select
                 value={itemsPerPage}
                 onChange={(e) => setItemsPerPage(e.target.value)}
-                className="w-full h-full py-2 pl-2 pr-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold text-orange-600 dark:text-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer truncate"
+                className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                aria-label="Products per page"
               >
-                <option value="default">প্রদর্শন: সব মধু (All)</option>
+                <option value="default">সব মধু দেখুন (All)</option>
                 <option value="16">১৬টি করে দেখুন (16)</option>
                 <option value="20">২০টি করে দেখুন (20)</option>
                 <option value="24">২৪টি করে দেখুন (24)</option>
                 <option value="36">৩৬টি করে দেখুন (36)</option>
               </select>
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 text-orange-600 dark:text-orange-400">
-                <span className="truncate text-xs font-bold flex items-center gap-1">
-                  <Eye className="w-3 h-3 text-orange-400 shrink-0" />
-                  <span className="truncate">{currentLimitLabel}</span>
-                </span>
-                <span className="text-[10px] text-orange-500">▼</span>
+              <div className="w-full h-full py-2 px-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-1 min-w-0 truncate">
+                  <Eye className="w-3 h-3 text-orange-500 shrink-0" />
+                  <span className="text-xs font-bold text-orange-600 dark:text-orange-400 truncate">
+                    {currentLimitLabel}
+                  </span>
+                </div>
+                <span className="text-[9px] text-orange-500 shrink-0 ml-0.5">▼</span>
               </div>
             </div>
           </div>
