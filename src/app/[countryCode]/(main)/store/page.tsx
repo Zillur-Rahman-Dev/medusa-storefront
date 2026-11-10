@@ -1,33 +1,44 @@
 import { Metadata } from "next"
-
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { listProducts } from "@lib/data/products"
+import { listCategories } from "@lib/data/categories"
+import { getRegion } from "@lib/data/regions"
 import StoreTemplate from "@modules/store/templates"
 
 export const metadata: Metadata = {
-  title: "Store",
-  description: "Explore all of our products.",
+  title: "সকল খাঁটি মধু | মধুমেলা",
+  description: "সুন্দরবন ও দেশের সেরা মৌচাক থেকে সংগৃহীত ১০০% খাঁটি প্রাকৃতিক মধু।",
 }
 
 type Params = {
-  searchParams: Promise<{
-    sortBy?: SortOptions
-    page?: string
-  }>
   params: Promise<{
     countryCode: string
   }>
 }
 
 export default async function StorePage(props: Params) {
-  const params = await props.params;
-  const searchParams = await props.searchParams;
-  const { sortBy, page } = searchParams
+  const params = await props.params
+  const countryCode = params.countryCode || "bd"
+
+  const [region, productsRes, categories] = await Promise.all([
+    getRegion(countryCode),
+    listProducts({
+      pageParam: 0,
+      queryParams: { limit: 100 },
+      countryCode,
+    }),
+    listCategories(),
+  ])
+
+  if (!region) {
+    return null
+  }
 
   return (
     <StoreTemplate
-      sortBy={sortBy}
-      page={page}
-      countryCode={params.countryCode}
+      products={productsRes?.response?.products || []}
+      categories={categories || []}
+      region={region}
+      countryCode={countryCode}
     />
   )
 }
