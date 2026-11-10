@@ -337,8 +337,8 @@ export default function ClientStoreView({
 
   // Active Flag Name for chip
   const activeFlagName = useMemo(() => {
-    if (selectedFlag === "best_selling") return "Best Selling"
-    if (selectedFlag === "new_arrival") return "New Arrival"
+    if (selectedFlag === "best_selling") return "সর্বাধিক বিক্রিত"
+    if (selectedFlag === "new_arrival") return "নতুন আগমন"
     return null
   }, [selectedFlag])
 
@@ -391,9 +391,9 @@ export default function ClientStoreView({
             আমাদের সকল খাঁটি মধু
           </h1>
           <div className="hidden sm:flex items-center gap-1.5">
-            <span>Home</span>
+            <span>হোম</span>
             <span>&gt;</span>
-            <span className="text-zinc-900 dark:text-zinc-100 font-semibold">Store</span>
+            <span className="text-zinc-900 dark:text-zinc-100 font-semibold">স্টোর</span>
           </div>
         </div>
 
@@ -591,7 +591,7 @@ export default function ClientStoreView({
             {/* Sort By controls */}
             <div className="flex items-center gap-2">
               <span className="text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-                Sort By :
+                সাজান :
               </span>
               <div className="relative">
                 <select
@@ -599,12 +599,12 @@ export default function ClientStoreView({
                   onChange={(e) => setSortBy(e.target.value as StoreSortOption)}
                   className="py-1.5 pl-3 pr-8 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer"
                 >
-                  <option value="default">Default Sorting</option>
-                  <option value="latest">Sort by Latest</option>
-                  <option value="oldest">Sort by Oldest</option>
-                  <option value="price_asc">Price Low to High</option>
-                  <option value="price_desc">Price High to Low</option>
-                  <option value="offer">Offered Products</option>
+                  <option value="default">সাধারণ সাজান</option>
+                  <option value="latest">নতুন মধু (সর্বশেষ)</option>
+                  <option value="oldest">পুরাতন মধু</option>
+                  <option value="price_asc">দাম: কম থেকে বেশি</option>
+                  <option value="price_desc">দাম: বেশি থেকে কম</option>
+                  <option value="offer">অফার প্রোডাক্ট</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-zinc-400 text-xs">
                   ▼
@@ -623,11 +623,11 @@ export default function ClientStoreView({
                   onChange={(e) => setItemsPerPage(e.target.value)}
                   className="py-1.5 pl-3 pr-7 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs sm:text-sm font-bold text-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none cursor-pointer"
                 >
-                  <option value="default">Default</option>
-                  <option value="16">Show 16</option>
-                  <option value="20">Show 20</option>
-                  <option value="24">Show 24</option>
-                  <option value="36">Show 36</option>
+                  <option value="default">সব মধু (সবগুলো)</option>
+                  <option value="16">১৬টি করে</option>
+                  <option value="20">২০টি করে</option>
+                  <option value="24">২৪টি করে</option>
+                  <option value="36">৩৬টি করে</option>
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-orange-500 text-xs">
                   ▼
@@ -732,7 +732,7 @@ export default function ClientStoreView({
                 className="w-full py-2.5 px-4 rounded-lg bg-[#e52d27] hover:bg-[#c91f1a] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-200 uppercase tracking-wide cursor-pointer"
               >
                 <X className="w-4 h-4 stroke-[3]" />
-                <span>Clear All Filters</span>
+                <span>সব ফিল্টার মুছুন</span>
               </button>
             )}
 
@@ -787,7 +787,7 @@ export default function ClientStoreView({
                   className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#e52d27] hover:bg-[#c91f1a] text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4 stroke-[3]" />
-                  <span>Clear All Filters</span>
+                  <span>সব ফিল্টার মুছুন</span>
                 </button>
               </div>
             ) : (
@@ -844,7 +844,7 @@ export default function ClientStoreView({
                   className="w-full py-2.5 px-4 rounded-lg bg-[#e52d27] hover:bg-[#c91f1a] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md uppercase tracking-wide cursor-pointer"
                 >
                   <X className="w-4 h-4 stroke-[3]" />
-                  <span>Clear All Filters</span>
+                  <span>সব ফিল্টার মুছুন</span>
                 </button>
               )}
 

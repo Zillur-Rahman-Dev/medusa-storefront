@@ -17,8 +17,8 @@ export default function ProductFlagFilter({
   const [isOpen, setIsOpen] = useState(true)
 
   const flags = [
-    { id: "best_selling", label: "Best Selling (সর্বাধিক বিক্রিত)" },
-    { id: "new_arrival", label: "New Arrival (নতুন আগমন)" },
+    { id: "best_selling", label: "সর্বাধিক বিক্রিত (Best Selling)" },
+    { id: "new_arrival", label: "নতুন আগমন (New Arrival)" },
   ]
 
   return (
@@ -28,7 +28,7 @@ export default function ProductFlagFilter({
         <div className="flex items-center justify-between">
           <div className="relative inline-block pb-1">
             <span className="text-xs sm:text-sm font-black tracking-wider text-zinc-900 dark:text-zinc-100 uppercase">
-              PRODUCT FLAG
+              স্পেশাল ট্যাগ / FLAG
             </span>
             {/* Orange underline */}
             <div className="absolute left-0 bottom-0 w-full h-[2.5px] bg-orange-500 rounded-full" />
