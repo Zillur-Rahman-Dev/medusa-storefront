@@ -15,19 +15,19 @@ interface Slide {
 const slides: Slide[] = [
   {
     id: 1,
-    image: "/images/hero/slider-kalijira-clean.jpg",
-    alt: "১ কেজি হানিরাজ কালিজিরার ফুলের মধুর সাথে লিচু ফ্লাওয়ার হানি স্যাশে বক্স ফ্রি",
+    image: "/images/hero/slide-kalijira.jpg",
+    alt: "কালিজিরার ফুলের মধু - ১০০% প্রাকৃতিক কাঁচা মধু",
     link: "/products/black-seed-flower-honey",
   },
   {
     id: 2,
-    image: "/images/hero/slider-sundarban.jpg",
-    alt: "সুন্দরবনের খাঁটি খলিশা ফুলের মধু - ১০০% প্রাকৃতিক কাঁচা মধু",
+    image: "/images/hero/slide-sundarban.jpg",
+    alt: "সুন্দরবনের খাঁটি খলিশা ফুলের মধু - সরাসরি বুনো মৌচাক থেকে",
     link: "/products/sundarban-kholisha-honey",
   },
   {
     id: 3,
-    image: "/images/hero/slider-mustard.jpg",
+    image: "/images/hero/slide-mustard.jpg",
     alt: "সরিষা ও লিচু ফুলের প্রাকৃতিক মধু - পুষ্টি ও স্বাস্থ্য সুরক্ষায় সেরা",
     link: "/products/mustard-flower-honey",
   },
@@ -69,9 +69,9 @@ export default function Hero() {
     if (!touchStartX.current || !touchEndX.current) return
     const diff = touchStartX.current - touchEndX.current
     if (diff > 45) {
-      nextSlide() // Swiped left -> Glide to Next
+      nextSlide()
     } else if (diff < -45) {
-      prevSlide() // Swiped right -> Glide to Prev
+      prevSlide()
     }
     touchStartX.current = null
     touchEndX.current = null
@@ -80,7 +80,7 @@ export default function Hero() {
   return (
     <section className="py-2.5 sm:py-4 bg-zinc-50 dark:bg-zinc-950 transition-colors">
       <div className="content-container">
-        {/* Exact Layout Matching Screenshot: 2-Column Grid (Slider ~2/3 + Promo ~1/3) */}
+        {/* Exact Layout Matching Reference: 2-Column Grid (Slider ~2/3 + Promo ~1/3) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch">
           {/* ======================================================== */}
           {/* LEFT COLUMN: Pure Image Slider with Smooth Horizontal    */}

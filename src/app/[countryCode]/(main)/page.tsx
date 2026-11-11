@@ -13,6 +13,7 @@ import Testimonials from "@modules/home/components/testimonials"
 import FAQ from "@modules/home/components/faq"
 
 import { listProducts } from "@lib/data/products"
+import { listCategories } from "@lib/data/categories"
 import { mapMedusaProductToHoneyItem } from "@lib/util/honey-product"
 
 export const metadata: Metadata = {
@@ -27,18 +28,29 @@ export default async function Home() {
   let featuredProducts: any[] = []
   let topSellingProducts: any[] = []
   let shelves: any[] = []
+  let liveCategories: any[] = []
 
   try {
-    const {
-      response: { products: allRawProducts },
-    } = await listProducts({
-      countryCode: "bd",
-      queryParams: {
-        limit: 100,
-        fields:
-          "*categories,*collection,*thumbnail,*images,*variants,*variants.calculated_price",
-      },
-    })
+    const [productsRes, categoriesRes] = await Promise.allSettled([
+      listProducts({
+        countryCode: "bd",
+        queryParams: {
+          limit: 100,
+          fields:
+            "*categories,*collection,*thumbnail,*images,*variants,*variants.calculated_price",
+        },
+      }),
+      listCategories(),
+    ])
+
+    if (categoriesRes.status === "fulfilled" && categoriesRes.value) {
+      liveCategories = categoriesRes.value
+    }
+
+    const allRawProducts =
+      productsRes.status === "fulfilled" && productsRes.value?.response?.products
+        ? productsRes.value.response.products
+        : []
 
     if (allRawProducts && allRawProducts.length > 0) {
       allHoneyItems = allRawProducts.map((p) =>
@@ -114,8 +126,8 @@ export default async function Home() {
       {/* 1. Dual-Banner Hero Section */}
       <Hero />
 
-      {/* 2. Featured Categories */}
-      <FeaturedCategories />
+      {/* 2. Featured Categories (Live from Medusa Dashboard) */}
+      <FeaturedCategories categories={liveCategories} />
 
       {/* 3. Top Selling Products (Live from 'top-selling' category in Dashboard) */}
       <TopSelling
