@@ -9,6 +9,7 @@ import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
 import MobileBottomNav from "@modules/layout/components/mobile-bottom-nav"
+import WhatsAppButton from "@modules/layout/components/whatsapp-button"
 import FreeShippingPriceNudge from "@modules/shipping/components/free-shipping-price-nudge"
 
 export const metadata: Metadata = {
@@ -51,6 +52,7 @@ export default async function PageLayout(props: {
       <main className="flex-1">{props.children}</main>
       <Footer />
       <MobileBottomNav />
+      <WhatsAppButton />
     </div>
   )
 }
