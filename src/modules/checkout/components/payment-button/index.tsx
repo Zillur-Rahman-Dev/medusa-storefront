@@ -141,7 +141,7 @@ const StripePaymentButton = ({
         isLoading={submitting}
         data-testid={dataTestId}
       >
-        Place order
+        {submitting ? "অর্ডার সম্পন্ন হচ্ছে..." : "অর্ডার কনফার্ম করুন (ক্যাশ অন ডেলিভারি)"}
       </Button>
       <ErrorMessage
         error={errorMessage}
@@ -180,7 +180,7 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
         size="large"
         data-testid="submit-order-button"
       >
-        Place order
+        {submitting ? "অর্ডার সম্পন্ন হচ্ছে..." : "অর্ডার কনফার্ম করুন (ক্যাশ অন ডেলিভারি)"}
       </Button>
       <ErrorMessage
         error={errorMessage}

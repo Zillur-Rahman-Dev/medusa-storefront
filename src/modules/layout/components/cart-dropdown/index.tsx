@@ -27,6 +27,7 @@ const CartDropdown = ({
     undefined
   )
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
+  const [optimisticDelta, setOptimisticDelta] = useState(0)
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
@@ -46,6 +47,32 @@ const CartDropdown = ({
 
     setActiveTimer(timer)
   }
+
+  // Listen to optimistic cart events for instant UI responsiveness
+  useEffect(() => {
+    const handleItemAdded = () => {
+      setOptimisticDelta((prev) => prev + 1)
+      timedOpen()
+    }
+    const handleItemFailed = () => {
+      setOptimisticDelta((prev) => Math.max(0, prev - 1))
+    }
+
+    window.addEventListener("cart:item-added", handleItemAdded)
+    window.addEventListener("cart:item-failed", handleItemFailed)
+
+    return () => {
+      window.removeEventListener("cart:item-added", handleItemAdded)
+      window.removeEventListener("cart:item-failed", handleItemFailed)
+    }
+  }, [])
+
+  // When real server cart arrives, reset optimistic delta
+  useEffect(() => {
+    setOptimisticDelta(0)
+  }, [totalItems])
+
+  const displayTotalItems = totalItems + optimisticDelta
 
   const openAndCancel = () => {
     if (activeTimer) {
@@ -89,8 +116,8 @@ const CartDropdown = ({
           >
             <div className="relative">
               <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-              <span className="absolute -top-1.5 -right-2 bg-amber-500 text-white font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
-                {totalItems}
+              <span className={`absolute -top-1.5 -right-2 bg-amber-500 text-white font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm transition-transform ${optimisticDelta > 0 ? "scale-125 bg-emerald-500" : ""}`}>
+                {displayTotalItems}
               </span>
             </div>
             <span className="text-[11px] font-semibold mt-0.5 leading-tight">Cart</span>

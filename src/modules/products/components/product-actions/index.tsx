@@ -52,6 +52,7 @@ export default function ProductActions({
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
   const [isOrdering, setIsOrdering] = useState(false)
+  const [isOptimisticAdded, setIsOptimisticAdded] = useState(false)
   const countryCode = useParams().countryCode as string
 
   // Pre-select variant: Default to the 1st variant (or variant from URL `?v_id=...`)
@@ -141,25 +142,63 @@ export default function ProductActions({
   const actionsRef = useRef<HTMLDivElement>(null)
   const inView = useIntersection(actionsRef, "0px")
 
-  // add the selected variant to the cart
+  // Add the selected variant to the cart with instant Optimistic UI response
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
 
+    // 1. INSTANT (0ms) OPTIMISTIC UI FEEDBACK
+    setIsOptimisticAdded(true)
     setIsAdding(true)
 
-    const res = await addToCart({
-      variantId: selectedVariant.id,
-      quantity: 1,
-      countryCode: "bd",
-    })
-    if (res && res.success === false) {
-      console.error("Add to cart error:", res.error)
+    // Trigger instant toast and navbar cart badge jump
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-added", {
+          detail: {
+            title: product.title,
+            variant: selectedVariant.title,
+            price: rawPrice,
+          },
+        })
+      )
     }
-    router.refresh()
-    setIsAdding(false)
+
+    try {
+      // 2. Background Server Sync
+      const res = await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode: "bd",
+      })
+
+      if (res && res.success === false) {
+        throw new Error(res.error || "Failed to add to cart")
+      }
+
+      router.refresh()
+    } catch (err: any) {
+      console.error("Optimistic add to cart failed, rolling back:", err)
+      // 3. Rollback on failure
+      setIsOptimisticAdded(false)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-failed", {
+            detail: {
+              message: "ইন্টারনেট সংযোগে সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+            },
+          })
+        )
+      }
+    } finally {
+      setIsAdding(false)
+      // Reset optimistic success checkmark after 2.5s
+      setTimeout(() => {
+        setIsOptimisticAdded(false)
+      }, 2500)
+    }
   }
 
-  // direct checkout: add to cart and immediately route to /checkout
+  // direct checkout: immediate feedback and fast route to /checkout
   const handleDirectCheckout = async () => {
     if (!selectedVariant?.id) return
     setIsOrdering(true)
@@ -281,7 +320,7 @@ export default function ProductActions({
 
         {/* 4-Button Grid (Exact match with reference design) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-          {/* 1. Add To Cart Button (Top-Left: White with black border) */}
+          {/* 1. Add To Cart Button (Top-Left: Instant Optimistic UI feedback) */}
           <button
             type="button"
             onClick={handleAddToCart}
@@ -289,39 +328,56 @@ export default function ProductActions({
               !inStock ||
               !selectedVariant ||
               !!disabled ||
-              isAdding ||
               isOrdering ||
               !isValidVariant
             }
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+            className={`w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base border-2 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 cursor-pointer ${
+              isOptimisticAdded
+                ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-600 dark:border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-md shadow-emerald-500/20"
+                : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            }`}
           >
-            {isAdding ? (
-              <Loader2 className="w-4 h-4 animate-spin text-zinc-900 dark:text-zinc-100" />
-            ) : null}
-            <span>{isAdding ? "যোগ হচ্ছে..." : "কার্টে যোগ করুন"}</span>
+            {isOptimisticAdded ? (
+              <>
+                <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-200" />
+                <span>কার্টে যোগ হয়েছে! ✓</span>
+              </>
+            ) : isAdding ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-zinc-900 dark:text-zinc-100" />
+                <span>যোগ হচ্ছে...</span>
+              </>
+            ) : (
+              <span>কার্টে যোগ করুন</span>
+            )}
           </button>
 
           {/* 2. Direct Order Button (Top-Right: Warm Amber matching "পণ্যের বিবরণ ও তথ্য" tab) */}
           <button
             type="button"
             onClick={handleDirectCheckout}
-            disabled={!inStock || !selectedVariant || isOrdering || isAdding}
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+            disabled={!inStock || !selectedVariant || isOrdering}
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
           >
             {isOrdering ? (
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>চেকআউটে নেওয়া হচ্ছে...</span>
+              </>
             ) : (
-              <ShoppingBag className="w-4 h-4 text-white" />
+              <>
+                <ShoppingBag className="w-4 h-4 text-white" />
+                <span>অর্ডার করুন</span>
+              </>
             )}
-            <span>{isOrdering ? "অর্ডার হচ্ছে..." : "অর্ডার করুন"}</span>
           </button>
 
           {/* 3. WhatsApp Order Button (Bottom-Left: WhatsApp Vibrant Green) */}
           <a
-            href={`https://wa.me/8801700000000?text=আসসালামু%20আলাইকুম,%20আমি%20${encodeURIComponent(product.title)}%20(${selectedVariant?.title || ""})%20অর্ডার%20করতে%20চাই।`}
+            href={`https://wa.me/8801999602203?text=আসসালামু%20আলাইকুম,%20আমি%20${encodeURIComponent(product.title)}%20(${selectedVariant?.title || ""})%20অর্ডার%20করতে%20চাই।`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <MessageCircle className="w-4 h-4 fill-white shrink-0" />
             <span>হোয়াটসঅ্যাপে অর্ডার করুন</span>
@@ -330,7 +386,7 @@ export default function ProductActions({
           {/* 4. Call Order Button (Bottom-Right: White with black border) */}
           <a
             href={`tel:${((product.metadata as Record<string, any>)?.call_phone) || "09678812525"}`}
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
+            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <PhoneCall className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
             <span>কল অর্ডার: {((product.metadata as Record<string, any>)?.call_phone) || "09678812525"}</span>
