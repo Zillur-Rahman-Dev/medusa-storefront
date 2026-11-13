@@ -38,14 +38,44 @@ export default function HoneyProductCard({
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
-  // 1. Add to Cart (updates line items in Medusa backend & header cart count)
+  // 1. Add to Cart (updates line items in Medusa backend & header cart count with instant Optimistic UI)
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
     if (!product.variantId) return
 
+    // 1. Instant Optimistic Feedback (0ms)
+    setIsAdded(true)
     setIsAdding(true)
+
+    const resolvedThumbnail =
+      product.thumbnail ||
+      (product.images && product.images.length > 0 ? product.images[0]?.url : null) ||
+      (product.handle?.includes("sundarban") || product.handle?.includes("kholisha")
+        ? "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167286/c5582ba6-d0c3-43b3-afbf-57ead15f9b54_imgi_138_c9eefb3810ff098b0fc9651e2e21f012.jpg.jpg"
+        : product.handle?.includes("mustard") || product.handle?.includes("sorisha")
+        ? "https://res.cloudinary.com/dqseoiw8p/raw/upload/v1794166098/e9b3e553-c496-419a-a1ca-e817d73045f1_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg"
+        : product.handle?.includes("black-seed") || product.handle?.includes("kalijira")
+        ? "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg"
+        : null)
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-added", {
+          detail: {
+            id: `opt_${Date.now()}`,
+            title: product.title,
+            variant: product.weight || "১ কেজি",
+            price: product.price,
+            thumbnail: resolvedThumbnail,
+            handle: product.handle,
+            quantity: 1,
+          },
+        })
+      )
+    }
+
     try {
       const res = await addToCart({
         variantId: product.variantId,
@@ -53,16 +83,24 @@ export default function HoneyProductCard({
         countryCode: "bd",
       })
       if (res && res.success === false) {
-        console.error("Failed to add to cart:", res.error)
-      } else {
-        setIsAdded(true)
-        router.refresh()
-        setTimeout(() => setIsAdded(false), 2000)
+        throw new Error(res.error || "Failed to add to cart")
       }
+      router.refresh()
     } catch (err) {
       console.error("Failed to add to cart:", err)
+      setIsAdded(false)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-failed", {
+            detail: {
+              message: "কার্টে যোগ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+            },
+          })
+        )
+      }
     } finally {
       setIsAdding(false)
+      setTimeout(() => setIsAdded(false), 2500)
     }
   }
 

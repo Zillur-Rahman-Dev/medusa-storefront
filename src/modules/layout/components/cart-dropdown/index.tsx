@@ -8,21 +8,77 @@ import {
 } from "@headlessui/react"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
-import { Button } from "@medusajs/ui"
 import DeleteButton from "@modules/common/components/delete-button"
-import LineItemOptions from "@modules/common/components/line-item-options"
-import LineItemPrice from "@modules/common/components/line-item-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import Thumbnail from "@modules/products/components/thumbnail"
 import { usePathname } from "next/navigation"
 import { Fragment, useEffect, useRef, useState } from "react"
-import { ShoppingCart, ShoppingBag, ArrowRight, CheckCircle2 } from "lucide-react"
+import { ShoppingCart, CheckCircle2 } from "lucide-react"
+
+// Cloudinary images for known products (in case database thumbnail field is null)
+const KNOWN_HONEY_IMAGES: Record<string, string> = {
+  "sundarban-kholisha-honey":
+    "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167286/c5582ba6-d0c3-43b3-afbf-57ead15f9b54_imgi_138_c9eefb3810ff098b0fc9651e2e21f012.jpg.jpg",
+  "mustard-flower-honey":
+    "https://res.cloudinary.com/dqseoiw8p/raw/upload/v1794166098/e9b3e553-c496-419a-a1ca-e817d73045f1_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg",
+  "black-seed-flower-honey":
+    "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg",
+}
+
+function resolveProductImage(opts: {
+  thumbnail?: string | null
+  metadata?: any
+  handle?: string | null
+  title?: string | null
+}): string | null {
+  if (
+    opts.thumbnail &&
+    typeof opts.thumbnail === "string" &&
+    opts.thumbnail.startsWith("http")
+  ) {
+    return opts.thumbnail
+  }
+
+  if (opts.metadata?.thumbnail && typeof opts.metadata.thumbnail === "string") {
+    return opts.metadata.thumbnail
+  }
+
+  const handle = opts.handle || ""
+  const title = opts.title || ""
+
+  if (KNOWN_HONEY_IMAGES[handle]) {
+    return KNOWN_HONEY_IMAGES[handle]
+  }
+
+  if (
+    handle.includes("sundarban") ||
+    handle.includes("kholisha") ||
+    title.includes("খলিশা")
+  ) {
+    return KNOWN_HONEY_IMAGES["sundarban-kholisha-honey"]
+  }
+  if (
+    handle.includes("mustard") ||
+    handle.includes("sorisha") ||
+    title.includes("সরিষা")
+  ) {
+    return KNOWN_HONEY_IMAGES["mustard-flower-honey"]
+  }
+  if (
+    handle.includes("black-seed") ||
+    handle.includes("kalijira") ||
+    title.includes("কালোজিরা")
+  ) {
+    return KNOWN_HONEY_IMAGES["black-seed-flower-honey"]
+  }
+
+  return null
+}
 
 type OptimisticItem = {
   id: string
   title: string
   product_handle?: string
-  thumbnail?: string
+  thumbnail?: string | null
   variantTitle?: string
   quantity: number
   unitPrice: number
@@ -66,7 +122,7 @@ const CartDropdown = ({
     setActiveTimer(timer)
   }
 
-  // Listen to optimistic cart events for instant 0.05s UI responsiveness
+  // Listen to optimistic cart events for instant 0.05s UI responsiveness across the entire storefront
   useEffect(() => {
     const handleItemAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
@@ -180,119 +236,180 @@ const CartDropdown = ({
                   আপনার শপিং কার্ট
                 </h3>
               </div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
                 {totalItems} টি পণ্য
               </span>
             </div>
 
             {hasItems ? (
               <>
-                <div className="overflow-y-scroll max-h-[380px] p-4 flex flex-col gap-y-4 no-scrollbar divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                  {/* 1. Instant Optimistic Items (Rendered at top with green check badge) */}
-                  {optimisticItems.map((optItem) => (
-                    <div
-                      className="pt-3 first:pt-0 flex gap-x-3 animate-in fade-in slide-in-from-top-2 duration-300"
-                      key={optItem.id}
-                    >
-                      <LocalizedClientLink
-                        href={`/products/${optItem.product_handle}`}
-                        className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50 dark:bg-zinc-800 border border-amber-200/60 dark:border-zinc-700 flex items-center justify-center"
-                      >
-                        {optItem.thumbnail ? (
-                          <img
-                            src={optItem.thumbnail}
-                            alt={optItem.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-2xl">🍯</span>
-                        )}
-                      </LocalizedClientLink>
+                <div className="overflow-y-scroll max-h-[380px] p-4 flex flex-col no-scrollbar divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                  {/* 1. Instant Optimistic Items (Rendered with 100% IDENTICAL card design as server items) */}
+                  {optimisticItems.map((optItem) => {
+                    const imageUrl = resolveProductImage({
+                      thumbnail: optItem.thumbnail,
+                      handle: optItem.product_handle,
+                      title: optItem.title,
+                    })
 
-                      <div className="flex flex-col justify-between flex-1 min-w-0">
-                        <div>
-                          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-0.5">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>কার্টে যোগ হয়েছে!</span>
+                    return (
+                      <div
+                        className="py-3 first:pt-0 last:pb-0 flex gap-x-3 items-center animate-in fade-in duration-200"
+                        key={optItem.id}
+                        data-testid="cart-item"
+                      >
+                        {/* Product Image */}
+                        <LocalizedClientLink
+                          href={`/products/${optItem.product_handle}`}
+                          onClick={close}
+                          className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50/50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center relative group"
+                        >
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={optItem.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
+                              <span className="text-2xl">🍯</span>
+                              <span className="text-[9px] font-bold">মধু</span>
+                            </div>
+                          )}
+                        </LocalizedClientLink>
+
+                        {/* Product Details */}
+                        <div className="flex flex-col justify-between flex-1 min-w-0">
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-bold truncate text-zinc-900 dark:text-zinc-100">
+                              <LocalizedClientLink
+                                href={`/products/${optItem.product_handle}`}
+                                onClick={close}
+                                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                data-testid="product-link"
+                              >
+                                {optItem.title}
+                              </LocalizedClientLink>
+                            </h4>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                              সাইজ:{" "}
+                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                {optItem.variantTitle || "ডিফল্ট"}
+                              </span>
+                              {"  •  "}
+                              পরিমাণ:{" "}
+                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                {optItem.quantity}
+                              </span>
+                            </p>
                           </div>
-                          <h4 className="text-xs sm:text-sm font-semibold truncate text-zinc-900 dark:text-zinc-100">
-                            {optItem.title}
-                          </h4>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            সাইজ: {optItem.variantTitle} | পরিমাণ: {optItem.quantity}
-                          </p>
-                        </div>
-                        <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 pt-1">
-                          ৳{optItem.unitPrice * optItem.quantity}
+
+                          {/* Bottom Row: Status on Left, Price on Right */}
+                          <div className="flex items-center justify-between pt-1.5">
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>যোগ হচ্ছে...</span>
+                            </span>
+
+                            <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                              ৳{optItem.unitPrice * optItem.quantity}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
 
-                  {/* 2. Official Medusa Server Items */}
+                  {/* 2. Official Medusa Server Items (Rendered with 100% IDENTICAL card design) */}
                   {serverItems
                     .sort((a, b) => {
                       return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
                     })
-                    .map((item) => (
-                      <div
-                        className="pt-3 first:pt-0 flex gap-x-3"
-                        key={item.id}
-                        data-testid="cart-item"
-                      >
-                        <LocalizedClientLink
-                          href={`/products/${item.product_handle}`}
-                          className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
+                    .map((item) => {
+                      const imageUrl = resolveProductImage({
+                        thumbnail: item.thumbnail,
+                        metadata: item.metadata,
+                        handle: item.product_handle,
+                        title: item.title,
+                      })
+
+                      const variantLabel =
+                        item.variant?.title || item.subtitle || "ডিফল্ট"
+                      const itemPrice = item.unit_price * item.quantity
+
+                      return (
+                        <div
+                          className="py-3 first:pt-0 last:pb-0 flex gap-x-3 items-center"
+                          key={item.id}
+                          data-testid="cart-item"
                         >
-                          <Thumbnail
-                            thumbnail={item.thumbnail}
-                            images={item.variant?.product?.images}
-                            size="square"
-                          />
-                        </LocalizedClientLink>
-
-                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                          <div>
-                            <h4 className="text-xs sm:text-sm font-semibold truncate text-zinc-900 dark:text-zinc-100">
-                              <LocalizedClientLink
-                                href={`/products/${item.product_handle}`}
-                                data-testid="product-link"
-                              >
-                                {item.title}
-                              </LocalizedClientLink>
-                            </h4>
-                            <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                              <LineItemOptions
-                                variant={item.variant}
-                                data-testid="cart-item-variant"
+                          {/* Product Image */}
+                          <LocalizedClientLink
+                            href={`/products/${item.product_handle}`}
+                            onClick={close}
+                            className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50/50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center relative group"
+                          >
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
-                              <span>পরিমাণ: {item.quantity}</span>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
+                                <span className="text-2xl">🍯</span>
+                                <span className="text-[9px] font-bold">মধু</span>
+                              </div>
+                            )}
+                          </LocalizedClientLink>
+
+                          {/* Product Details */}
+                          <div className="flex flex-col justify-between flex-1 min-w-0">
+                            <div>
+                              <h4 className="text-xs sm:text-sm font-bold truncate text-zinc-900 dark:text-zinc-100">
+                                <LocalizedClientLink
+                                  href={`/products/${item.product_handle}`}
+                                  onClick={close}
+                                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                  data-testid="product-link"
+                                >
+                                  {item.title}
+                                </LocalizedClientLink>
+                              </h4>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                সাইজ:{" "}
+                                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                  {variantLabel}
+                                </span>
+                                {"  •  "}
+                                পরিমাণ:{" "}
+                                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                  {item.quantity}
+                                </span>
+                              </p>
                             </div>
-                          </div>
 
-                          <div className="flex items-center justify-between pt-1">
-                            <DeleteButton
-                              id={item.id}
-                              className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
-                              data-testid="cart-item-remove-button"
-                            >
-                              মুছে ফেলুন 🗑️
-                            </DeleteButton>
+                            {/* Bottom Row: Delete Button on Left, Price on Right */}
+                            <div className="flex items-center justify-between pt-1.5">
+                              <DeleteButton
+                                id={item.id}
+                                className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                                data-testid="cart-item-remove-button"
+                              >
+                                মুছে ফেলুন 🗑️
+                              </DeleteButton>
 
-                            <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                              <LineItemPrice
-                                item={item}
-                                style="tight"
-                                currencyCode={cartState?.currency_code || "bdt"}
-                              />
+                              <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                                ৳{itemPrice}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                 </div>
 
-                {/* Subtotal & Action Buttons */}
+                {/* Subtotal & Action Button (Only 'কার্ট দেখুন' button) */}
                 <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 flex flex-col gap-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-semibold text-zinc-600 dark:text-zinc-400">
@@ -309,29 +426,16 @@ const CartDropdown = ({
                     </span>
                   </div>
 
-                  {/* Dual Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <LocalizedClientLink
-                      href="/cart"
-                      onClick={close}
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                      data-testid="go-to-cart-button"
-                    >
-                      <ShoppingCart className="w-3.5 h-3.5" />
-                      <span>কার্ট দেখুন</span>
-                    </LocalizedClientLink>
-
-                    <LocalizedClientLink
-                      href="/checkout?step=address"
-                      onClick={close}
-                      className="w-full h-10 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-md shadow-amber-600/20 active:scale-[0.98]"
-                      data-testid="go-to-checkout-button"
-                    >
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>অর্ডার করুন</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </LocalizedClientLink>
-                  </div>
+                  {/* Single Clean Full-Width Button: Only 'কার্ট দেখুন' */}
+                  <LocalizedClientLink
+                    href="/cart"
+                    onClick={close}
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99]"
+                    data-testid="go-to-cart-button"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>কার্ট দেখুন</span>
+                  </LocalizedClientLink>
                 </div>
               </>
             ) : (
@@ -346,14 +450,12 @@ const CartDropdown = ({
                   পছন্দের খাঁটি মধু বেছে নিয়ে কার্টে যোগ করুন।
                 </p>
                 <div className="mt-4">
-                  <LocalizedClientLink href="/store" onClick={close}>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      className="rounded-xl font-bold text-xs"
-                    >
-                      মধু ব্রাউজ করুন ➔
-                    </Button>
+                  <LocalizedClientLink
+                    href="/store"
+                    onClick={close}
+                    className="inline-flex h-9 items-center justify-center px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors"
+                  >
+                    মধু ব্রাউজ করুন ➔
                   </LocalizedClientLink>
                 </div>
               </div>

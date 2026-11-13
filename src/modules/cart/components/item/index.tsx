@@ -57,6 +57,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           <Thumbnail
             thumbnail={item.thumbnail}
             images={item.variant?.product?.images}
+            productHandle={item.product_handle}
             size="square"
           />
         </LocalizedClientLink>
@@ -142,3 +143,4 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
 }
 
 export default Item
+

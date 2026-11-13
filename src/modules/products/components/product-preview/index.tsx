@@ -62,12 +62,16 @@ export default function ProductPreview({
         </div>
       </LocalizedClientLink>
 
-      {/* Action Button: 'কার্ট-এ যোগ' button for Store / Collections / Categories */}
+      {/* Action Button: 'কার্ট-এ যোগ' button for Store / Collections / Categories with instant Optimistic UI */}
       <div className="mt-4 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
         <PreviewAddToCart
           variantId={defaultVariantId}
           productHandle={product.handle}
           hasMultipleVariants={hasMultipleVariants}
+          productTitle={product.title}
+          thumbnail={product.thumbnail || product.images?.[0]?.url}
+          price={cheapestPrice?.calculated_price_number}
+          variantTitle={product.variants?.[0]?.title}
         />
       </div>
     </div>
