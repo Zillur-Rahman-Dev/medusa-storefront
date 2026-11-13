@@ -155,9 +155,13 @@ export default function ProductActions({
       window.dispatchEvent(
         new CustomEvent("cart:item-added", {
           detail: {
+            id: `opt_${Date.now()}`,
             title: product.title,
             variant: selectedVariant.title,
             price: rawPrice,
+            thumbnail: product.thumbnail || product.images?.[0]?.url,
+            handle: product.handle,
+            quantity: 1,
           },
         })
       )
