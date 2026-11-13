@@ -123,7 +123,6 @@ const Item = ({
                 1
               </option>
             </CartItemSelect>
-            {updating && <Spinner />}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />
         </Table.Cell>

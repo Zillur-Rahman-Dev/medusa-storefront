@@ -132,6 +132,12 @@ const CartTemplate = ({
           quantity: qty,
           subtotal,
           total: subtotal,
+          original_subtotal: subtotal,
+          original_total: subtotal,
+          raw_subtotal: { value: String(subtotal), precision: 20 },
+          raw_total: { value: String(subtotal), precision: 20 },
+          raw_original_subtotal: { value: String(subtotal), precision: 20 },
+          raw_original_total: { value: String(subtotal), precision: 20 },
         }
       })
 
