@@ -12,9 +12,9 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
         <Divider className="my-6 small:hidden" />
         <Heading
           level="h2"
-          className="flex flex-row text-3xl-regular items-baseline"
+          className="flex flex-row text-3xl-regular items-baseline font-bold text-gray-900"
         >
-          In your Cart
+          আপনার কার্ট (অর্ডার বিবরণ)
         </Heading>
         <Divider className="my-6" />
         <CartTotals totals={cart} />

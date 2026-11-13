@@ -18,18 +18,18 @@ export default function CheckoutLayout({
           >
             <ChevronDown className="rotate-90" size={16} />
             <span className="mt-px hidden small:block txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base ">
-              Back to shopping cart
+              কার্ট-এ ফিরে যান
             </span>
             <span className="mt-px block small:hidden txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base">
-              Back
+              ফিরে যান
             </span>
           </LocalizedClientLink>
           <LocalizedClientLink
             href="/"
-            className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
+            className="txt-compact-xlarge-plus text-amber-600 hover:text-amber-700 font-bold uppercase tracking-wider flex items-center gap-1.5"
             data-testid="store-link"
           >
-            Medusa Store
+            <span className="text-xl">🍯</span> PURE HONEY
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>

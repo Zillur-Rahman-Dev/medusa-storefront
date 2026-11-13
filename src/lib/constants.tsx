@@ -59,7 +59,7 @@ export const paymentInfoMap: Record<
     icon: <PayPal />,
   },
   pp_system_default: {
-    title: "Manual Payment",
+    title: "ক্যাশ অন ডেলিভারি (Cash on Delivery)",
     icon: <CreditCard />,
   },
   // Add more payment providers here

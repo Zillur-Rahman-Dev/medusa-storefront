@@ -29,7 +29,7 @@ const Payment = ({
   const [cardBrand, setCardBrand] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    activeSession?.provider_id ?? ""
+    activeSession?.provider_id ?? (availablePaymentMethods?.[0]?.id || "")
   )
 
   const searchParams = useSearchParams()
@@ -110,24 +110,28 @@ const Payment = ({
         <Heading
           level="h2"
           className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
+            "flex flex-row text-3xl-regular gap-x-2 items-baseline font-bold text-gray-900",
             {
               "opacity-50 pointer-events-none select-none":
                 !isOpen && !paymentReady,
             }
           )}
         >
-          Payment
-          {!isOpen && paymentReady && <CheckCircleSolid />}
+          পেমেন্ট মাধ্যম
+          {!isOpen && paymentReady && (
+            <span className="text-emerald-600 inline-flex items-center">
+              <CheckCircleSolid />
+            </span>
+          )}
         </Heading>
         {!isOpen && paymentReady && (
           <Text>
             <button
               onClick={handleEdit}
-              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="text-amber-600 hover:text-amber-700 font-medium text-sm hover:underline cursor-pointer transition-colors"
               data-testid="edit-payment-button"
             >
-              Edit
+              পরিবর্তন করুন (Edit)
             </button>
           </Text>
         )}
@@ -136,6 +140,14 @@ const Payment = ({
         <div className={isOpen ? "block" : "hidden"}>
           {!paidByGiftcard && availablePaymentMethods?.length && (
             <>
+              <div className="flex flex-col mb-4">
+                <span className="font-semibold text-lg text-gray-800">
+                  মূল্য পরিশোধের পদ্ধতি বেছে নিন
+                </span>
+                <span className="text-gray-500 text-sm mt-0.5">
+                  হোম ডেলিভারিতে পণ্য হাতে পেয়ে মূল্য পরিশোধ করতে পারবেন
+                </span>
+              </div>
               <RadioGroup
                 value={selectedPaymentMethod}
                 onChange={(value: string) => setPaymentMethod(value)}
@@ -167,13 +179,13 @@ const Payment = ({
           {paidByGiftcard && (
             <div className="flex flex-col w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                Payment method
+                পেমেন্ট পদ্ধতি
               </Text>
               <Text
                 className="txt-medium text-ui-fg-subtle"
                 data-testid="payment-method-summary"
               >
-                Gift card
+                গিফট কার্ড
               </Text>
             </div>
           )}
@@ -185,7 +197,7 @@ const Payment = ({
 
           <Button
             size="large"
-            className="mt-6"
+            className="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-medium"
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
@@ -195,57 +207,34 @@ const Payment = ({
             data-testid="submit-payment-button"
           >
             {!activeSession && isStripeLike(selectedPaymentMethod)
-              ? " Enter card details"
-              : "Continue to review"}
+              ? "কার্ডের তথ্য দিন"
+              : "পরবর্তী ধাপ: রিভিউ ও কনফার্ম →"}
           </Button>
         </div>
 
         <div className={isOpen ? "hidden" : "block"}>
           {cart && paymentReady && activeSession ? (
-            <div className="flex items-start gap-x-1 w-full">
-              <div className="flex flex-col w-1/3">
-                <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Payment method
-                </Text>
-                <Text
-                  className="txt-medium text-ui-fg-subtle"
-                  data-testid="payment-method-summary"
-                >
-                  {paymentInfoMap[activeSession?.provider_id]?.title ||
-                    activeSession?.provider_id}
-                </Text>
-              </div>
-              <div className="flex flex-col w-1/3">
-                <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Payment details
-                </Text>
-                <div
-                  className="flex gap-2 txt-medium text-ui-fg-subtle items-center"
-                  data-testid="payment-details-summary"
-                >
-                  <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
-                    {paymentInfoMap[selectedPaymentMethod]?.icon || (
-                      <CreditCard />
-                    )}
-                  </Container>
-                  <Text>
-                    {isStripeLike(selectedPaymentMethod) && cardBrand
-                      ? cardBrand
-                      : "Another step will appear"}
-                  </Text>
-                </div>
+            <div className="bg-stone-50/70 p-4 rounded-xl border border-stone-200/60 max-w-md">
+              <Text className="txt-medium-plus font-semibold text-gray-800 mb-1">
+                পেমেন্ট পদ্ধতি
+              </Text>
+              <div className="flex items-center justify-between text-gray-700 font-medium">
+                <span>💵 {paymentInfoMap[activeSession?.provider_id]?.title || "ক্যাশ অন ডেলিভারি (Cash on Delivery)"}</span>
+                <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                  পণ্য হাতে পেয়ে টাকা দিন
+                </span>
               </div>
             </div>
           ) : paidByGiftcard ? (
             <div className="flex flex-col w-1/3">
-              <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                Payment method
+              <Text className="txt-medium-plus text-ui-fg-base mb-1 font-semibold text-gray-800">
+                পেমেন্ট পদ্ধতি
               </Text>
               <Text
                 className="txt-medium text-ui-fg-subtle"
                 data-testid="payment-method-summary"
               >
-                Gift card
+                গিফট কার্ড
               </Text>
             </div>
           ) : null}

@@ -1,11 +1,9 @@
 import { HttpTypes } from "@medusajs/types"
 import { Container } from "@medusajs/ui"
-import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
 import { mapKeys } from "lodash"
 import React, { useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
-import CountrySelect from "../country-select"
 
 const ShippingAddress = ({
   customer,
@@ -20,12 +18,12 @@ const ShippingAddress = ({
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({
     "shipping_address.first_name": cart?.shipping_address?.first_name || "",
-    "shipping_address.last_name": cart?.shipping_address?.last_name || "",
+    "shipping_address.last_name": cart?.shipping_address?.last_name || ".",
     "shipping_address.address_1": cart?.shipping_address?.address_1 || "",
     "shipping_address.company": cart?.shipping_address?.company || "",
-    "shipping_address.postal_code": cart?.shipping_address?.postal_code || "",
+    "shipping_address.postal_code": cart?.shipping_address?.postal_code || "1200",
     "shipping_address.city": cart?.shipping_address?.city || "",
-    "shipping_address.country_code": cart?.shipping_address?.country_code || "",
+    "shipping_address.country_code": cart?.shipping_address?.country_code || "bd",
     "shipping_address.province": cart?.shipping_address?.province || "",
     "shipping_address.phone": cart?.shipping_address?.phone || "",
     email: cart?.email || "",
@@ -36,10 +34,9 @@ const ShippingAddress = ({
     [cart?.region]
   )
 
-  // check if customer has saved addresses that are in the current region
   const addressesInRegion = useMemo(
     () =>
-      customer?.addresses.filter(
+      customer?.addresses?.filter(
         (a) => a.country_code && countriesInRegion?.includes(a.country_code)
       ),
     [customer?.addresses, countriesInRegion]
@@ -53,12 +50,12 @@ const ShippingAddress = ({
       setFormData((prevState: Record<string, any>) => ({
         ...prevState,
         "shipping_address.first_name": address?.first_name || "",
-        "shipping_address.last_name": address?.last_name || "",
+        "shipping_address.last_name": address?.last_name || ".",
         "shipping_address.address_1": address?.address_1 || "",
         "shipping_address.company": address?.company || "",
-        "shipping_address.postal_code": address?.postal_code || "",
+        "shipping_address.postal_code": address?.postal_code || "1200",
         "shipping_address.city": address?.city || "",
-        "shipping_address.country_code": address?.country_code || "",
+        "shipping_address.country_code": address?.country_code || "bd",
         "shipping_address.province": address?.province || "",
         "shipping_address.phone": address?.phone || "",
       }))
@@ -71,7 +68,6 @@ const ShippingAddress = ({
   }
 
   useEffect(() => {
-    // Ensure cart is not null and has a shipping_address before setting form data
     if (cart && cart.shipping_address) {
       setFormAddress(cart?.shipping_address, cart?.email)
     }
@@ -79,11 +75,11 @@ const ShippingAddress = ({
     if (cart && !cart.email && customer?.email) {
       setFormAddress(undefined, customer.email)
     }
-  }, [cart]) // Add cart as a dependency
+  }, [cart])
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLInputElement | HTMLSelectElement
+      HTMLInputElement | HTMLSelectElement
     >
   ) => {
     setFormData({
@@ -95,9 +91,9 @@ const ShippingAddress = ({
   return (
     <>
       {customer && (addressesInRegion?.length || 0) > 0 && (
-        <Container className="mb-6 flex flex-col gap-y-4 p-5">
-          <p className="text-small-regular">
-            {`Hi ${customer.first_name}, do you want to use one of your saved addresses?`}
+        <Container className="mb-6 flex flex-col gap-y-4 p-5 bg-amber-50/50 border border-amber-200/60 rounded-xl">
+          <p className="text-small-regular text-amber-900 font-medium">
+            {`প্রিয় ${customer.first_name || "সম্মানিত গ্রাহক"}, আপনি কি আপনার পূর্বের সংরক্ষিত ঠিকানা ব্যবহার করতে চান?`}
           </p>
           <AddressSelect
             addresses={customer.addresses}
@@ -110,107 +106,82 @@ const ShippingAddress = ({
           />
         </Container>
       )}
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="First name"
-          name="shipping_address.first_name"
-          autoComplete="given-name"
-          value={formData["shipping_address.first_name"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-first-name-input"
-        />
-        <Input
-          label="Last name"
-          name="shipping_address.last_name"
-          autoComplete="family-name"
-          value={formData["shipping_address.last_name"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-last-name-input"
-        />
-        <Input
-          label="Address"
-          name="shipping_address.address_1"
-          autoComplete="address-line1"
-          value={formData["shipping_address.address_1"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-address-input"
-        />
-        <Input
-          label="Company"
-          name="shipping_address.company"
-          value={formData["shipping_address.company"]}
-          onChange={handleChange}
-          autoComplete="organization"
-          data-testid="shipping-company-input"
-        />
-        <Input
-          label="Postal code"
-          name="shipping_address.postal_code"
-          autoComplete="postal-code"
-          value={formData["shipping_address.postal_code"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-postal-code-input"
-        />
-        <Input
-          label="City"
-          name="shipping_address.city"
-          autoComplete="address-level2"
-          value={formData["shipping_address.city"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-city-input"
-        />
-        <CountrySelect
-          name="shipping_address.country_code"
-          autoComplete="country"
-          region={cart?.region}
-          value={formData["shipping_address.country_code"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-country-select"
-        />
-        <Input
-          label="State / Province"
-          name="shipping_address.province"
-          autoComplete="address-level1"
-          value={formData["shipping_address.province"]}
-          onChange={handleChange}
-          data-testid="shipping-province-input"
-        />
-      </div>
-      <div className="my-8">
-        <Checkbox
-          label="Billing address same as shipping address"
-          name="same_as_billing"
-          checked={checked}
-          onChange={onChange}
-          data-testid="billing-address-checkbox"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          title="Enter a valid email address."
-          autoComplete="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          data-testid="shipping-email-input"
-        />
-        <Input
-          label="Phone"
-          name="shipping_address.phone"
-          autoComplete="tel"
-          value={formData["shipping_address.phone"]}
-          onChange={handleChange}
-          data-testid="shipping-phone-input"
-        />
+
+      {/* Hidden fields ensuring Medusa API validity */}
+      <input type="hidden" name="shipping_address.last_name" value={formData["shipping_address.last_name"] || "."} />
+      <input type="hidden" name="shipping_address.postal_code" value={formData["shipping_address.postal_code"] || "1200"} />
+      <input type="hidden" name="shipping_address.country_code" value="bd" />
+      <input type="hidden" name="shipping_address.company" value={formData["shipping_address.company"] || ""} />
+      <input type="hidden" name="shipping_address.province" value={formData["shipping_address.province"] || ""} />
+      <input type="hidden" name="same_as_billing" value="on" />
+
+      {/* Streamlined Bangladeshi Customer-Friendly Form */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Input
+            label="আপনার পূর্ণ নাম"
+            name="shipping_address.first_name"
+            autoComplete="name"
+            placeholder="যেমন: মোঃ রহিম"
+            value={formData["shipping_address.first_name"]}
+            onChange={handleChange}
+            required
+            data-testid="shipping-first-name-input"
+          />
+        </div>
+
+        <div>
+          <Input
+            label="সচল মোবাইল নম্বর"
+            name="shipping_address.phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="যেমন: 017xxxxxxxx"
+            value={formData["shipping_address.phone"]}
+            onChange={handleChange}
+            required
+            data-testid="shipping-phone-input"
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <Input
+            label="ডেলিভারি ঠিকানা (বাসা/রোড/এলাকা/থানা)"
+            name="shipping_address.address_1"
+            autoComplete="address-line1"
+            placeholder="যেমন: বাড়ি নং ১২, রোড নং ৫, ধানমন্ডি, ঢাকা"
+            value={formData["shipping_address.address_1"]}
+            onChange={handleChange}
+            required
+            data-testid="shipping-address-input"
+          />
+        </div>
+
+        <div>
+          <Input
+            label="জেলা / শহর"
+            name="shipping_address.city"
+            autoComplete="address-level2"
+            placeholder="যেমন: ঢাকা / চট্টগ্রাম / ময়মনসিংহ"
+            value={formData["shipping_address.city"]}
+            onChange={handleChange}
+            required
+            data-testid="shipping-city-input"
+          />
+        </div>
+
+        <div>
+          <Input
+            label="ইমেইল এড্রেস (ঐচ্ছিক)"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="আপনার ইমেইল (না দিলেও চলবে)"
+            value={formData.email}
+            onChange={handleChange}
+            data-testid="shipping-email-input"
+          />
+        </div>
       </div>
     </>
   )

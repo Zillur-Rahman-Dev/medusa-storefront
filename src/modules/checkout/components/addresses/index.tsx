@@ -39,24 +39,37 @@ const Addresses = ({
 
   const [message, formAction] = useActionState(setAddresses, null)
 
+  const fullName = [
+    cart?.shipping_address?.first_name,
+    cart?.shipping_address?.last_name && cart?.shipping_address?.last_name !== "."
+      ? cart?.shipping_address?.last_name
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+
   return (
     <div className="bg-white">
       <div className="flex flex-row items-center justify-between mb-6">
         <Heading
           level="h2"
-          className="flex flex-row text-3xl-regular gap-x-2 items-baseline"
+          className="flex flex-row text-3xl-regular gap-x-2 items-baseline font-bold text-gray-900"
         >
-          Shipping Address
-          {!isOpen && <CheckCircleSolid />}
+          ডেলিভারি ঠিকানা
+          {!isOpen && cart?.shipping_address && (
+            <span className="text-emerald-600 inline-flex items-center">
+              <CheckCircleSolid />
+            </span>
+          )}
         </Heading>
         {!isOpen && cart?.shipping_address && (
           <Text>
             <button
               onClick={handleEdit}
-              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="text-amber-600 hover:text-amber-700 font-medium text-sm hover:underline cursor-pointer transition-colors"
               data-testid="edit-address-button"
             >
-              Edit
+              পরিবর্তন করুন (Edit)
             </button>
           </Text>
         )}
@@ -77,14 +90,14 @@ const Addresses = ({
                   level="h2"
                   className="text-3xl-regular gap-x-4 pb-6 pt-8"
                 >
-                  Billing address
+                  বিলিং ঠিকানা
                 </Heading>
 
                 <BillingAddress cart={cart} />
               </div>
             )}
-            <SubmitButton className="mt-6" data-testid="submit-address-button">
-              Continue to delivery
+            <SubmitButton className="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-medium" data-testid="submit-address-button">
+              পরবর্তী ধাপ: ডেলিভারি পদ্ধতি বেছে নিন →
             </SubmitButton>
             <ErrorMessage error={message} data-testid="address-error-message" />
           </div>
@@ -94,77 +107,55 @@ const Addresses = ({
           <div className="text-small-regular">
             {cart && cart.shipping_address ? (
               <div className="flex items-start gap-x-8">
-                <div className="flex items-start gap-x-1 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full bg-stone-50/70 p-4 rounded-xl border border-stone-200/60">
                   <div
-                    className="flex flex-col w-1/3"
+                    className="flex flex-col"
                     data-testid="shipping-address-summary"
                   >
-                    <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                      Shipping Address
+                    <Text className="txt-medium-plus text-ui-fg-base mb-1 font-semibold text-gray-800">
+                      প্রাপকের ঠিকানা
                     </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.first_name}{" "}
-                      {cart.shipping_address.last_name}
+                    <Text className="txt-medium text-gray-700 font-medium">
+                      {fullName || "সম্মানিত গ্রাহক"}
                     </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.address_1}{" "}
-                      {cart.shipping_address.address_2}
+                    <Text className="txt-medium text-gray-600">
+                      {cart.shipping_address.address_1}
                     </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.postal_code},{" "}
+                    <Text className="txt-medium text-gray-600">
                       {cart.shipping_address.city}
                     </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.country_code?.toUpperCase()}
+                    <Text className="txt-medium text-gray-500 text-xs">
+                      বাংলাদেশ (BD)
                     </Text>
                   </div>
 
                   <div
-                    className="flex flex-col w-1/3 "
+                    className="flex flex-col"
                     data-testid="shipping-contact-summary"
                   >
-                    <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                      Contact
+                    <Text className="txt-medium-plus text-ui-fg-base mb-1 font-semibold text-gray-800">
+                      যোগাযোগ
                     </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.phone}
+                    <Text className="txt-medium text-gray-700 font-medium">
+                      📱 {cart.shipping_address.phone || "—"}
                     </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.email}
+                    <Text className="txt-medium text-gray-600 text-xs mt-0.5">
+                      {cart.email && !cart.email.includes("@purehoneybd.com")
+                        ? `✉️ ${cart.email}`
+                        : "✉️ ইমেইল সংরক্ষিত"}
                     </Text>
                   </div>
 
                   <div
-                    className="flex flex-col w-1/3"
+                    className="flex flex-col"
                     data-testid="billing-address-summary"
                   >
-                    <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                      Billing Address
+                    <Text className="txt-medium-plus text-ui-fg-base mb-1 font-semibold text-gray-800">
+                      বিলিং পদ্ধতি
                     </Text>
-
-                    {sameAsBilling ? (
-                      <Text className="txt-medium text-ui-fg-subtle">
-                        Billing and delivery address are the same.
-                      </Text>
-                    ) : (
-                      <>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address?.first_name}{" "}
-                          {cart.billing_address?.last_name}
-                        </Text>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address?.address_1}{" "}
-                          {cart.billing_address?.address_2}
-                        </Text>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address?.postal_code},{" "}
-                          {cart.billing_address?.city}
-                        </Text>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address?.country_code?.toUpperCase()}
-                        </Text>
-                      </>
-                    )}
+                    <Text className="txt-medium text-emerald-700 font-medium">
+                      ✓ ডেলিভারি ও বিলিং ঠিকানা একই
+                    </Text>
                   </div>
                 </div>
               </div>

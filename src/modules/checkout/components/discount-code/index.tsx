@@ -63,33 +63,32 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             <button
               onClick={() => setIsOpen(!isOpen)}
               type="button"
-              className="txt-medium text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="txt-medium text-amber-700 hover:text-amber-800 font-medium hover:underline flex items-center gap-1.5"
               data-testid="add-discount-button"
             >
-              Add Promotion Code(s)
+              <span>🏷️</span>
+              <span>প্রোমো কোড যোগ করুন</span>
             </button>
-
-            {/* <Tooltip content="You can add multiple promotion codes">
-              <InformationCircleSolid color="var(--fg-muted)" />
-            </Tooltip> */}
           </Label>
 
           {isOpen && (
             <>
-              <div className="flex w-full gap-x-2">
+              <div className="flex w-full gap-x-2 mt-2">
                 <Input
                   className="size-full"
                   id="promotion-input"
                   name="code"
                   type="text"
+                  placeholder="কুপন বা প্রোমো কোড লিখুন"
                   autoFocus={false}
                   data-testid="discount-input"
                 />
                 <SubmitButton
                   variant="secondary"
+                  className="bg-stone-800 text-white hover:bg-stone-900 px-4"
                   data-testid="discount-apply-button"
                 >
-                  Apply
+                  প্রয়োগ করুন
                 </SubmitButton>
               </div>
 
@@ -104,19 +103,19 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         {promotions.length > 0 && (
           <div className="w-full flex items-center">
             <div className="flex flex-col w-full">
-              <Heading className="txt-medium mb-2">
-                Promotion(s) applied:
+              <Heading className="txt-medium mb-2 font-semibold text-gray-800">
+                প্রোমো কোড যুক্ত হয়েছে:
               </Heading>
 
               {promotions.map((promotion) => {
                 return (
                   <div
                     key={promotion.id}
-                    className="flex items-center justify-between w-full max-w-full mb-2"
+                    className="flex items-center justify-between w-full max-w-full mb-2 bg-emerald-50 p-2 rounded-lg border border-emerald-200"
                     data-testid="discount-row"
                   >
                     <Text className="flex gap-x-1 items-baseline txt-small-plus w-4/5 pr-1">
-                      <span className="truncate" data-testid="discount-code">
+                      <span className="truncate flex items-center gap-2" data-testid="discount-code">
                         <Badge
                           color={promotion.is_automatic ? "green" : "grey"}
                           size="small"
@@ -140,16 +139,11 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                             </>
                           )}
                         )
-                        {/* {promotion.is_automatic && (
-                          <Tooltip content="This promotion is automatically applied">
-                            <InformationCircleSolid className="inline text-zinc-400" />
-                          </Tooltip>
-                        )} */}
                       </span>
                     </Text>
                     {!promotion.is_automatic && (
                       <button
-                        className="flex items-center"
+                        className="flex items-center text-red-600 hover:text-red-700 p-1"
                         onClick={() => {
                           if (!promotion.code) {
                             return
@@ -158,6 +152,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                           removePromotionCode(promotion.code)
                         }}
                         data-testid="remove-discount-button"
+                        title="প্রোমো কোড মুছুন"
                       >
                         <Trash size={14} />
                         <span className="sr-only">

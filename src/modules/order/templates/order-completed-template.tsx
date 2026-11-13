@@ -31,14 +31,14 @@ export default async function OrderCompletedTemplate({
         >
           <Heading
             level="h1"
-            className="flex flex-col gap-y-3 text-ui-fg-base text-3xl mb-4"
+            className="flex flex-col gap-y-2 text-ui-fg-base text-3xl mb-4 text-emerald-800"
           >
-            <span>Thank you!</span>
-            <span>Your order was placed successfully.</span>
+            <span className="flex items-center gap-2">🎉 ধন্যবাদ!</span>
+            <span className="text-xl font-medium text-gray-700">আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।</span>
           </Heading>
           <OrderDetails order={order} />
-          <Heading level="h2" className="flex flex-row text-3xl-regular">
-            Summary
+          <Heading level="h2" className="flex flex-row text-2xl-regular font-bold text-gray-900 mt-4">
+            অর্ডারের সারসংক্ষেপ
           </Heading>
           <Items order={order} />
           <CartTotals totals={order} />
