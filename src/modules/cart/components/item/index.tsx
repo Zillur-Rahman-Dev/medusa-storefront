@@ -19,16 +19,35 @@ type ItemProps = {
   type?: "full" | "preview"
   currencyCode: string
   onDelete?: (id: string) => void
+  onUpdateQuantity?: (id: string, quantity: number) => Promise<void>
 }
 
-const Item = ({ item, type = "full", currencyCode, onDelete }: ItemProps) => {
+const Item = ({
+  item,
+  type = "full",
+  currencyCode,
+  onDelete,
+  onUpdateQuantity,
+}: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
-    setUpdating(true)
 
+    if (onUpdateQuantity) {
+      setUpdating(true)
+      try {
+        await onUpdateQuantity(item.id, quantity)
+      } catch (err: any) {
+        setError(err?.message || "কোয়ান্টিটি পরিবর্তন করতে সমস্যা হয়েছে")
+      } finally {
+        setUpdating(false)
+      }
+      return
+    }
+
+    setUpdating(true)
     await updateLineItem({
       lineId: item.id,
       quantity,

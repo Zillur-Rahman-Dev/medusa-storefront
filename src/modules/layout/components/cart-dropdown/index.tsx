@@ -96,6 +96,7 @@ const CartDropdown = ({
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
   const [optimisticItems, setOptimisticItems] = useState<OptimisticItem[]>([])
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
+  const [quantityOverrides, setQuantityOverrides] = useState<Record<string, number>>({})
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
@@ -103,14 +104,19 @@ const CartDropdown = ({
   // 1. Raw server items coming directly from backend props
   const rawServerItems = cartState?.items || []
 
-  // 2. Active server items (excluding items optimistically deleted by user in this session)
+  // 2. Active server items (excluding items optimistically deleted by user)
   const activeServerItems = rawServerItems.filter(
     (item) => !deletedItemIds.includes(item.id)
   )
 
+  // Helper to get active quantity for an item (supporting optimistic quantity sync)
+  const getItemQuantity = (item: HttpTypes.StoreCartLineItem) => {
+    return quantityOverrides[item.id] ?? item.quantity
+  }
+
   // 3. Totals (Active server items + Optimistic pending items)
   const activeServerCount = activeServerItems.reduce(
-    (acc, item) => acc + item.quantity,
+    (acc, item) => acc + getItemQuantity(item),
     0
   )
   const optimisticCount = optimisticItems.reduce(
@@ -120,7 +126,7 @@ const CartDropdown = ({
   const totalItems = activeServerCount + optimisticCount
 
   const activeServerSubtotal = activeServerItems.reduce(
-    (acc, item) => acc + item.unit_price * item.quantity,
+    (acc, item) => acc + item.unit_price * getItemQuantity(item),
     0
   )
   const optimisticSubtotal = optimisticItems.reduce(
@@ -129,7 +135,7 @@ const CartDropdown = ({
   )
   const totalSubtotal = activeServerSubtotal + optimisticSubtotal
 
-  // Signature based STRICTLY on server props (does NOT change on local optimistic delete)
+  // Signature based STRICTLY on server props (does NOT change on local optimistic actions)
   const serverSignature = rawServerItems
     .map((i) => `${i.id}_${i.quantity}`)
     .join("|")
@@ -142,7 +148,7 @@ const CartDropdown = ({
     setActiveTimer(timer)
   }
 
-  // Instant 0ms Optimistic Delete handler (Clean, reliable, no loop or blink)
+  // Instant 0ms Optimistic Delete handler
   const handleOptimisticDelete = async (itemId: string) => {
     // 1. Instantly hide item from UI & recalculate totals in 0ms
     setDeletedItemIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]))
@@ -157,7 +163,7 @@ const CartDropdown = ({
     }
   }
 
-  // Listen to optimistic cart events for instant 0.05s UI responsiveness across the storefront
+  // Listen to optimistic cart events for instant 0.05s UI responsiveness across the entire storefront
   useEffect(() => {
     const handleItemAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
@@ -176,16 +182,62 @@ const CartDropdown = ({
     }
 
     const handleItemFailed = () => {
-      // Rollback on failure
       setOptimisticItems((prev) => prev.slice(1))
+    }
+
+    // External delete from Cart Page
+    const handleItemDeleted = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      if (detail.id) {
+        setDeletedItemIds((prev) =>
+          prev.includes(detail.id) ? prev : [...prev, detail.id]
+        )
+      }
+    }
+
+    const handleItemDeleteFailed = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      if (detail.id) {
+        setDeletedItemIds((prev) => prev.filter((id) => id !== detail.id))
+      }
+    }
+
+    // External quantity update from Cart Page
+    const handleQuantityUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      if (detail.id && typeof detail.quantity === "number") {
+        setQuantityOverrides((prev) => ({
+          ...prev,
+          [detail.id]: detail.quantity,
+        }))
+      }
+    }
+
+    const handleQuantityUpdateFailed = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      if (detail.id) {
+        setQuantityOverrides((prev) => {
+          const next = { ...prev }
+          delete next[detail.id]
+          return next
+        })
+      }
     }
 
     window.addEventListener("cart:item-added", handleItemAdded)
     window.addEventListener("cart:item-failed", handleItemFailed)
+    window.addEventListener("cart:item-deleted", handleItemDeleted)
+    window.addEventListener("cart:item-delete-failed", handleItemDeleteFailed)
+    window.addEventListener("cart:quantity-updated", handleQuantityUpdated)
+    window.addEventListener("cart:quantity-update-failed", handleQuantityUpdateFailed)
 
     return () => {
       window.removeEventListener("cart:item-added", handleItemAdded)
       window.removeEventListener("cart:item-failed", handleItemFailed)
+      window.removeEventListener("cart:item-deleted", handleItemDeleted)
+      window.removeEventListener("cart:item-delete-failed", handleItemDeleteFailed)
+      window.removeEventListener("cart:quantity-updated", handleQuantityUpdated)
+      window.removeEventListener("cart:quantity-update-failed", handleQuantityUpdateFailed)
     }
   }, [])
 
@@ -207,6 +259,18 @@ const CartDropdown = ({
           )
       )
     )
+
+    // 3. Clean up matched quantityOverrides
+    setQuantityOverrides((prev) => {
+      const next = { ...prev }
+      for (const [id, qty] of Object.entries(prev)) {
+        const srv = rawServerItems.find((i) => i.id === id)
+        if (srv && srv.quantity === qty) {
+          delete next[id]
+        }
+      }
+      return next
+    })
 
     prevSignatureRef.current = serverSignature
   }, [serverSignature, rawServerItems])
@@ -373,9 +437,10 @@ const CartDropdown = ({
                         title: item.title,
                       })
 
+                      const currentQty = getItemQuantity(item)
+                      const itemPrice = item.unit_price * currentQty
                       const variantLabel =
                         item.variant?.title || item.subtitle || "ডিফল্ট"
-                      const itemPrice = item.unit_price * item.quantity
 
                       return (
                         <div
@@ -424,7 +489,7 @@ const CartDropdown = ({
                                 {"  •  "}
                                 পরিমাণ:{" "}
                                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                  {item.quantity}
+                                  {currentQty}
                                 </span>
                               </p>
                             </div>

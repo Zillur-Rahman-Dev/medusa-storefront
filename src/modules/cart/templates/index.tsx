@@ -6,7 +6,7 @@ import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
-import { deleteLineItem } from "@lib/data/cart"
+import { deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
@@ -19,6 +19,7 @@ const CartTemplate = ({
 }) => {
   const router = useRouter()
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
 
   // Raw items from server props
   const rawItems = cart?.items || []
@@ -30,6 +31,15 @@ const CartTemplate = ({
     // Instantly hide item from items table and recalculate summary in 0ms!
     setDeletedItemIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]))
 
+    // Instantly notify header CartDropdown & cart badge count
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-deleted", {
+          detail: { id: itemId },
+        })
+      )
+    }
+
     try {
       await deleteLineItem(itemId)
       router.refresh()
@@ -37,10 +47,56 @@ const CartTemplate = ({
       console.error("Failed to delete line item on cart page:", err)
       // Rollback on network failure
       setDeletedItemIds((prev) => prev.filter((id) => id !== itemId))
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-delete-failed", {
+            detail: { id: itemId },
+          })
+        )
+      }
     }
   }
 
-  // When server cart updates from backend, clean up deletedItemIds
+  // 2. Instant 0ms Optimistic Quantity Update Handler for the Cart Page
+  const handleOptimisticQuantity = async (itemId: string, newQuantity: number) => {
+    // Instantly update dropdown value, row price, and summary subtotal in 0ms!
+    setQuantities((prev) => ({ ...prev, [itemId]: newQuantity }))
+
+    // Instantly notify header CartDropdown & cart badge count
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:quantity-updated", {
+          detail: { id: itemId, quantity: newQuantity },
+        })
+      )
+    }
+
+    try {
+      await updateLineItem({
+        lineId: itemId,
+        quantity: newQuantity,
+      })
+      router.refresh()
+    } catch (err) {
+      console.error("Failed to update quantity on cart page:", err)
+      // Rollback on network failure
+      setQuantities((prev) => {
+        const copy = { ...prev }
+        delete copy[itemId]
+        return copy
+      })
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:quantity-update-failed", {
+            detail: { id: itemId },
+          })
+        )
+      }
+      throw err
+    }
+  }
+
+  // When server cart updates from backend, clean up deletedItemIds and matched quantities
   useEffect(() => {
     if (prevSignatureRef.current === serverSignature) return
 
@@ -48,16 +104,36 @@ const CartTemplate = ({
       prev.filter((id) => rawItems.some((item) => item.id === id))
     )
 
+    setQuantities((prev) => {
+      const next = { ...prev }
+      for (const [id, qty] of Object.entries(prev)) {
+        const srv = rawItems.find((i) => i.id === id)
+        if (srv && srv.quantity === qty) {
+          delete next[id]
+        }
+      }
+      return next
+    })
+
     prevSignatureRef.current = serverSignature
   }, [serverSignature, rawItems])
 
-  // Active Cart Object for 0ms UI update
+  // Active Cart Object for 0ms UI update across items table & summary
   const activeCart = useMemo(() => {
     if (!cart) return null
 
-    const activeItems = (cart.items || []).filter(
-      (item) => !deletedItemIds.includes(item.id)
-    )
+    const activeItems = (cart.items || [])
+      .filter((item) => !deletedItemIds.includes(item.id))
+      .map((item) => {
+        const qty = quantities[item.id] ?? item.quantity
+        const subtotal = item.unit_price * qty
+        return {
+          ...item,
+          quantity: qty,
+          subtotal,
+          total: subtotal,
+        }
+      })
 
     const subtotal = activeItems.reduce(
       (acc, item) => acc + item.unit_price * item.quantity,
@@ -74,7 +150,7 @@ const CartTemplate = ({
       original_subtotal: subtotal,
       original_total: subtotal,
     } as HttpTypes.StoreCart
-  }, [cart, deletedItemIds])
+  }, [cart, deletedItemIds, quantities])
 
   const hasItems = (activeCart?.items?.length ?? 0) > 0
 
@@ -90,7 +166,11 @@ const CartTemplate = ({
                   <Divider />
                 </>
               )}
-              <ItemsTemplate cart={activeCart!} onDelete={handleOptimisticDelete} />
+              <ItemsTemplate
+                cart={activeCart!}
+                onDelete={handleOptimisticDelete}
+                onUpdateQuantity={handleOptimisticQuantity}
+              />
             </div>
             <div className="relative">
               <div className="flex flex-col gap-y-8 sticky top-12">

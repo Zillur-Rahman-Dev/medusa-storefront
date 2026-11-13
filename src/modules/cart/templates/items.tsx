@@ -8,9 +8,14 @@ import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 type ItemsTemplateProps = {
   cart?: HttpTypes.StoreCart
   onDelete?: (id: string) => void
+  onUpdateQuantity?: (id: string, quantity: number) => Promise<void>
 }
 
-const ItemsTemplate = ({ cart, onDelete }: ItemsTemplateProps) => {
+const ItemsTemplate = ({
+  cart,
+  onDelete,
+  onUpdateQuantity,
+}: ItemsTemplateProps) => {
   const items = cart?.items
   return (
     <div>
@@ -44,6 +49,7 @@ const ItemsTemplate = ({ cart, onDelete }: ItemsTemplateProps) => {
                       item={item}
                       currencyCode={cart?.currency_code}
                       onDelete={onDelete}
+                      onUpdateQuantity={onUpdateQuantity}
                     />
                   )
                 })
