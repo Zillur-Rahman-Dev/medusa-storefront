@@ -17,7 +17,7 @@ type Props = {
 export default async function Checkout(props: Props) {
   const { countryCode } = await props.params
   if (countryCode && countryCode.toLowerCase() !== "bd") {
-    redirect("/bd/checkout?step=address")
+    redirect("/bd/checkout")
   }
   const cart = await retrieveCart()
 

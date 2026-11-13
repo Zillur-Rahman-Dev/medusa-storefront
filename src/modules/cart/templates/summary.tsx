@@ -14,32 +14,22 @@ type SummaryProps = {
   }
 }
 
-function getCheckoutStep(cart: HttpTypes.StoreCart) {
-  if (!cart?.shipping_address?.address_1 || !cart.email) {
-    return "address"
-  } else if (cart?.shipping_methods?.length === 0) {
-    return "delivery"
-  } else {
-    return "payment"
-  }
-}
-
 const Summary = ({ cart }: SummaryProps) => {
-  const step = getCheckoutStep(cart)
-
   return (
     <div className="flex flex-col gap-y-4">
-      <Heading level="h2" className="text-[2rem] leading-[2.75rem]">
-        Summary
+      <Heading level="h2" className="text-[2rem] leading-[2.75rem] font-bold text-gray-900">
+        অর্ডার বিবরণ
       </Heading>
       <DiscountCode cart={cart} />
       <Divider />
       <CartTotals totals={cart} />
       <LocalizedClientLink
-        href={"/checkout?step=" + step}
+        href="/checkout"
         data-testid="checkout-button"
       >
-        <Button className="w-full h-10">Go to checkout</Button>
+        <Button className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white font-bold text-base rounded-xl shadow-md cursor-pointer transition-all">
+          চেকআউট করুন (অর্ডার নিশ্চিত করুন) →
+        </Button>
       </LocalizedClientLink>
     </div>
   )

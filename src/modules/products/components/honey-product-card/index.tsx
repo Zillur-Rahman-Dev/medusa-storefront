@@ -110,7 +110,7 @@ export default function HoneyProductCard({
     e.stopPropagation()
 
     if (!product.variantId) {
-      router.push("/bd/checkout?step=address")
+      router.push("/bd/checkout")
       return
     }
 
@@ -121,10 +121,10 @@ export default function HoneyProductCard({
         quantity: 1,
         countryCode: "bd",
       })
-      router.push("/bd/checkout?step=address")
+      router.push("/bd/checkout")
     } catch (err) {
       console.error("Failed to add to cart for direct checkout:", err)
-      router.push("/bd/checkout?step=address")
+      router.push("/bd/checkout")
     } finally {
       setIsOrdering(false)
     }

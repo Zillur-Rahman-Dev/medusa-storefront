@@ -491,6 +491,98 @@ export async function placeOrder(cartId?: string) {
   return cartRes.cart
 }
 
+export async function submitOneStepOrder(previousState: any, formData: FormData) {
+  let cartId: string | undefined
+  try {
+    cartId = await getCartId()
+    if (!cartId) {
+      throw new Error("আপনার কার্ট পাওয়া যায়নি। অনুগ্রহ করে কার্ট-এ পণ্য যোগ করুন।")
+    }
+
+    const rawFullName = ((formData.get("fullName") || formData.get("shipping_address.first_name") || "") as string).trim()
+    if (!rawFullName) {
+      throw new Error("অনুগ্রহ করে আপনার নাম লিখুন।")
+    }
+
+    let firstName = rawFullName
+    let lastName = "."
+    const nameParts = rawFullName.split(" ")
+    if (nameParts.length > 1) {
+      firstName = nameParts.slice(0, -1).join(" ")
+      lastName = nameParts[nameParts.length - 1]
+    }
+
+    const phone = ((formData.get("phone") || formData.get("shipping_address.phone") || "") as string).trim()
+    if (!phone) {
+      throw new Error("অনুগ্রহ করে আপনার মোবাইল নম্বর লিখুন।")
+    }
+
+    const address1 = ((formData.get("address") || formData.get("shipping_address.address_1") || "") as string).trim()
+    if (!address1) {
+      throw new Error("অনুগ্রহ করে আপনার সম্পূর্ণ ডেলিভারি ঠিকানা লিখুন।")
+    }
+
+    const city = ((formData.get("city") || formData.get("shipping_address.city") || "") as string).trim() || "ঢাকা"
+
+    let email = ((formData.get("email") || "") as string).trim()
+    if (!email) {
+      const cleanPhone = phone.replace(/\D/g, "")
+      email = cleanPhone ? `${cleanPhone}@purehoneybd.com` : "customer@purehoneybd.com"
+    }
+
+    const postalCode = ((formData.get("postal_code") || "") as string).trim() || "1200"
+    const countryCode = "bd"
+
+    // 1. Update Address on Cart
+    const addressData = {
+      first_name: firstName,
+      last_name: lastName || ".",
+      address_1: address1,
+      address_2: "",
+      city: city,
+      country_code: countryCode,
+      postal_code: postalCode,
+      phone: phone,
+      company: "",
+      province: "",
+    }
+
+    await updateCart({
+      shipping_address: addressData,
+      billing_address: addressData,
+      email: email,
+    })
+
+    // 2. Set Shipping Method if provided
+    const shippingMethodId = (formData.get("shippingMethodId") || formData.get("shipping_method_id") || "") as string
+    if (shippingMethodId) {
+      await setShippingMethod({ cartId, shippingMethodId })
+    }
+
+    // 3. Initiate Payment Session (Cash on Delivery)
+    const paymentProviderId = ((formData.get("paymentProviderId") || "") as string) || "pp_system_default"
+    const cart = await retrieveCart()
+    if (cart) {
+      const activeSession = cart.payment_collection?.payment_sessions?.find(
+        (s: any) => s.status === "pending"
+      )
+      if (!activeSession || activeSession.provider_id !== paymentProviderId) {
+        await initiatePaymentSession(cart, {
+          provider_id: paymentProviderId,
+        })
+      }
+    }
+  } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT")) {
+      throw err
+    }
+    return err?.message || "অর্ডার সম্পন্ন করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
+  }
+
+  // 4. Complete Order (redirects to confirmation page)
+  return await placeOrder(cartId)
+}
+
 /**
  * Updates the countrycode param and revalidates the regions cache
  * @param regionId

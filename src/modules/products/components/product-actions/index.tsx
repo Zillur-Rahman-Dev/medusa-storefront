@@ -212,10 +212,10 @@ export default function ProductActions({
         quantity: 1,
         countryCode: "bd",
       })
-      router.push("/bd/checkout?step=address")
+      router.push("/bd/checkout")
     } catch (err) {
       console.error("Direct checkout add to cart error:", err)
-      router.push("/bd/checkout?step=address")
+      router.push("/bd/checkout")
     } finally {
       setIsOrdering(false)
     }

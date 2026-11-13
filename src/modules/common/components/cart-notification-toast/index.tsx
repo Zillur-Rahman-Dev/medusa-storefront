@@ -109,7 +109,7 @@ export default function CartNotificationToast() {
                 <span>কার্ট দেখুন</span>
               </LocalizedClientLink>
               <LocalizedClientLink
-                href="/checkout?step=address"
+                href="/checkout"
                 onClick={() => setVisible(false)}
                 className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm"
               >
