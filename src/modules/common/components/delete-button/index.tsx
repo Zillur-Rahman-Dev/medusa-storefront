@@ -7,18 +7,24 @@ const DeleteButton = ({
   id,
   children,
   className,
+  onDelete,
 }: {
   id: string
   children?: React.ReactNode
   className?: string
+  onDelete?: (id: string) => void
 }) => {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
-    await deleteLineItem(id).catch((err) => {
-      setIsDeleting(false)
-    })
+    if (onDelete) {
+      onDelete(id)
+    } else {
+      await deleteLineItem(id).catch(() => {
+        setIsDeleting(false)
+      })
+    }
   }
 
   return (
@@ -29,11 +35,15 @@ const DeleteButton = ({
       )}
     >
       <button
-        className="flex gap-x-1 text-ui-fg-subtle hover:text-ui-fg-base cursor-pointer"
+        className="flex items-center gap-x-1.5 text-inherit hover:opacity-80 transition-opacity cursor-pointer"
         onClick={() => handleDelete(id)}
       >
-        {isDeleting ? <Spinner className="animate-spin" /> : <Trash />}
-        <span>{children}</span>
+        {isDeleting ? (
+          <Spinner className="animate-spin w-3.5 h-3.5" />
+        ) : (
+          <Trash className="w-3.5 h-3.5" />
+        )}
+        {children ? <span>{children}</span> : null}
       </button>
     </div>
   )

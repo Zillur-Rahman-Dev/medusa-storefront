@@ -7,6 +7,7 @@ import {
   Transition,
 } from "@headlessui/react"
 import { convertToLocale } from "@lib/util/money"
+import { deleteLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import DeleteButton from "@modules/common/components/delete-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -94,19 +95,34 @@ const CartDropdown = ({
   )
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
   const [optimisticItems, setOptimisticItems] = useState<OptimisticItem[]>([])
+  const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
 
   const serverItems = cartState?.items || []
 
-  // Total items = server items + optimistic items
-  const serverTotalItems = serverItems.reduce((acc, item) => acc + item.quantity, 0)
-  const optimisticTotalItems = optimisticItems.reduce((acc, item) => acc + item.quantity, 0)
+  // Active server items (excluding instant optimistically deleted items)
+  const activeServerItems = serverItems.filter(
+    (item) => !deletedItemIds.includes(item.id)
+  )
+
+  // Total items = active server items + optimistic items
+  const serverTotalItems = activeServerItems.reduce(
+    (acc, item) => acc + item.quantity,
+    0
+  )
+  const optimisticTotalItems = optimisticItems.reduce(
+    (acc, item) => acc + item.quantity,
+    0
+  )
   const totalItems = serverTotalItems + optimisticTotalItems
 
-  // Subtotal = server subtotal + optimistic items prices
-  const serverSubtotal = cartState?.subtotal ?? 0
+  // Subtotal = active server subtotal + optimistic items prices
+  const serverSubtotal = activeServerItems.reduce(
+    (acc, item) => acc + item.unit_price * item.quantity,
+    0
+  )
   const optimisticSubtotal = optimisticItems.reduce(
     (acc, item) => acc + item.unitPrice * item.quantity,
     0
@@ -120,6 +136,21 @@ const CartDropdown = ({
     if (activeTimer) clearTimeout(activeTimer)
     const timer = setTimeout(close, 4500)
     setActiveTimer(timer)
+  }
+
+  // Instant 0ms Optimistic Delete handler
+  const handleOptimisticDelete = async (itemId: string) => {
+    // 1. Instant 0ms visual removal from dropdown & immediate bill recalculation
+    setDeletedItemIds((prev) => [...prev, itemId])
+
+    // 2. Background Medusa API delete
+    try {
+      await deleteLineItem(itemId)
+    } catch (err) {
+      console.error("Failed to delete line item:", err)
+      // Rollback on network failure
+      setDeletedItemIds((prev) => prev.filter((id) => id !== itemId))
+    }
   }
 
   // Listen to optimistic cart events for instant 0.05s UI responsiveness across the entire storefront
@@ -154,10 +185,11 @@ const CartDropdown = ({
     }
   }, [])
 
-  // When real server cart arrives, smoothly reset optimistic items
+  // When real server cart arrives, smoothly reset optimistic items and deleted tracking
   useEffect(() => {
     if (serverTotalItems !== itemRef.current) {
       setOptimisticItems([])
+      setDeletedItemIds([])
       itemRef.current = serverTotalItems
     }
   }, [serverTotalItems])
@@ -321,7 +353,7 @@ const CartDropdown = ({
                   })}
 
                   {/* 2. Official Medusa Server Items (Rendered with 100% IDENTICAL card design) */}
-                  {serverItems
+                  {activeServerItems
                     .sort((a, b) => {
                       return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
                     })
@@ -339,7 +371,7 @@ const CartDropdown = ({
 
                       return (
                         <div
-                          className="py-3 first:pt-0 last:pb-0 flex gap-x-3 items-center"
+                          className="py-3 first:pt-0 last:pb-0 flex gap-x-3 items-center animate-in fade-in duration-200"
                           key={item.id}
                           data-testid="cart-item"
                         >
@@ -389,14 +421,15 @@ const CartDropdown = ({
                               </p>
                             </div>
 
-                            {/* Bottom Row: Delete Button on Left, Price on Right */}
+                            {/* Bottom Row: Delete Button on Left (Single Trash Icon + 'মুছে ফেলুন'), Price on Right */}
                             <div className="flex items-center justify-between pt-1.5">
                               <DeleteButton
                                 id={item.id}
+                                onDelete={handleOptimisticDelete}
                                 className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
                                 data-testid="cart-item-remove-button"
                               >
-                                মুছে ফেলুন 🗑️
+                                মুছে ফেলুন
                               </DeleteButton>
 
                               <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
