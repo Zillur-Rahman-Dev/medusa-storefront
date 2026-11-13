@@ -100,26 +100,26 @@ const CartDropdown = ({
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
 
-  const serverItems = cartState?.items || []
+  // 1. Raw server items coming directly from backend props
+  const rawServerItems = cartState?.items || []
 
-  // Active server items (excluding instant optimistically deleted items)
-  const activeServerItems = serverItems.filter(
+  // 2. Active server items (excluding items optimistically deleted by user in this session)
+  const activeServerItems = rawServerItems.filter(
     (item) => !deletedItemIds.includes(item.id)
   )
 
-  // Total items = active server items + optimistic items
-  const serverTotalItems = activeServerItems.reduce(
+  // 3. Totals (Active server items + Optimistic pending items)
+  const activeServerCount = activeServerItems.reduce(
     (acc, item) => acc + item.quantity,
     0
   )
-  const optimisticTotalItems = optimisticItems.reduce(
+  const optimisticCount = optimisticItems.reduce(
     (acc, item) => acc + item.quantity,
     0
   )
-  const totalItems = serverTotalItems + optimisticTotalItems
+  const totalItems = activeServerCount + optimisticCount
 
-  // Subtotal = active server subtotal + optimistic items prices
-  const serverSubtotal = activeServerItems.reduce(
+  const activeServerSubtotal = activeServerItems.reduce(
     (acc, item) => acc + item.unit_price * item.quantity,
     0
   )
@@ -127,9 +127,13 @@ const CartDropdown = ({
     (acc, item) => acc + item.unitPrice * item.quantity,
     0
   )
-  const totalSubtotal = serverSubtotal + optimisticSubtotal
+  const totalSubtotal = activeServerSubtotal + optimisticSubtotal
 
-  const itemRef = useRef<number>(serverTotalItems)
+  // Signature based STRICTLY on server props (does NOT change on local optimistic delete)
+  const serverSignature = rawServerItems
+    .map((i) => `${i.id}_${i.quantity}`)
+    .join("|")
+  const prevSignatureRef = useRef<string>(serverSignature)
 
   const timedOpen = () => {
     open()
@@ -138,12 +142,12 @@ const CartDropdown = ({
     setActiveTimer(timer)
   }
 
-  // Instant 0ms Optimistic Delete handler
+  // Instant 0ms Optimistic Delete handler (Clean, reliable, no loop or blink)
   const handleOptimisticDelete = async (itemId: string) => {
-    // 1. Instant 0ms visual removal from dropdown & immediate bill recalculation
-    setDeletedItemIds((prev) => [...prev, itemId])
+    // 1. Instantly hide item from UI & recalculate totals in 0ms
+    setDeletedItemIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]))
 
-    // 2. Background Medusa API delete
+    // 2. Background delete via Medusa API
     try {
       await deleteLineItem(itemId)
     } catch (err) {
@@ -153,7 +157,7 @@ const CartDropdown = ({
     }
   }
 
-  // Listen to optimistic cart events for instant 0.05s UI responsiveness across the entire storefront
+  // Listen to optimistic cart events for instant 0.05s UI responsiveness across the storefront
   useEffect(() => {
     const handleItemAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
@@ -185,14 +189,27 @@ const CartDropdown = ({
     }
   }, [])
 
-  // When real server cart arrives, smoothly reset optimistic items and deleted tracking
+  // When real server cart updates from backend (serverSignature changes)
   useEffect(() => {
-    if (serverTotalItems !== itemRef.current) {
-      setOptimisticItems([])
-      setDeletedItemIds([])
-      itemRef.current = serverTotalItems
-    }
-  }, [serverTotalItems])
+    if (prevSignatureRef.current === serverSignature) return
+
+    // 1. Clean up deletedItemIds for items that are now permanently gone from rawServerItems
+    setDeletedItemIds((prev) =>
+      prev.filter((id) => rawServerItems.some((item) => item.id === id))
+    )
+
+    // 2. Remove only optimistic items that have now appeared in rawServerItems
+    setOptimisticItems((prev) =>
+      prev.filter(
+        (opt) =>
+          !rawServerItems.some(
+            (srv) => srv.product_handle === opt.product_handle
+          )
+      )
+    )
+
+    prevSignatureRef.current = serverSignature
+  }, [serverSignature, rawServerItems])
 
   const openAndCancel = () => {
     if (activeTimer) clearTimeout(activeTimer)
@@ -204,15 +221,6 @@ const CartDropdown = ({
       if (activeTimer) clearTimeout(activeTimer)
     }
   }, [activeTimer])
-
-  const pathname = usePathname()
-
-  // Open cart dropdown when modifying the cart items, but only if we're not on the cart page
-  useEffect(() => {
-    if (itemRef.current !== serverTotalItems && !pathname.includes("/cart")) {
-      timedOpen()
-    }
-  }, [serverTotalItems])
 
   const hasItems = totalItems > 0
 
