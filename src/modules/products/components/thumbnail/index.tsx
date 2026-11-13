@@ -17,9 +17,13 @@ const KNOWN_HONEY_IMAGES: Record<string, string> = {
   "sundarban-kholisha-honey":
     "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167286/c5582ba6-d0c3-43b3-afbf-57ead15f9b54_imgi_138_c9eefb3810ff098b0fc9651e2e21f012.jpg.jpg",
   "mustard-flower-honey":
-    "https://res.cloudinary.com/dqseoiw8p/raw/upload/v1794166098/e9b3e553-c496-419a-a1ca-e817d73045f1_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg",
+    "/images/hero/slider-mustard.jpg",
   "black-seed-flower-honey":
     "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg",
+}
+
+const isValidUrl = (url?: string | null): url is string => {
+  return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/"))
 }
 
 const Thumbnail: React.FC<ThumbnailProps> = ({
@@ -32,8 +36,11 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   "data-testid": dataTestid,
 }) => {
   const fallbackImage = productHandle ? KNOWN_HONEY_IMAGES[productHandle] : null
-  const primaryImage = thumbnail || images?.[0]?.url || fallbackImage
-  const secondaryImage = images && images.length > 1 ? images[1]?.url : null
+  const validThumb = isValidUrl(thumbnail) ? thumbnail : null
+  const validImage0 = images && images.length > 0 && isValidUrl(images[0]?.url) ? images[0].url : null
+
+  const primaryImage = validThumb || validImage0 || fallbackImage
+  const secondaryImage = images && images.length > 1 && isValidUrl(images[1]?.url) ? images[1].url : null
 
   return (
     <div
