@@ -28,7 +28,14 @@ export default function Footer() {
             <div className="pt-2 space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-medium">
               <div className="flex items-center gap-2">
                 <PhoneCall className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                <span>+৮৮০ ১৭১১-XXXXXX (হোয়াটসঅ্যাপ)</span>
+                <a
+                  href="https://wa.me/8801999602203"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+                >
+                  +৮৮০ ১৯৯৯-৬০২২০৩ (হোয়াটসঅ্যাপ)
+                </a>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />

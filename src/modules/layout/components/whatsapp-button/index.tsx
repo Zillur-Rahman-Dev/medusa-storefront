@@ -4,10 +4,10 @@ import React from "react"
 
 export default function WhatsAppButton() {
   const whatsappNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "8801700000000"
+    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "8801999602203"
 
   const defaultMessage = encodeURIComponent(
-    "আসসালামু আলাইকুম, আমি খাঁটি মধু অর্ডার করতে চাই।"
+    "আসসালামু আলাইকুম, আমি Pure Honey ওয়েবসাইট থেকে খাঁটি মধু অর্ডার করতে চাই।"
   )
 
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${defaultMessage}`
