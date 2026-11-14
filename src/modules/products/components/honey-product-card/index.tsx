@@ -6,6 +6,7 @@ import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
 import { addToCart } from "@lib/data/cart"
+import { formatPrice, formatSize } from "@lib/util/money"
 
 export type HoneyProductItem = {
   id: string
@@ -188,18 +189,18 @@ export default function HoneyProductCard({
         <div className="mt-3 flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1.5">
             <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
-              ৳{product.price}
+              {formatPrice(product.price)}
             </span>
             {product.regularPrice && (
               <span className="text-xs text-zinc-400 line-through">
-                ৳{product.regularPrice}
+                {formatPrice(product.regularPrice)}
               </span>
             )}
           </div>
 
           {product.weight && (
             <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
-              {product.weight}
+              {formatSize(product.weight)}
             </span>
           )}
         </div>

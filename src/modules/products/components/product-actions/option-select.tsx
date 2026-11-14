@@ -1,6 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
 import React from "react"
+import { formatSize } from "@lib/util/money"
 
 type OptionSelectProps = {
   option: HttpTypes.StoreProductOption
@@ -21,9 +22,9 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
 }) => {
   const filteredOptions = (option.values ?? []).map((v) => v.value)
   const displayTitle =
-    title?.toLowerCase() === "size"
+    title?.toLowerCase() === "size" || title?.toLowerCase() === "ওজন" || title?.toLowerCase() === "সাইজ"
       ? "প্যাক সাইজ / ওজন নির্বাচন করুন:"
-      : `Select ${title}:`
+      : `${title} নির্বাচন করুন:`
 
   return (
     <div className="flex flex-col gap-y-1.5">
@@ -53,7 +54,7 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
               disabled={disabled}
               data-testid="option-button"
             >
-              {v}
+              {formatSize(v)}
             </button>
           )
         })}

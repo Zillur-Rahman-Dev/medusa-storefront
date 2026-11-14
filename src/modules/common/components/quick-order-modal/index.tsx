@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { X, CheckCircle, Truck, ShieldCheck, PhoneCall, ShoppingBag } from "lucide-react"
+import { formatPrice, formatSize } from "@lib/util/money"
 
 type QuickOrderModalProps = {
   isOpen: boolean
@@ -86,10 +87,10 @@ export default function QuickOrderModal({
               অর্ডারটি সফলভাবে সম্পন্ন হয়েছে!
             </h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-300 max-w-md mx-auto leading-relaxed">
-              ধন্যবাদ <strong>{name}</strong>! আপনার <strong>{product.title}</strong> (পরিমাণ: {quantity}) এর অর্ডারটি গ্রহণ করা হয়েছে। ডেলিভারির আগে আপনাকে ফোন দেওয়া হবে।
+              ধন্যবাদ <strong>{name}</strong>! আপনার <strong>{product.title}</strong> (পরিমাণ: {formatSize(String(quantity))}) এর অর্ডারটি গ্রহণ করা হয়েছে। ডেলিভারির আগে আপনাকে ফোন দেওয়া হবে।
             </p>
             <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-600 dark:text-zinc-300">
-              মোট প্রদেয় টাকা: <strong className="text-emerald-700 dark:text-emerald-400 text-sm">৳{total}</strong> (ক্যাশ অন ডেলিভারি)
+              মোট প্রদেয় টাকা: <strong className="text-emerald-700 dark:text-emerald-400 text-sm">{formatPrice(total)}</strong> (ক্যাশ অন ডেলিভারি)
             </div>
             <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
               <button
@@ -120,7 +121,7 @@ export default function QuickOrderModal({
                     {product.title}
                   </h4>
                   <div className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
-                    ৳{unitPrice} {product.size && `• ${product.size}`}
+                    {formatPrice(unitPrice)} {product.size && `• ${formatSize(product.size)}`}
                   </div>
                 </div>
               </div>
@@ -135,7 +136,7 @@ export default function QuickOrderModal({
                   -
                 </button>
                 <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 w-4 text-center">
-                  {quantity}
+                  {formatSize(String(quantity))}
                 </span>
                 <button
                   type="button"
@@ -227,16 +228,16 @@ export default function QuickOrderModal({
             {/* Cost Breakdown */}
             <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-1 text-xs">
               <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
-                <span>পণ্যের মূল্য ({quantity} টি)</span>
-                <span>৳{subtotal}</span>
+                <span>পণ্যের মূল্য ({formatSize(String(quantity))} টি)</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
                 <span>ডেলিভারি চার্জ</span>
-                <span>৳{deliveryCharge}</span>
+                <span>{formatPrice(deliveryCharge)}</span>
               </div>
               <div className="flex justify-between text-sm font-black text-zinc-900 dark:text-zinc-100 pt-1 border-t border-zinc-200 dark:border-zinc-800">
                 <span>সর্বমোট প্রদেয় বিল:</span>
-                <span className="text-emerald-700 dark:text-emerald-400">৳{total}</span>
+                <span className="text-emerald-700 dark:text-emerald-400">{formatPrice(total)}</span>
               </div>
             </div>
 
@@ -247,7 +248,7 @@ export default function QuickOrderModal({
               className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Truck className="w-4 h-4" />
-              <span>{loading ? "অর্ডার সাবমিট হচ্ছে..." : `অর্ডার কনফার্ম করুন (৳${total})`}</span>
+              <span>{loading ? "অর্ডার সাবমিট হচ্ছে..." : `অর্ডার কনফার্ম করুন (${formatPrice(total)})`}</span>
             </button>
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 pt-1">

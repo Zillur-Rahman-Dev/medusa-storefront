@@ -10,6 +10,7 @@ import WeightFilter, { WEIGHT_OPTIONS } from "../weight-filter"
 import CategoryFilter from "../category-filter"
 import ProductFlagFilter from "../product-flag-filter"
 import ProductPreview from "@modules/products/components/product-preview"
+import { formatPrice } from "@lib/util/money"
 
 type ClientStoreViewProps = {
   products: HttpTypes.StoreProduct[]
@@ -567,8 +568,7 @@ export default function ClientStoreView({
                   priceRange[1] < maxPossiblePrice) && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
                     <span>
-                      দাম: ৳{priceRange[0].toLocaleString()} - ৳
-                      {priceRange[1].toLocaleString()}
+                      দাম: {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
                     </span>
                     <button
                       type="button"
@@ -703,8 +703,7 @@ export default function ClientStoreView({
               priceRange[1] < maxPossiblePrice) && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>
-                  দাম: ৳{priceRange[0].toLocaleString()} - ৳
-                  {priceRange[1].toLocaleString()}
+                  দাম: {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
                 </span>
                 <button
                   type="button"

@@ -4,6 +4,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
 import PreviewAddToCart from "./add-to-cart"
+import { formatSize } from "@lib/util/money"
 
 export default function ProductPreview({
   product,
@@ -55,7 +56,7 @@ export default function ProductPreview({
             )}
             {((product.metadata?.weight as string) || (product.weight ? `${product.weight}g` : null)) && (
               <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
-                {(product.metadata?.weight as string) || `${product.weight}g`}
+                {formatSize((product.metadata?.weight as string) || `${product.weight}g`)}
               </span>
             )}
           </div>

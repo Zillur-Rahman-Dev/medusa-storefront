@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { Minus, Plus } from "lucide-react"
+import { formatPrice } from "@lib/util/money"
 
 type PriceRangeSliderProps = {
   min: number
@@ -80,8 +81,8 @@ export default function PriceRangeSlider({
         <div className="pt-4 space-y-3">
           {/* Price values row: ৳ 0 on left, ৳ 2,500 on right */}
           <div className="flex items-center justify-between text-sm sm:text-base font-bold text-zinc-800 dark:text-zinc-200">
-            <span>৳ {minVal.toLocaleString()}</span>
-            <span>৳ {maxVal.toLocaleString()}</span>
+            <span>{formatPrice(minVal)}</span>
+            <span>{formatPrice(maxVal)}</span>
           </div>
 
           {/* Slider track container: Perfectly centered */}

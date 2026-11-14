@@ -1,5 +1,6 @@
 import { getProductPrice } from "@lib/util/get-product-price"
 import { HttpTypes } from "@medusajs/types"
+import { formatPrice, formatSize } from "@lib/util/money"
 
 export default function ProductPrice({
   product,
@@ -54,8 +55,8 @@ export default function ProductPrice({
       {/* Row 2: Green Savings Badge (matching screenshot) */}
       {isSale && (
         <div className="inline-flex items-center gap-1.5 w-fit px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300">
-          <span>৳{savedAmount} সাশ্রয়</span>
-          <span>({selectedPrice.percentage_diff}% ছাড়)</span>
+          <span>{formatPrice(savedAmount)} সাশ্রয়</span>
+          <span>({formatSize(String(selectedPrice.percentage_diff))}% ছাড়)</span>
         </div>
       )}
     </div>

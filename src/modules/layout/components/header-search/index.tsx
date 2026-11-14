@@ -5,6 +5,7 @@ import { Search, X, ArrowRight, Loader2 } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
+import { formatPrice, formatSize } from "@lib/util/money"
 
 type SearchItem = {
   id: string
@@ -188,12 +189,12 @@ export default function HeaderSearch() {
                     <div className="flex items-center gap-2 mt-0.5">
                       {product.price ? (
                         <span className="text-xs font-black text-zinc-900 dark:text-zinc-200">
-                          ৳ {product.price.toLocaleString()}
+                          {formatPrice(product.price)}
                         </span>
                       ) : null}
                       {product.weight && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold border border-amber-200/50">
-                          {product.weight}
+                          {formatSize(product.weight)}
                         </span>
                       )}
                     </div>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { Minus, Plus, Check } from "lucide-react"
+import { formatSize } from "@lib/util/money"
 
 export type WeightOption = {
   id: string
@@ -163,7 +164,7 @@ export default function WeightFilter({
                         : "bg-zinc-200/80 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
                     }`}
                   >
-                    {count}
+                    {formatSize(String(count))}
                   </span>
                 )}
               </button>

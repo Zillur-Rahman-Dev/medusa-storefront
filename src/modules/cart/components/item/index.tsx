@@ -13,6 +13,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { useState } from "react"
+import { formatSize } from "@lib/util/money"
 
 type ItemProps = {
   item: HttpTypes.StoreCartLineItem
@@ -114,13 +115,13 @@ const Item = ({
                 },
                 (_, i) => (
                   <option value={i + 1} key={i}>
-                    {i + 1}
+                    {formatSize(String(i + 1))}
                   </option>
                 )
               )}
 
               <option value={1} key={1}>
-                1
+                ১
               </option>
             </CartItemSelect>
           </div>
@@ -146,7 +147,7 @@ const Item = ({
         >
           {type === "preview" && (
             <span className="flex gap-x-1 ">
-              <Text className="text-ui-fg-muted">{item.quantity}x </Text>
+              <Text className="text-ui-fg-muted">{formatSize(String(item.quantity))}x </Text>
               <LineItemUnitPrice
                 item={item}
                 style="tight"

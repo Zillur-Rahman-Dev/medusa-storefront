@@ -1,4 +1,4 @@
-import { convertToLocale } from "@lib/util/money"
+import { convertToLocale, formatSize } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
 
@@ -39,7 +39,7 @@ const LineItemUnitPrice = ({
         <>
           <p>
             {style === "default" && (
-              <span className="text-ui-fg-muted">Original: </span>
+              <span className="text-ui-fg-muted">পূর্বমূল্য: </span>
             )}
             <span
               className="line-through"
@@ -52,7 +52,7 @@ const LineItemUnitPrice = ({
             </span>
           </p>
           {style === "default" && (
-            <span className="text-ui-fg-interactive">-{percentage_diff}%</span>
+            <span className="text-ui-fg-interactive">-{formatSize(String(percentage_diff))}%</span>
           )}
         </>
       )}

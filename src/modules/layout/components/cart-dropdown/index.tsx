@@ -6,7 +6,7 @@ import {
   PopoverPanel,
   Transition,
 } from "@headlessui/react"
-import { convertToLocale } from "@lib/util/money"
+import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
 import { deleteLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import DeleteButton from "@modules/common/components/delete-button"
@@ -310,7 +310,7 @@ const CartDropdown = ({
                     : "bg-amber-500 text-white"
                 }`}
               >
-                {totalItems}
+                {formatSize(String(totalItems))}
               </span>
             </div>
             <span className="text-[11px] font-semibold mt-0.5 leading-tight">কার্ট</span>
@@ -341,7 +341,7 @@ const CartDropdown = ({
                 </h3>
               </div>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                {totalItems} টি পণ্য
+                {formatSize(String(totalItems))} টি পণ্য
               </span>
             </div>
 
@@ -398,12 +398,12 @@ const CartDropdown = ({
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                               সাইজ:{" "}
                               <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                {optItem.variantTitle || "ডিফল্ট"}
+                                {formatSize(optItem.variantTitle || "ডিফল্ট")}
                               </span>
                               {"  •  "}
                               পরিমাণ:{" "}
                               <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                {optItem.quantity}
+                                {formatSize(String(optItem.quantity))}
                               </span>
                             </p>
                           </div>
@@ -416,7 +416,7 @@ const CartDropdown = ({
                             </span>
 
                             <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                              ৳{optItem.unitPrice * optItem.quantity}
+                              {formatPrice(optItem.unitPrice * optItem.quantity)}
                             </div>
                           </div>
                         </div>
@@ -484,12 +484,12 @@ const CartDropdown = ({
                               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                                 সাইজ:{" "}
                                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                  {variantLabel}
+                                  {formatSize(variantLabel)}
                                 </span>
                                 {"  •  "}
                                 পরিমাণ:{" "}
                                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                  {currentQty}
+                                  {formatSize(String(currentQty))}
                                 </span>
                               </p>
                             </div>
@@ -506,7 +506,7 @@ const CartDropdown = ({
                               </DeleteButton>
 
                               <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                                ৳{itemPrice}
+                                {formatPrice(itemPrice)}
                               </div>
                             </div>
                           </div>
