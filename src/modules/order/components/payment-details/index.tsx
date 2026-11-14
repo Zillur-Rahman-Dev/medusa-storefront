@@ -10,49 +10,39 @@ type PaymentDetailsProps = {
 }
 
 const PaymentDetails = ({ order }: PaymentDetailsProps) => {
-  const payment = order.payment_collections?.[0].payments?.[0]
+  const payment = order.payment_collections?.[0]?.payments?.[0]
 
   return (
     <div>
-      <Heading level="h2" className="flex flex-row text-3xl-regular my-6">
-        Payment
+      <Heading level="h2" className="flex flex-row text-2xl font-bold my-6 text-gray-900">
+        পেমেন্ট তথ্য
       </Heading>
       <div>
-        {payment && (
-          <div className="flex items-start gap-x-1 w-full">
-            <div className="flex flex-col w-1/3">
-              <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                Payment method
-              </Text>
-              <Text
-                className="txt-medium text-ui-fg-subtle"
-                data-testid="payment-method"
-              >
-                {paymentInfoMap[payment.provider_id].title}
-              </Text>
-            </div>
-            <div className="flex flex-col w-2/3">
-              <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                Payment details
-              </Text>
-              <div className="flex gap-2 txt-medium text-ui-fg-subtle items-center">
-                <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
-                  {paymentInfoMap[payment.provider_id].icon}
-                </Container>
-                <Text data-testid="payment-amount">
-                  {isStripeLike(payment.provider_id) && payment.data?.card_last4
-                    ? `**** **** **** ${payment.data.card_last4}`
-                    : `${convertToLocale({
-                        amount: payment.amount,
-                        currency_code: order.currency_code,
-                      })} paid at ${new Date(
-                        payment.created_at ?? ""
-                      ).toLocaleString()}`}
-                </Text>
-              </div>
+        <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-x-8 w-full">
+          <div className="flex flex-col w-full sm:w-1/3">
+            <Text className="txt-medium-plus font-bold text-ui-fg-base mb-1">
+              পেমেন্ট মাধ্যম
+            </Text>
+            <Text
+              className="txt-medium text-ui-fg-subtle"
+              data-testid="payment-method"
+            >
+              {payment?.provider_id && paymentInfoMap[payment.provider_id]
+                ? paymentInfoMap[payment.provider_id].title
+                : "ক্যাশ অন ডেলিভারি (পণ্য হাতে পেয়ে মূল্য পরিশোধ)"}
+            </Text>
+          </div>
+          <div className="flex flex-col w-full sm:w-2/3">
+            <Text className="txt-medium-plus font-bold text-ui-fg-base mb-1">
+              পেমেন্ট স্ট্যাটাস
+            </Text>
+            <div className="flex gap-2 txt-medium text-ui-fg-subtle items-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
+                📦 ক্যাশ অন ডেলিভারি (পার্সেল পাওয়ার পর মূল্য পরিশোধযোগ্য)
+              </span>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       <Divider className="mt-8" />

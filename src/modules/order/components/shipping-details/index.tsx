@@ -11,16 +11,16 @@ type ShippingDetailsProps = {
 const ShippingDetails = ({ order }: ShippingDetailsProps) => {
   return (
     <div>
-      <Heading level="h2" className="flex flex-row text-3xl-regular my-6">
-        Delivery
+      <Heading level="h2" className="flex flex-row text-2xl font-bold my-6 text-gray-900">
+        ডেলিভারির বিবরণ
       </Heading>
-      <div className="flex items-start gap-x-8">
+      <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-x-8">
         <div
-          className="flex flex-col w-1/3"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-address-summary"
         >
-          <Text className="txt-medium-plus text-ui-fg-base mb-1">
-            Shipping Address
+          <Text className="txt-medium-plus font-bold text-ui-fg-base mb-1">
+            ডেলিভারি ঠিকানা
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
             {order.shipping_address?.first_name}{" "}
@@ -31,19 +31,15 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
             {order.shipping_address?.address_2}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.postal_code},{" "}
             {order.shipping_address?.city}
-          </Text>
-          <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.country_code?.toUpperCase()}
           </Text>
         </div>
 
         <div
-          className="flex flex-col w-1/3 "
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-contact-summary"
         >
-          <Text className="txt-medium-plus text-ui-fg-base mb-1">Contact</Text>
+          <Text className="txt-medium-plus font-bold text-ui-fg-base mb-1">যোগাযোগ</Text>
           <Text className="txt-medium text-ui-fg-subtle">
             {order.shipping_address?.phone}
           </Text>
@@ -51,14 +47,14 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
         </div>
 
         <div
-          className="flex flex-col w-1/3"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-method-summary"
         >
-          <Text className="txt-medium-plus text-ui-fg-base mb-1">Method</Text>
+          <Text className="txt-medium-plus font-bold text-ui-fg-base mb-1">ডেলিভারি পদ্ধতি</Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {(order as any).shipping_methods[0]?.name} (
+            {(order as any).shipping_methods?.[0]?.name || "হোম ডেলিভারি"} (
             {convertToLocale({
-              amount: order.shipping_methods?.[0].total ?? 0,
+              amount: order.shipping_methods?.[0]?.total ?? 0,
               currency_code: order.currency_code,
             })}
             )

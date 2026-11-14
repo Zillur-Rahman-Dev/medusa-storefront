@@ -4,10 +4,7 @@ import React, { useEffect, useImperativeHandle, useState } from "react"
 import Eye from "@modules/common/icons/eye"
 import EyeOff from "@modules/common/icons/eye-off"
 
-type InputProps = Omit<
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
-  "placeholder"
-> & {
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   label: string
   errors?: Record<string, unknown>
   touched?: Record<string, unknown>
@@ -16,7 +13,7 @@ type InputProps = Omit<
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ type, name, label, touched, required, topLabel, ...props }, ref) => {
+  ({ type, name, label, touched, required, topLabel, placeholder, ...props }, ref) => {
     const inputRef = React.useRef<HTMLInputElement>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [inputType, setInputType] = useState(type)
@@ -32,6 +29,43 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     }, [type, showPassword])
 
     useImperativeHandle(ref, () => inputRef.current!)
+
+    // If a descriptive placeholder is provided, render a clean modern top-label layout
+    // to prevent label and placeholder text colliding / overlapping
+    if (placeholder && placeholder.trim().length > 0) {
+      return (
+        <div className="flex flex-col w-full">
+          <label
+            htmlFor={name}
+            className="block text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200 mb-1.5"
+          >
+            {topLabel || label}
+            {required && <span className="text-rose-500 ml-0.5">*</span>}
+          </label>
+          <div className="relative w-full">
+            <input
+              type={inputType}
+              name={name}
+              id={name}
+              placeholder={placeholder}
+              required={required}
+              className="w-full h-11 px-3.5 text-xs sm:text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-xs"
+              {...props}
+              ref={inputRef}
+            />
+            {type === "password" && (
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 px-3.5 focus:outline-none transition-all duration-150 absolute right-0 top-1/2 -translate-y-1/2"
+              >
+                {showPassword ? <Eye /> : <EyeOff />}
+              </button>
+            )}
+          </div>
+        </div>
+      )
+    }
 
     return (
       <div className="flex flex-col w-full">
