@@ -303,15 +303,17 @@ const CartDropdown = ({
           >
             <div className="relative">
               <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-              <span
-                className={`absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 ${
-                  optimisticItems.length > 0
-                    ? "bg-emerald-500 text-white scale-110"
-                    : "bg-amber-500 text-white"
-                }`}
-              >
-                {formatSize(String(totalItems))}
-              </span>
+              {totalItems > 0 && (
+                <span
+                  className={`absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 ${
+                    optimisticItems.length > 0
+                      ? "bg-emerald-500 text-white scale-110"
+                      : "bg-amber-500 text-white"
+                  }`}
+                >
+                  {formatSize(String(totalItems))}
+                </span>
+              )}
             </div>
             <span className="text-[11px] font-semibold mt-0.5 leading-tight">কার্ট</span>
           </LocalizedClientLink>
@@ -341,7 +343,7 @@ const CartDropdown = ({
                 </h3>
               </div>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                {formatSize(String(totalItems))} টি পণ্য
+                {totalItems > 0 ? `${formatSize(String(totalItems))} টি পণ্য` : "খালি"}
               </span>
             </div>
 
