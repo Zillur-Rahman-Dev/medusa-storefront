@@ -47,18 +47,38 @@ export default function ProductPreview({
             {product.title}
           </h3>
 
-          {/* Compact Single Row: Price on LEFT, Weight badge on RIGHT (if available) */}
+          {/* Compact Single Row: Price on LEFT, Weight badge on RIGHT (always resolved like HoneyProductCard) */}
           <div className="pt-0.5 flex items-center justify-between gap-2">
             {cheapestPrice && (
               <div className="text-zinc-900 dark:text-zinc-100 font-black text-base sm:text-lg">
                 <PreviewPrice price={cheapestPrice} />
               </div>
             )}
-            {((product.metadata?.weight as string) || (product.weight ? `${product.weight}g` : null)) && (
-              <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
-                {formatSize((product.metadata?.weight as string) || `${product.weight}g`)}
-              </span>
-            )}
+            {(() => {
+              const variantOptionValue = product.variants?.[0]?.options?.[0]?.value
+              const variantTitle = product.variants?.[0]?.title
+              const cleanVariantTitle =
+                variantTitle &&
+                variantTitle.toLowerCase() !== "default variant" &&
+                variantTitle.toLowerCase() !== "default option" &&
+                variantTitle.toLowerCase() !== "ডিফল্ট"
+                  ? variantTitle
+                  : null
+
+              const rawWeight =
+                (product.metadata?.weight as string) ||
+                (product.variants?.[0]?.metadata as Record<string, any>)?.weight ||
+                variantOptionValue ||
+                cleanVariantTitle ||
+                (product.weight ? `${product.weight}g` : null) ||
+                "১ কেজি"
+
+              return (
+                <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+                  {formatSize(rawWeight)}
+                </span>
+              )
+            })()}
           </div>
         </div>
       </LocalizedClientLink>
