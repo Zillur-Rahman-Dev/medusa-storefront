@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
+import { t } from "@lib/locales"
 import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2, Package, MessageCircle } from "lucide-react"
 
 type ProductActionsProps = {
@@ -390,22 +391,22 @@ export default function ProductActions({
 
           {/* 4. Call Order Button (Bottom-Right: White with black border) */}
           <a
-            href={`tel:${((product.metadata as Record<string, any>)?.call_phone) || "09678812525"}`}
+            href={`tel:${((product.metadata as Record<string, any>)?.call_phone) || t.globalPolicies.hotline}`}
             className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <PhoneCall className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
-            <span>কল অর্ডার: {((product.metadata as Record<string, any>)?.call_phone) || "09678812525"}</span>
+            <span>কল অর্ডার: {((product.metadata as Record<string, any>)?.call_phone) || t.globalPolicies.hotline}</span>
           </a>
         </div>
 
-        {/* Delivery & Trust Box */}
+        {/* Delivery & Trust Box (Global Store Policy with product-level override capability) */}
         <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 space-y-2.5 text-xs text-zinc-700 dark:text-zinc-300">
           <div className="flex items-center gap-2.5">
             <Truck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>
               <strong>ডেলিভারি চার্জ:</strong>{" "}
               {((product.metadata as Record<string, any>)?.delivery_charge) ||
-                "ঢাকার মধ্যে ৳৭০, ঢাকার বাইরে ৳১৩০"}
+                t.globalPolicies.deliveryNote}
             </span>
           </div>
           <div className="flex items-center gap-2.5">
@@ -413,7 +414,7 @@ export default function ProductActions({
             <span>
               <strong>১০০% ক্যাশ অন ডেলিভারি:</strong>{" "}
               {((product.metadata as Record<string, any>)?.cod_note) ||
-                "পার্সেল হাতে পেয়ে টেস্ট করে পেমেন্ট করুন"}
+                t.globalPolicies.codNote}
             </span>
           </div>
           <div className="flex items-center gap-2.5">
@@ -421,7 +422,7 @@ export default function ProductActions({
             <span>
               <strong>রিটার্ন ও রিপ্লেসমেন্ট:</strong>{" "}
               {((product.metadata as Record<string, any>)?.return_policy) ||
-                "ডেলিভারির সময় পাত্রে কোনো ক্ষতি বা লিক পরিলক্ষিত হলে সাথে সাথে সম্পূর্ণ ফ্রিতে নতুন মধু প্রদান"}
+                t.globalPolicies.returnPolicy}
             </span>
           </div>
         </div>

@@ -1,13 +1,10 @@
 "use client"
 
-import { useState } from "react"
 import { HttpTypes } from "@medusajs/types"
 import {
   FileText,
-  Truck,
   ShieldCheck,
   CheckCircle2,
-  RotateCcw,
   Sparkles,
   AlertCircle,
 } from "lucide-react"
@@ -112,95 +109,67 @@ function FormattedDescription({ content }: { content: string }) {
   lines.forEach((rawLine, index) => {
     const line = rawLine.trim()
 
-    // Bullet point: - Item or * Item
-    if (line.startsWith("- ") || line.startsWith("* ")) {
-      if (alertHeader !== null) {
-        flushLists(`flush-before-bullet-${index}`)
-      }
-      bulletList.push(line.replace(/^[-*]\s+/, ""))
+    if (!line) {
+      flushLists(index)
       return
     }
 
-    // Numbered list: 1. Item or 2. Item
-    const numMatch = line.match(/^(\d+)\.\s+(.*)$/)
+    // Callout Box Headers
+    if (line.startsWith("! ") || line.startsWith("⚠️") || line.startsWith("💡")) {
+      flushLists(index)
+      alertHeader = line.replace(/^[!⚠️💡\s]+/, "")
+      return
+    }
+
+    if (alertHeader !== null) {
+      alertLines.push(line)
+      return
+    }
+
+    // Bullet Lists
+    if (line.startsWith("• ") || line.startsWith("- ") || line.startsWith("* ")) {
+      if (numberedList.length > 0) flushLists(`num-${index}`)
+      bulletList.push(line.replace(/^[•\-\*]\s*/, ""))
+      return
+    }
+
+    // Numbered Lists
+    const numMatch = line.match(/^(\d+)[\.\)]\s*(.*)$/)
     if (numMatch) {
-      if (alertHeader !== null) {
-        flushLists(`flush-before-num-${index}`)
-      }
+      if (bulletList.length > 0) flushLists(`bul-${index}`)
       numberedList.push(numMatch[2])
       return
     }
 
-    // If currently inside an alert block and encounter text
-    if (alertHeader !== null) {
-      if (!line) {
-        // Empty line ends alert block
-        flushLists(index)
-        return
-      }
-      if (line.startsWith("#")) {
-        // New heading ends alert block
-        flushLists(index)
-      } else {
-        alertLines.push(line)
-        return
-      }
-    }
-
-    // Flush any pending lists
-    flushLists(index)
-
-    if (!line) {
-      return
-    }
-
-    // H2: ## Heading
-    if (line.startsWith("## ")) {
+    // Heading 2 / 3
+    if (line.startsWith("### ")) {
+      flushLists(index)
       elements.push(
-        <h2
+        <h4
           key={index}
-          className="text-base sm:text-xl font-black text-zinc-900 dark:text-zinc-50 mt-6 mb-3 pb-2 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2"
+          className="text-xs sm:text-sm font-black text-amber-800 dark:text-amber-400 uppercase tracking-wider mt-4 mb-2"
         >
-          <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
-          <span>{renderFormattedText(line.replace(/^##\s+/, ""))}</span>
-        </h2>
+          {renderFormattedText(line.replace(/^###\s*/, ""))}
+        </h4>
       )
       return
     }
 
-    // H3: ### Sub-heading
-    if (line.startsWith("### ")) {
+    if (line.startsWith("## ")) {
+      flushLists(index)
       elements.push(
         <h3
           key={index}
-          className="text-sm sm:text-lg font-bold text-amber-600 dark:text-amber-400 mt-5 mb-2"
+          className="text-sm sm:text-base font-black text-zinc-900 dark:text-zinc-100 mt-5 mb-2.5 pb-1 border-b border-amber-200/40 dark:border-amber-900/40"
         >
-          {renderFormattedText(line.replace(/^###\s+/, ""))}
+          {renderFormattedText(line.replace(/^##\s*/, ""))}
         </h3>
       )
       return
     }
 
-    // H4: #### Minor Heading (e.g. খাওয়ার সঠিক নিয়ম)
-    if (line.startsWith("#### ")) {
-      elements.push(
-        <div key={index} className="flex items-center gap-2 mt-4 mb-2">
-          <span className="w-1.5 h-4 bg-amber-500 rounded-full inline-block shrink-0"></span>
-          <h4 className="text-xs sm:text-base font-bold text-zinc-900 dark:text-zinc-100">
-            {renderFormattedText(line.replace(/^####\s+/, ""))}
-          </h4>
-        </div>
-      )
-      return
-    }
-
-    // H5: ##### Alert / Warning (e.g. বিশেষ সতর্কতা)
-    if (line.startsWith("##### ")) {
-      alertHeader = line.replace(/^#####\s+/, "")
-      return
-    }
-
     // Regular Paragraph
+    flushLists(index)
     elements.push(
       <p
         key={index}
@@ -217,31 +186,7 @@ function FormattedDescription({ content }: { content: string }) {
 }
 
 export default function ProductTabs({ product }: ProductTabsProps) {
-  const [activeTab, setActiveTab] = useState<"info" | "shipping" | "purity">("info")
-
   const metadata = (product.metadata as Record<string, any>) || {}
-
-  // 3 Primary Tabs (খাওয়ার নিয়ম is now gracefully consolidated inside info tab)
-  const tabs = [
-    {
-      id: "info",
-      label: "পণ্যের বিবরণ ও তথ্য",
-      sublabel: "Product Description & Information",
-      icon: FileText,
-    },
-    {
-      id: "shipping",
-      label: "ডেলিভারি ও রিটার্ন পলিসি",
-      sublabel: "Shipping & Returns",
-      icon: Truck,
-    },
-    {
-      id: "purity",
-      label: "বিশুদ্ধতার নিশ্চয়তা",
-      sublabel: "Purity & Quality",
-      icon: ShieldCheck,
-    },
-  ]
 
   // Known metadata keys mapping to friendly Bengali labels
   const metaKeyLabels: Record<string, string> = {
@@ -264,12 +209,20 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     {
       key: "honey_type",
       label: "পণ্যের ধরন",
-      value: product.type?.value || (product.categories && product.categories[0]?.name ? product.categories[0].name.trim() : metadata.honey_type) || "১০০% কাঁচা প্রাকৃতিক মধু",
+      value:
+        product.type?.value ||
+        (product.categories && product.categories[0]?.name
+          ? product.categories[0].name.trim()
+          : metadata.honey_type) ||
+        "১০০% কাঁচা প্রাকৃতিক মধু",
     },
     {
       key: "material",
       label: "মূল উপাদান",
-      value: product.material || metadata.material || "১০০% অপরিশোধিত খাঁটি সরিষা ফুলের নেক্টার",
+      value:
+        product.material ||
+        metadata.material ||
+        "১০০% অপরিশোধিত খাঁটি সরিষা ফুলের নেক্টার",
     },
     {
       key: "origin_area",
@@ -295,7 +248,9 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     {
       key: "flavor_taste",
       label: "ফ্লেভার ও টেক্সচার",
-      value: metadata.flavor_taste || "মৃদু মিষ্টি সুবাস ও প্রাকৃতিকভাবে জমে যাওয়া ক্রিমি ভাব",
+      value:
+        metadata.flavor_taste ||
+        "মৃদু মিষ্টি সুবাস ও প্রাকৃতিকভাবে জমে যাওয়া ক্রিমি ভাব",
     },
     {
       key: "shelf_life",
@@ -316,7 +271,9 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     if (!handledKeys.has(k) && typeof v === "string" && v.trim()) {
       specItems.push({
         key: k,
-        label: metaKeyLabels[k] || k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        label:
+          metaKeyLabels[k] ||
+          k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
         value: v.trim(),
         highlight: false,
       })
@@ -326,221 +283,136 @@ export default function ProductTabs({ product }: ProductTabsProps) {
   const halfLength = Math.ceil(specItems.length / 2)
 
   return (
-    <div className="w-full">
-      {/* Horizontal Tabs Navigation Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-2 sm:pb-3">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 shrink-0 ${
-                  isActive
-                    ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
-                    : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <Icon
-                  className={`w-4 h-4 ${
-                    isActive ? "text-white" : "text-amber-600 dark:text-amber-400"
-                  }`}
-                />
-                <span>{tab.label}</span>
-              </button>
-            )
-          })}
+    <div className="w-full space-y-6 pt-4 pb-8">
+      {/* Consolidated Single Section: পণ্যের বিবরণ ও তথ্য (No multiple tabs) */}
+      <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100">
+              পণ্যের বিবরণ ও তথ্য
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Product Description & Specifications
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Tab Panels Content */}
-      <div className="py-6 sm:py-8">
-        {/* 1. Product Information Tab (Rich Description from Dashboard + Specifications Table) */}
-        {activeTab === "info" && (
-          <div className="space-y-8 animate-fade-in">
-            {/* Rich Formatted Description from Medusa Admin */}
-            <div className="p-5 sm:p-7 rounded-3xl bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800">
-              <FormattedDescription content={product.description || ""} />
+      {/* 1. Rich Formatted Description from Medusa Admin */}
+      <div className="p-5 sm:p-7 rounded-3xl bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+        <FormattedDescription content={product.description || ""} />
+      </div>
+
+      {/* 2. Specifications Table Driven by Dashboard Metadata */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100">
+            বিশুদ্ধতার মানদণ্ড ও পণ্যের বৈশিষ্ট্য
+          </h3>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-zinc-200 dark:divide-zinc-800 text-xs sm:text-sm">
+            {/* Left Column */}
+            <div className="p-4 sm:p-5 space-y-3.5 divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              {specItems.slice(0, halfLength).map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center justify-between ${
+                    idx > 0 ? "pt-3" : ""
+                  }`}
+                >
+                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">
+                    {item.label}
+                  </span>
+                  <span
+                    className={`font-bold text-right ml-2 ${
+                      item.highlight
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-zinc-900 dark:text-zinc-100"
+                    }`}
+                  >
+                    {item.value}
+                  </span>
+                </div>
+              ))}
             </div>
 
-            {/* Specifications Grid Table Driven by Dashboard Metadata */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-4 h-4 text-amber-500" />
-                <h3 className="font-black text-sm sm:text-base text-zinc-900 dark:text-zinc-100">
-                  পণ্যের বিস্তারিত স্পেসিফিকেশন ও তথ্য
-                </h3>
-              </div>
-
-              <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900">
-                <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-zinc-200 dark:border-zinc-800 dark:divide-zinc-800 text-xs sm:text-sm">
-                  {/* Left Column */}
-                  <div className="p-4 sm:p-5 space-y-3.5 divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                    {specItems.slice(0, halfLength).map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex items-center justify-between ${
-                          idx > 0 ? "pt-3" : ""
-                        }`}
-                      >
-                        <span className="text-zinc-500 dark:text-zinc-400 font-medium">
-                          {item.label}
-                        </span>
-                        <span
-                          className={`font-bold text-right ml-2 ${
-                            item.highlight
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-zinc-900 dark:text-zinc-100"
-                          }`}
-                        >
-                          {item.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="p-4 sm:p-5 space-y-3.5 divide-y divide-zinc-100 dark:divide-zinc-800/60 border-t sm:border-t-0 border-zinc-200 dark:border-zinc-800">
-                    {specItems.slice(halfLength).map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex items-center justify-between ${
-                          idx > 0 ? "pt-3" : ""
-                        }`}
-                      >
-                        <span className="text-zinc-500 dark:text-zinc-400 font-medium">
-                          {item.label}
-                        </span>
-                        <span
-                          className={`font-bold text-right ml-2 ${
-                            item.highlight
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-zinc-900 dark:text-zinc-100"
-                          }`}
-                        >
-                          {item.value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+            {/* Right Column */}
+            <div className="p-4 sm:p-5 space-y-3.5 divide-y divide-zinc-100 dark:divide-zinc-800/60 border-t sm:border-t-0 border-zinc-200 dark:border-zinc-800">
+              {specItems.slice(halfLength).map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center justify-between ${
+                    idx > 0 ? "pt-3" : ""
+                  }`}
+                >
+                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">
+                    {item.label}
+                  </span>
+                  <span
+                    className={`font-bold text-right ml-2 ${
+                      item.highlight
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-zinc-900 dark:text-zinc-100"
+                    }`}
+                  >
+                    {item.value}
+                  </span>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* 2. Shipping & Returns Tab */}
-        {activeTab === "shipping" && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Delivery Details */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-base">
-                  <Truck className="w-5 h-5" />
-                  <span>হোম ডেলিভারি ও সময়সীমা</span>
-                </div>
-                <ul className="space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                  <li className="flex items-start gap-2">
-                    <span className="text-amber-500 font-bold">•</span>
-                    <span>
-                      <strong>ঢাকা সিটির ভেতরে:</strong> ২৪ থেকে ৪৮ ঘণ্টার মধ্যে ডেলিভারি সম্পন্ন হয়। ডেলিভারি চার্জ মাত্র <strong>৳৭০</strong>।
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-amber-500 font-bold">•</span>
-                    <span>
-                      <strong>ঢাকার বাইরে সারা বাংলাদেশে:</strong> ২ থেকে ৩ কার্যদিবসের মধ্যে নির্ভরযোগ্য কুরিয়ারে ডেলিভারি। ডেলিভারি চার্জ মাত্র <strong>৳১৩০</strong>।
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-amber-500 font-bold">•</span>
-                    <span>
-                      <strong>ক্যাশ অন ডেলিভারি (COD):</strong> কোনো অগ্রিম পেমেন্ট ছাড়াই পণ্য হাতে পেয়ে মূল্য পরিশোধ করতে পারবেন।
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Return Policy */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-base">
-                  <RotateCcw className="w-5 h-5" />
-                  <span>৭ দিনের সহজ রিটার্ন বা রিপ্লেসমেন্ট</span>
-                </div>
-                <ul className="space-y-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                  <li className="flex items-start gap-2">
-                    <span className="text-amber-500 font-bold">•</span>
-                    <span>
-                      <strong>নিরাপদ গ্লাস জার প্যাকেজিং:</strong> আমরা বাবল র‍্যাপ ও বিশেষ থার্মোকল সুরক্ষায় কাচের জার প্যাকিং করি।
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-amber-500 font-bold">•</span>
-                    <span>
-                      <strong>ভাঙা বা নষ্ট হলে:</strong> পরিবহনে কোনো কারণে জার ক্ষতিগ্রস্ত হলে সাথে সাথে সম্পূর্ণ ফ্রিতে নতুন প্রোডাক্ট প্রতিস্থাপন করে দেওয়া হবে।
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-amber-500 font-bold">•</span>
-                    <span>
-                      <strong>১০০% মানি-ব্যাক:</strong> আমাদের খাঁটি মধুর গুণমানে কোনো প্রকার অসন্তুষ্টি থাকলে সম্পূর্ণ মূল্য ফেরতের সুবিধা রয়েছে।
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+      {/* 3. Assurance & Quality Badges */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2">
+        <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/50 flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 shrink-0">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
-        )}
-
-        {/* 3. Purity & Quality Tab */}
-        {activeTab === "purity" && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="p-5 sm:p-6 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/60">
-              <h4 className="font-bold text-sm sm:text-base text-amber-900 dark:text-amber-300 mb-2 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <span>আমাদের শতভাগ বিশুদ্ধতার অঙ্গীকার</span>
-              </h4>
-              <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                আমাদের মধু কোনো কারখানায় তৈরি হয় না। সুন্দরবনের প্রাকৃতিক বুনো মৌচাক ও গ্রামবাংলার বিশ্বস্ত মৌয়ালদের থেকে সংগৃহীত কাঁচা মধুকে কেবল প্রাকৃতিক কোল্ড ফিল্টারের মাধ্যমে ছাঁকন করা হয়।
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm">
-                <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 mb-1 text-emerald-700 dark:text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>জিরো হিটিং ও প্রসেসিং</span>
-                </div>
-                <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">
-                  অতিরিক্ত তাপে মধুর ভেতরের প্রাকৃতিক এনজাইম ও ভিটামিন নষ্ট হয় না।
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm">
-                <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 mb-1 text-emerald-700 dark:text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>শূন্য কৃত্রিম চিনি</span>
-                </div>
-                <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">
-                  কোনো প্রকার কর্ন সিরাপ বা সুগার ফিডিং ছাড়া ১০০% অকৃত্রিম নেক্টার।
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm">
-                <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 mb-1 text-emerald-700 dark:text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>ফুড-গ্রেড কাচের জার</span>
-                </div>
-                <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">
-                  প্লাস্টিকের রাসায়নিক দূষণমুক্ত দীর্ঘস্থায়ী কাচের সংরক্ষণ।
-                </p>
-              </div>
-            </div>
+          <div>
+            <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100">
+              জিরো হিটিং ও প্রসেসিং
+            </h4>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+              প্রাকৃতিক কোল্ড ফিল্টার, কোনো ক্ষতিকর তাপ ছাড়াই এনজাইম সমৃদ্ধ কাঁচা মধু।
+            </p>
           </div>
-        )}
+        </div>
+
+        <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/50 flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 shrink-0">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div>
+            <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100">
+              ১০০% চিনি ও ভেজালমুক্ত
+            </h4>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+              কোনো প্রকার কর্ন সিরাপ বা কৃত্রিম চিনি ছাড়া সম্পূর্ণ প্রাকৃতিকভাবে সংগৃহীত।
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/50 flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 shrink-0">
+            <ShieldCheck className="w-4 h-4 text-amber-600" />
+          </div>
+          <div>
+            <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100">
+              নিরাপদ কাচের জার
+            </h4>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+              ফুড-গ্রেড বায়ুরোধী কাচের জারে সুরক্ষিত, দীর্ঘস্থায়ী পুষ্টিমান রক্ষা।
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

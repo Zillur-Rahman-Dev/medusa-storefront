@@ -85,7 +85,7 @@ export default async function Nav() {
                   data-testid="nav-cart-link"
                 >
                   <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-                  <span className="text-[11px] font-semibold mt-0.5 leading-tight">Cart</span>
+                  <span className="text-[11px] font-semibold mt-0.5 leading-tight">শপিং ব্যাগ</span>
                 </LocalizedClientLink>
               }
             >

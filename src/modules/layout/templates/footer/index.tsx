@@ -138,9 +138,8 @@ export default function Footer() {
         <div className="mt-14 pt-6 border-t border-zinc-200 dark:border-zinc-850 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-500">
           <p>© {new Date().getFullYear()} PURE HONEY. সর্বস্বত্ব সংরক্ষিত।</p>
           <p className="flex items-center gap-1">
-            <span>Made with</span>
+            <span>১০০% খাঁটি ও প্রাকৃতিক খাবারের প্রতিশ্রুতি সহ</span>
             <span className="text-amber-600">❤️</span>
-            <span>for 100% pure & raw natural food</span>
           </p>
         </div>
       </div>

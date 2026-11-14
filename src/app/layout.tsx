@@ -5,6 +5,29 @@ import "styles/globals.css"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
+  title: {
+    default: "Pure Honey BD - ১০০% খাঁটি প্রাকৃতিক মধু অনলাইন শপ",
+    template: "%s | Pure Honey BD",
+  },
+  description:
+    "সুন্দরবন ও গ্রামবাংলার মৌচাক থেকে সরাসরি সংগৃহীত ১০০% খাঁটি কাঁচা মধু। Buy 100% pure raw honey in Bangladesh with cash on delivery.",
+  keywords: [
+    "pure honey bd",
+    "raw honey bangladesh",
+    "সুন্দরবনের মধু",
+    "খাঁটি মধু",
+    "মধু",
+    "মধু কিনুন",
+    "মধু দাম কত",
+  ],
+  openGraph: {
+    title: "Pure Honey BD - ১০০% খাঁটি প্রাকৃতিক মধু",
+    description:
+      "সুন্দরবন ও গ্রামবাংলার মৌচাক থেকে সরাসরি সংগৃহীত ১০০% খাঁটি কাঁচা মধু। Buy 100% pure raw honey in Bangladesh with cash on delivery.",
+    type: "website",
+    locale: "bn_BD",
+    siteName: "Pure Honey BD",
+  },
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {
