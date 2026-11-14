@@ -32,9 +32,11 @@ export default function PreviewAddToCart({
     e.preventDefault()
     e.stopPropagation()
 
-    // If no variant ID, navigate to product page
-    if (!variantId) {
-      router.push(`/${countryCode}/products/${productHandle}`)
+    // If no variant ID or already processing, ignore click
+    if (!variantId || isAdding || isAdded) {
+      if (!variantId) {
+        router.push(`/${countryCode}/products/${productHandle}`)
+      }
       return
     }
 
@@ -68,6 +70,7 @@ export default function PreviewAddToCart({
       )
     }
 
+    const startTime = Date.now()
     try {
       // 2. Background Server Sync
       const res = await addToCart({
@@ -81,9 +84,18 @@ export default function PreviewAddToCart({
       }
 
       router.refresh()
+
+      // Ensure minimum visual dwell time of 1200ms so user comfortably sees "যোগ হয়েছে"
+      const elapsed = Date.now() - startTime
+      const remainingTime = Math.max(0, 1200 - elapsed)
+      setTimeout(() => {
+        setIsAdded(false)
+        setIsAdding(false)
+      }, remainingTime)
     } catch (err) {
       console.error("Failed to add to cart:", err)
       setIsAdded(false)
+      setIsAdding(false)
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("cart:item-failed", {
@@ -93,9 +105,6 @@ export default function PreviewAddToCart({
           })
         )
       }
-    } finally {
-      setIsAdding(false)
-      setTimeout(() => setIsAdded(false), 2500)
     }
   }
 
@@ -103,8 +112,8 @@ export default function PreviewAddToCart({
     <button
       type="button"
       onClick={handleClick}
-      disabled={isAdding}
-      className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-sm ${
+      disabled={isAdding || isAdded}
+      className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-90 ${
         isAdded
           ? "bg-emerald-600 text-white"
           : "bg-amber-600 hover:bg-amber-700 text-white"
@@ -114,11 +123,6 @@ export default function PreviewAddToCart({
         <>
           <Check className="w-4 h-4" />
           <span>যোগ হয়েছে</span>
-        </>
-      ) : isAdding ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>যোগ হচ্ছে...</span>
         </>
       ) : (
         <>

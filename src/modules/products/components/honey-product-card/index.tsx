@@ -43,7 +43,7 @@ export default function HoneyProductCard({
     e.preventDefault()
     e.stopPropagation()
 
-    if (!product.variantId) return
+    if (!product.variantId || isAdding || isAdded || isOrdering) return
 
     // 1. Instant Optimistic Feedback (0ms)
     setIsAdded(true)
@@ -76,6 +76,7 @@ export default function HoneyProductCard({
       )
     }
 
+    const startTime = Date.now()
     try {
       const res = await addToCart({
         variantId: product.variantId,
@@ -86,9 +87,18 @@ export default function HoneyProductCard({
         throw new Error(res.error || "Failed to add to cart")
       }
       router.refresh()
+
+      // Ensure minimum visual dwell time of 1200ms so the user comfortably sees "যোগ হয়েছে"
+      const elapsed = Date.now() - startTime
+      const remainingTime = Math.max(0, 1200 - elapsed)
+      setTimeout(() => {
+        setIsAdded(false)
+        setIsAdding(false)
+      }, remainingTime)
     } catch (err) {
       console.error("Failed to add to cart:", err)
       setIsAdded(false)
+      setIsAdding(false)
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("cart:item-failed", {
@@ -98,9 +108,6 @@ export default function HoneyProductCard({
           })
         )
       }
-    } finally {
-      setIsAdding(false)
-      setTimeout(() => setIsAdded(false), 2500)
     }
   }
 
@@ -204,11 +211,11 @@ export default function HoneyProductCard({
         <button
           type="button"
           onClick={handleAddToCart}
-          disabled={isAdding || isOrdering}
+          disabled={isAdding || isAdded || isOrdering}
           className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
             isAdded
               ? "bg-emerald-50 text-emerald-700 border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-300"
-              : "border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              : "border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
           }`}
         >
           {isAdded ? (
@@ -218,12 +225,8 @@ export default function HoneyProductCard({
             </>
           ) : (
             <>
-              {isAdding ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <ShoppingCart className="w-3.5 h-3.5" />
-              )}
-              <span>{isAdding ? "যোগ হচ্ছে..." : "কার্ট-এ যোগ"}</span>
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>কার্ট-এ যোগ</span>
             </>
           )}
         </button>
@@ -232,7 +235,7 @@ export default function HoneyProductCard({
         <button
           type="button"
           onClick={handleOrderNow}
-          disabled={isOrdering || isAdding}
+          disabled={isOrdering || isAdding || isAdded}
           className="flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80"
         >
           {isOrdering ? (

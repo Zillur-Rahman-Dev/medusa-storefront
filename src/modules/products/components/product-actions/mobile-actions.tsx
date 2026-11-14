@@ -19,6 +19,7 @@ type MobileActionsProps = {
   inStock?: boolean
   handleAddToCart: () => void
   isAdding?: boolean
+  isOptimisticAdded?: boolean
   show: boolean
   optionsDisabled: boolean
 }
@@ -31,6 +32,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   inStock,
   handleAddToCart,
   isAdding,
+  isOptimisticAdded,
   show,
   optionsDisabled,
 }) => {
@@ -104,30 +106,36 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               {!isSimple && <Button
                 onClick={open}
                 variant="secondary"
-                className="w-full"
+                className={clx("w-full transition-all duration-200", {
+                  "bg-emerald-600 text-white hover:bg-emerald-700": isOptimisticAdded,
+                })}
                 data-testid="mobile-actions-button"
               >
                 <div className="flex items-center justify-between w-full">
                   <span>
                     {variant
                       ? Object.values(options).join(" / ")
-                      : "Select Options"}
+                      : "অপশন নির্বাচন করুন"}
                   </span>
                   <ChevronDown />
                 </div>
               </Button>}
               <Button
                 onClick={handleAddToCart}
-                disabled={!inStock || !variant}
-                className="w-full"
-                isLoading={isAdding}
+                disabled={!inStock || !variant || isAdding || isOptimisticAdded || optionsDisabled}
+                className={clx("w-full transition-all duration-200", {
+                  "bg-emerald-600 text-white hover:bg-emerald-700": isOptimisticAdded,
+                })}
+
                 data-testid="mobile-cart-button"
               >
                 {!variant
-                  ? "Select variant"
+                  ? "ভ্যারিয়েন্ট নির্বাচন করুন"
                   : !inStock
-                  ? "Out of stock"
-                  : "Add to cart"}
+                  ? "স্টক শেষ"
+                  : isOptimisticAdded
+                  ? "কার্টে যোগ হয়েছে! ✓"
+                  : "কার্টে যোগ করুন"}
               </Button>
             </div>
           </div>

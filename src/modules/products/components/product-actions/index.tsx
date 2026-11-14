@@ -144,7 +144,7 @@ export default function ProductActions({
 
   // Add the selected variant to the cart with instant Optimistic UI response
   const handleAddToCart = async () => {
-    if (!selectedVariant?.id) return null
+    if (!selectedVariant?.id || isAdding || isOptimisticAdded || isOrdering) return null
 
     // 1. INSTANT (0ms) OPTIMISTIC UI FEEDBACK
     setIsOptimisticAdded(true)
@@ -167,6 +167,7 @@ export default function ProductActions({
       )
     }
 
+    const startTime = Date.now()
     try {
       // 2. Background Server Sync
       const res = await addToCart({
@@ -180,10 +181,19 @@ export default function ProductActions({
       }
 
       router.refresh()
+
+      // Ensure minimum visual dwell time of 1200ms so user comfortably sees "যোগ হয়েছে"
+      const elapsed = Date.now() - startTime
+      const remainingTime = Math.max(0, 1200 - elapsed)
+      setTimeout(() => {
+        setIsOptimisticAdded(false)
+        setIsAdding(false)
+      }, remainingTime)
     } catch (err: any) {
       console.error("Optimistic add to cart failed, rolling back:", err)
       // 3. Rollback on failure
       setIsOptimisticAdded(false)
+      setIsAdding(false)
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("cart:item-failed", {
@@ -193,12 +203,6 @@ export default function ProductActions({
           })
         )
       }
-    } finally {
-      setIsAdding(false)
-      // Reset optimistic success checkmark after 2.5s
-      setTimeout(() => {
-        setIsOptimisticAdded(false)
-      }, 2500)
     }
   }
 
@@ -333,9 +337,11 @@ export default function ProductActions({
               !selectedVariant ||
               !!disabled ||
               isOrdering ||
+              isAdding ||
+              isOptimisticAdded ||
               !isValidVariant
             }
-            className={`w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base border-2 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 cursor-pointer ${
+            className={`w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base border-2 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer ${
               isOptimisticAdded
                 ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-600 dark:border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-md shadow-emerald-500/20"
                 : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -345,11 +351,6 @@ export default function ProductActions({
               <>
                 <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-200" />
                 <span>কার্টে যোগ হয়েছে! ✓</span>
-              </>
-            ) : isAdding ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-zinc-900 dark:text-zinc-100" />
-                <span>যোগ হচ্ছে...</span>
               </>
             ) : (
               <span>কার্টে যোগ করুন</span>
@@ -433,8 +434,9 @@ export default function ProductActions({
           inStock={inStock}
           handleAddToCart={handleAddToCart}
           isAdding={isAdding}
+          isOptimisticAdded={isOptimisticAdded}
           show={!inView}
-          optionsDisabled={!!disabled || isAdding}
+          optionsDisabled={!!disabled || isAdding || isOptimisticAdded}
         />
       </div>
     </>
