@@ -191,7 +191,7 @@ export default function HoneyProductCard({
             <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
               {formatPrice(product.price)}
             </span>
-            {product.regularPrice && (
+            {product.regularPrice && product.regularPrice > product.price && (
               <span className="text-xs text-zinc-400 line-through">
                 {formatPrice(product.regularPrice)}
               </span>

@@ -9,11 +9,27 @@ export function mapMedusaProductToHoneyItem(
   const calcPrice = cheapestVariant?.calculated_price
   const price = calcPrice?.calculated_amount ?? 1000
 
-  // Original price or regular price (15% higher fallback for discount effect)
+  // Original / regular price: ONLY show strikethrough if applied in Medusa Admin Dashboard!
+  // Checks:
+  // 1. Medusa Price List sale price (original_amount > calculated_amount)
+  // 2. Dashboard Product/Variant metadata (regular_price or original_price > price)
+  const metaRegularPrice = Number(
+    (cheapestVariant?.metadata as Record<string, any>)?.regular_price ||
+    (cheapestVariant?.metadata as Record<string, any>)?.original_price ||
+    (product.metadata as Record<string, any>)?.regular_price ||
+    (product.metadata as Record<string, any>)?.original_price
+  )
+
+  const originalAmount = calcPrice?.original_amount
+    ? Number(calcPrice.original_amount)
+    : undefined
+
   const regularPrice =
-    calcPrice?.original_amount && calcPrice.original_amount > price
-      ? calcPrice.original_amount
-      : Math.round(price * 1.15)
+    originalAmount && originalAmount > price
+      ? originalAmount
+      : metaRegularPrice && metaRegularPrice > price
+      ? metaRegularPrice
+      : undefined
 
   // Weight badge: read from variant option value or product metadata
   const weight =
