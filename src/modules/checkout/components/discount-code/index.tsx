@@ -1,14 +1,14 @@
 "use client"
 
 import { Badge, Heading, Input, Label, Text } from "@medusajs/ui"
-import React from "react"
+import React, { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 import { applyPromotions } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
-import ErrorMessage from "../error-message"
-import { SubmitButton } from "../submit-button"
 
 type DiscountCodeProps = {
   cart: HttpTypes.StoreCart & {
@@ -17,53 +17,86 @@ type DiscountCodeProps = {
 }
 
 const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
-  const [isOpen, setIsOpen] = React.useState(false)
-  const [errorMessage, setErrorMessage] = React.useState("")
+  const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [codeValue, setCodeValue] = useState("")
+  const [isApplying, setIsApplying] = useState(false)
+  const [removingCode, setRemovingCode] = useState<string | null>(null)
 
   const { promotions = [] } = cart
+
   const removePromotionCode = async (code: string) => {
+    setRemovingCode(code)
+    setErrorMessage("")
+
     const validPromotions = promotions.filter(
       (promotion) => promotion.code !== code
     )
 
-    await applyPromotions(
-      validPromotions.filter((p) => p.code !== undefined).map((p) => p.code!)
-    )
+    try {
+      const res = await applyPromotions(
+        validPromotions.filter((p) => p.code !== undefined).map((p) => p.code!)
+      )
+      if (res && !res.success) {
+        setErrorMessage(res.error || "প্রোমো কোড মুছতে সমস্যা হয়েছে।")
+      } else {
+        router.refresh()
+      }
+    } catch (e: any) {
+      setErrorMessage("প্রোমো কোড মুছতে সমস্যা হয়েছে।")
+    } finally {
+      setRemovingCode(null)
+    }
   }
 
-  const addPromotionCode = async (formData: FormData) => {
+  const handleApplyPromotion = async (e: React.FormEvent) => {
+    e.preventDefault()
     setErrorMessage("")
 
-    const code = formData.get("code")
-    if (!code) {
+    const cleanCode = codeValue.trim()
+    if (!cleanCode) {
+      setErrorMessage("দয়া করে একটি সঠিক প্রোমো কোড লিখুন।")
       return
     }
-    const input = document.getElementById("promotion-input") as HTMLInputElement
-    const codes = promotions
-      .filter((p) => p.code !== undefined)
-      .map((p) => p.code!)
-    codes.push(code.toString())
 
-    try {
-      await applyPromotions(codes)
-    } catch (e: any) {
-      setErrorMessage(e.message)
+    // Check if code is already applied
+    if (promotions.some((p) => p.code?.toLowerCase() === cleanCode.toLowerCase())) {
+      setErrorMessage("এই প্রোমো কোডটি ইতিমধ্যে প্রয়োগ করা হয়েছে।")
+      return
     }
 
-    if (input) {
-      input.value = ""
+    const currentCodes = promotions
+      .filter((p) => p.code !== undefined)
+      .map((p) => p.code!)
+    const updatedCodes = [...currentCodes, cleanCode]
+
+    setIsApplying(true)
+    try {
+      const res = await applyPromotions(updatedCodes)
+      if (res && !res.success) {
+        setErrorMessage(res.error || "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।")
+      } else {
+        setCodeValue("")
+        setErrorMessage("")
+        router.refresh()
+      }
+    } catch (err: any) {
+      setErrorMessage("প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।")
+    } finally {
+      setIsApplying(false)
     }
   }
 
   return (
-    <div className="w-full bg-white flex flex-col">
+    <div className="w-full bg-white dark:bg-zinc-900 flex flex-col">
       <div className="txt-medium">
-        <form action={(a) => addPromotionCode(a)} className="w-full mb-5">
+        <form onSubmit={handleApplyPromotion} className="w-full mb-5">
           <Label className="flex gap-x-1 my-2 items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
               type="button"
-              className="txt-medium text-amber-700 hover:text-amber-800 font-medium hover:underline flex items-center gap-1.5"
+              className="txt-medium text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 font-semibold hover:underline flex items-center gap-1.5 cursor-pointer"
               data-testid="add-discount-button"
             >
               <span>🏷️</span>
@@ -79,23 +112,42 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                   id="promotion-input"
                   name="code"
                   type="text"
+                  value={codeValue}
+                  onChange={(e) => {
+                    setCodeValue(e.target.value)
+                    if (errorMessage) setErrorMessage("")
+                  }}
+                  disabled={isApplying}
                   placeholder="কুপন বা প্রোমো কোড লিখুন"
                   autoFocus={false}
                   data-testid="discount-input"
                 />
-                <SubmitButton
-                  variant="secondary"
-                  className="bg-stone-800 text-white hover:bg-stone-900 px-4"
+                <button
+                  type="submit"
+                  disabled={isApplying}
+                  className="h-10 px-5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white font-medium text-sm flex items-center justify-center gap-1.5 shrink-0 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                   data-testid="discount-apply-button"
                 >
-                  প্রয়োগ করুন
-                </SubmitButton>
+                  {isApplying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>প্রয়োগ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>প্রয়োগ করুন</span>
+                  )}
+                </button>
               </div>
 
-              <ErrorMessage
-                error={errorMessage}
-                data-testid="discount-error-message"
-              />
+              {errorMessage && (
+                <div
+                  className="mt-2.5 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2"
+                  data-testid="discount-error-message"
+                >
+                  <span className="text-sm shrink-0">⚠️</span>
+                  <span className="leading-relaxed">{errorMessage}</span>
+                </div>
+              )}
             </>
           )}
         </form>
@@ -103,18 +155,20 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         {promotions.length > 0 && (
           <div className="w-full flex items-center">
             <div className="flex flex-col w-full">
-              <Heading className="txt-medium mb-2 font-semibold text-gray-800">
+              <Heading className="txt-medium mb-2 font-semibold text-gray-800 dark:text-zinc-200">
                 প্রোমো কোড যুক্ত হয়েছে:
               </Heading>
 
               {promotions.map((promotion) => {
+                const isThisRemoving = removingCode === promotion.code
+
                 return (
                   <div
                     key={promotion.id}
-                    className="flex items-center justify-between w-full max-w-full mb-2 bg-emerald-50 p-2 rounded-lg border border-emerald-200"
+                    className="flex items-center justify-between w-full max-w-full mb-2 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800"
                     data-testid="discount-row"
                   >
-                    <Text className="flex gap-x-1 items-baseline txt-small-plus w-4/5 pr-1">
+                    <Text className="flex gap-x-1 items-baseline txt-small-plus w-4/5 pr-1 text-emerald-900 dark:text-emerald-200">
                       <span className="truncate flex items-center gap-2" data-testid="discount-code">
                         <Badge
                           color={promotion.is_automatic ? "green" : "grey"}
@@ -143,18 +197,20 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                     </Text>
                     {!promotion.is_automatic && (
                       <button
-                        className="flex items-center text-red-600 hover:text-red-700 p-1"
+                        className="flex items-center text-red-600 hover:text-red-700 dark:text-red-400 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/60 transition-colors disabled:opacity-50 cursor-pointer"
+                        disabled={isThisRemoving}
                         onClick={() => {
-                          if (!promotion.code) {
-                            return
-                          }
-
+                          if (!promotion.code) return
                           removePromotionCode(promotion.code)
                         }}
                         data-testid="remove-discount-button"
                         title="প্রোমো কোড মুছুন"
                       >
-                        <Trash size={14} />
+                        {isThisRemoving ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                        ) : (
+                          <Trash size={14} />
+                        )}
                         <span className="sr-only">
                           Remove discount code from order
                         </span>

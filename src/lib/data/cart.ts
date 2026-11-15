@@ -326,23 +326,43 @@ export async function applyPromotions(codes: string[]) {
   const cartId = await getCartId()
 
   if (!cartId) {
-    throw new Error("No existing cart found")
+    return { success: false, error: "কার্ট পাওয়া যায়নি। অনুগ্রহ করে পৃষ্ঠাটি রিফ্রেশ করুন।" }
   }
 
   const headers = {
     ...(await getAuthHeaders()),
   }
 
-  return sdk.store.cart
-    .update(cartId, { promo_codes: codes }, {}, headers)
-    .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
-      safeRevalidateTag(cartCacheTag)
+  try {
+    await sdk.store.cart.update(cartId, { promo_codes: codes }, {}, headers)
+    const cartCacheTag = await getCacheTag("carts")
+    safeRevalidateTag(cartCacheTag)
 
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
-      safeRevalidateTag(fulfillmentCacheTag)
-    })
-    .catch(medusaError)
+    const fulfillmentCacheTag = await getCacheTag("fulfillment")
+    safeRevalidateTag(fulfillmentCacheTag)
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("applyPromotions error:", error?.response?.data || error?.message || error)
+    const rawMessage = (
+      error?.response?.data?.message ||
+      error?.response?.data ||
+      error?.message ||
+      ""
+    ).toString().toLowerCase()
+
+    let banglaMessage = "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
+
+    if (rawMessage.includes("expired")) {
+      banglaMessage = "প্রোমো কোডটির মেয়াদ শেষ হয়ে গেছে।"
+    } else if (rawMessage.includes("usage limit") || rawMessage.includes("maximum")) {
+      banglaMessage = "প্রোমো কোডটি ব্যবহারের সর্বোচ্চ সীমা শেষ হয়ে গেছে।"
+    } else if (rawMessage.includes("minimum") || rawMessage.includes("subtotal")) {
+      banglaMessage = "এই কোডটি ব্যবহার করার জন্য নুন্যতম অর্ডারের শর্ত পূরণ হয়নি।"
+    }
+
+    return { success: false, error: banglaMessage }
+  }
 }
 
 export async function applyGiftCard(code: string) {
@@ -394,9 +414,13 @@ export async function submitPromotionForm(
 ) {
   const code = formData.get("code") as string
   try {
-    await applyPromotions([code])
+    const res = await applyPromotions([code])
+    if (!res.success) {
+      return res.error
+    }
+    return null
   } catch (e: any) {
-    return e.message
+    return "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
   }
 }
 

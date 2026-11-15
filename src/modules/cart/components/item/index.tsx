@@ -12,7 +12,7 @@ import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { formatSize } from "@lib/util/money"
 
 type ItemProps = {
@@ -61,9 +61,21 @@ const Item = ({
       })
   }
 
-  // TODO: Update this to grab the actual max inventory
-  const maxQtyFromInventory = 10
-  const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
+  // Compact & Smart Quantity Options (At most ~13 options, never creates an 80-item dropdown covering the screen!)
+  const quantityOptions = useMemo(() => {
+    const optionsSet = new Set<number>()
+    // Standard base 1 to 10
+    for (let i = 1; i <= 10; i++) {
+      optionsSet.add(i)
+    }
+    // If quantity is above 10, include current and neighboring values
+    if (item.quantity > 10) {
+      if (item.quantity - 1 > 10) optionsSet.add(item.quantity - 1)
+      optionsSet.add(item.quantity)
+      optionsSet.add(item.quantity + 1)
+    }
+    return Array.from(optionsSet).sort((a, b) => a - b)
+  }, [item.quantity])
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
@@ -96,29 +108,51 @@ const Item = ({
 
       {type === "full" && (
         <Table.Cell>
-          <div className="flex gap-2 items-center w-28">
+          <div className="flex items-center gap-2">
             <DeleteButton
               id={item.id}
               onDelete={onDelete}
               data-testid="product-delete-button"
             />
-            <CartItemSelect
-              value={item.quantity}
-              onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-14 h-10 p-4"
-              data-testid="product-select-button"
-            >
-              {Array.from(
-                {
-                  length: Math.max(10, item.quantity),
-                },
-                (_, i) => (
-                  <option value={i + 1} key={i}>
-                    {formatSize(String(i + 1))}
+            {/* Hybrid Smart Quantity Controller: Companion [-] and [+] with Select Dropdown */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => changeQuantity(item.quantity - 1)}
+                disabled={item.quantity <= 1 || updating}
+                className="w-7 h-8 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none transition-colors font-bold text-sm cursor-pointer select-none"
+                title="পরিমাণ ১ কমান"
+                aria-label="পরিমাণ ১ কমান"
+              >
+                -
+              </button>
+              <CartItemSelect
+                value={item.quantity}
+                disabled={updating}
+                onChange={(value) => changeQuantity(parseInt(value.target.value))}
+                className="w-14 h-10 p-4"
+                data-testid="product-select-button"
+              >
+                {quantityOptions.map((qty) => (
+                  <option value={qty} key={qty}>
+                    {formatSize(String(qty))}
                   </option>
-                )
-              )}
-            </CartItemSelect>
+                ))}
+              </CartItemSelect>
+              <button
+                type="button"
+                onClick={() => changeQuantity(item.quantity + 1)}
+                disabled={updating}
+                className="w-7 h-8 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none transition-colors font-bold text-sm cursor-pointer select-none"
+                title="পরিমাণ ১ বাড়ান"
+                aria-label="পরিমাণ ১ বাড়ান"
+              >
+                +
+              </button>
+            </div>
+            {updating && (
+              <Spinner className="animate-spin text-amber-600 w-4 h-4 shrink-0" />
+            )}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />
         </Table.Cell>

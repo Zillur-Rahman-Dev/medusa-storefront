@@ -10,7 +10,7 @@ import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
 import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { ShoppingCart, X, Truck, Loader2 } from "lucide-react"
 
@@ -95,9 +95,12 @@ export default function CartDropdown({
   cart?: HttpTypes.StoreCart | null
 }) {
   const router = useRouter()
+  const params = useParams()
+  const countryCode = (params?.countryCode as string) || "bd"
   const [activeTimer, setActiveTimer] = useState<NodeJS.Timeout | undefined>(undefined)
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [isNavigatingToCart, setIsNavigatingToCart] = useState(false)
 
   // Local state for instant 0ms optimistic changes
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
@@ -413,13 +416,9 @@ export default function CartDropdown({
   }, [rawServerItems, router])
 
   // =========================================================================
-  // INSTANT FLUSH ON CHECKOUT (Guarantees 100% Cart Accuracy on Checkout Page)
+  // FLUSH PENDING DEBOUNCED UPDATES TO SERVER IMMEDIATELY
   // =========================================================================
-  const handleCheckoutClick = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsCheckingOut(true)
-
-    // 1. Check if any debounce timers are still pending in memory
+  const flushPendingUpdates = async () => {
     const pendingKeys = Object.keys(pendingUpdatesRef.current)
     if (pendingKeys.length > 0) {
       const syncPromises = pendingKeys.map(async (key) => {
@@ -430,7 +429,6 @@ export default function CartDropdown({
         delete debounceTimersRef.current[key]
 
         if (typeof finalQty === "number") {
-          // Check if key is a server line item
           const srvItem = rawServerItems.find((i) => i.id === key)
           if (srvItem) {
             if (finalQty <= 0) {
@@ -445,12 +443,28 @@ export default function CartDropdown({
       try {
         await Promise.all(syncPromises)
       } catch (err) {
-        console.error("Flush before checkout error:", err)
+        console.error("Flush before cart navigation error:", err)
       }
     }
+  }
 
+  // Handle Cart Navigation (Header Cart Icon + "শপিং কার্ট ও কুপন দেখুন" Button)
+  const handleGoToCartClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsNavigatingToCart(true)
+    await flushPendingUpdates()
     close()
-    router.push("/bd/checkout")
+    router.push(`/${countryCode}/cart`)
+    setIsNavigatingToCart(false)
+  }
+
+  // Handle Checkout Click (🛒 অর্ডার নিশ্চিত করুন (চেকআউট))
+  const handleCheckoutClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsCheckingOut(true)
+    await flushPendingUpdates()
+    close()
+    router.push(`/${countryCode}/checkout`)
   }
 
   // =========================================================================
@@ -572,8 +586,9 @@ export default function CartDropdown({
       <Popover className="relative h-full flex items-center">
         <PopoverButton className="h-full flex items-center focus:outline-none">
           <LocalizedClientLink
-            className="flex flex-col items-center justify-center p-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors relative"
+            className="flex flex-col items-center justify-center p-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors relative cursor-pointer"
             href="/cart"
+            onClick={handleGoToCartClick}
             data-testid="nav-cart-link"
           >
             <div className="relative">
@@ -770,12 +785,16 @@ export default function CartDropdown({
                   {/* Secondary Button: কার্ট ও কুপন দেখুন */}
                   <LocalizedClientLink
                     href="/cart"
-                    onClick={close}
-                    className="w-full h-9 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                    onClick={handleGoToCartClick}
+                    className="w-full h-9 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     data-testid="go-to-cart-button"
                   >
-                    <ShoppingCart className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>শপিং কার্ট ও কুপন দেখুন</span>
+                    {isNavigatingToCart ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" />
+                    ) : (
+                      <ShoppingCart className="w-3.5 h-3.5 text-zinc-500" />
+                    )}
+                    <span>{isNavigatingToCart ? "কার্ট পেজে যাওয়া হচ্ছে..." : "শপিং কার্ট ও কুপন দেখুন"}</span>
                   </LocalizedClientLink>
                 </div>
               </>
