@@ -448,13 +448,17 @@ export default function CartDropdown({
     }
   }
 
-  // Handle Cart Navigation (Header Cart Icon + "শপিং কার্ট ও কুপন দেখুন" Button)
+  // Handle Cart Navigation (Header Cart Icon)
   const handleGoToCartClick = async (e: React.MouseEvent) => {
     e.preventDefault()
     setIsNavigatingToCart(true)
     await flushPendingUpdates()
     close()
-    router.push(`/${countryCode}/cart`)
+    if (totalItems > 0) {
+      router.push(`/${countryCode}/checkout`)
+    } else {
+      router.push(`/${countryCode}/store`)
+    }
     setIsNavigatingToCart(false)
   }
 
@@ -767,7 +771,7 @@ export default function CartDropdown({
                     </span>
                   </div>
 
-                  {/* Primary Button: 🛒 অর্ডার নিশ্চিত করুন (চেকআউট) with Instant Flush */}
+                  {/* Primary Button: 🛒 অর্ডার নিশ্চিত করুন with Instant Flush */}
                   <button
                     type="button"
                     onClick={handleCheckoutClick}
@@ -779,23 +783,8 @@ export default function CartDropdown({
                     ) : (
                       <Truck className="w-4 h-4" />
                     )}
-                    <span>{isCheckingOut ? "অর্ডার পেজে যাওয়া হচ্ছে..." : "🛒 অর্ডার নিশ্চিত করুন (চেকআউট)"}</span>
+                    <span>{isCheckingOut ? "অর্ডার পেজে যাওয়া হচ্ছে..." : "🛒 অর্ডার নিশ্চিত করুন"}</span>
                   </button>
-
-                  {/* Secondary Button: কার্ট ও কুপন দেখুন */}
-                  <LocalizedClientLink
-                    href="/cart"
-                    onClick={handleGoToCartClick}
-                    className="w-full h-9 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    data-testid="go-to-cart-button"
-                  >
-                    {isNavigatingToCart ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" />
-                    ) : (
-                      <ShoppingCart className="w-3.5 h-3.5 text-zinc-500" />
-                    )}
-                    <span>{isNavigatingToCart ? "কার্ট পেজে যাওয়া হচ্ছে..." : "শপিং কার্ট ও কুপন দেখুন"}</span>
-                  </LocalizedClientLink>
                 </div>
               </>
             ) : (

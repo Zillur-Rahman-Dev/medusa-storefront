@@ -197,19 +197,26 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                     </Text>
                     {!promotion.is_automatic && (
                       <button
-                        className="flex items-center text-red-600 hover:text-red-700 dark:text-red-400 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/60 transition-colors disabled:opacity-50 cursor-pointer"
-                        disabled={isThisRemoving}
+                        type="button"
+                        className="flex items-center gap-1.5 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-100/60 dark:hover:bg-red-950/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold"
+                        disabled={isThisRemoving || isApplying || !!removingCode}
                         onClick={() => {
-                          if (!promotion.code) return
+                          if (!promotion.code || removingCode) return
                           removePromotionCode(promotion.code)
                         }}
                         data-testid="remove-discount-button"
                         title="প্রোমো কোড মুছুন"
                       >
                         {isThisRemoving ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                            <span>মুছছে...</span>
+                          </>
                         ) : (
-                          <Trash size={14} />
+                          <>
+                            <Trash size={14} />
+                            <span>মুছুন</span>
+                          </>
                         )}
                         <span className="sr-only">
                           Remove discount code from order

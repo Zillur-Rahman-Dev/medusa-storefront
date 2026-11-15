@@ -12,16 +12,13 @@ export default function CheckoutLayout({
       <div className="h-16 bg-white border-b ">
         <nav className="flex h-full items-center content-container justify-between">
           <LocalizedClientLink
-            href="/cart"
-            className="text-small-semi text-ui-fg-base flex items-center gap-x-2 uppercase flex-1 basis-0"
-            data-testid="back-to-cart-link"
+            href="/store"
+            className="text-small-semi text-ui-fg-base flex items-center gap-x-2 flex-1 basis-0"
+            data-testid="back-to-store-link"
           >
-            <ChevronDown className="rotate-90" size={16} />
-            <span className="mt-px hidden small:block txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base ">
-              কার্ট-এ ফিরে যান
-            </span>
-            <span className="mt-px block small:hidden txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base">
-              ফিরে যান
+            <ChevronDown className="rotate-90 text-zinc-600" size={16} />
+            <span className="mt-px txt-compact-plus font-semibold text-zinc-600 hover:text-zinc-900 transition-colors">
+              শপে ফিরুন
             </span>
           </LocalizedClientLink>
           <LocalizedClientLink
