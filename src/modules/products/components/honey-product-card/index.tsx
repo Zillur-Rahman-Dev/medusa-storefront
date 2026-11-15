@@ -7,6 +7,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
 import { addToCart } from "@lib/data/cart"
 import { formatPrice, formatSize } from "@lib/util/money"
+import { useCartItem } from "@lib/hooks/use-cart-item"
 
 export type HoneyProductItem = {
   id: string
@@ -32,34 +33,31 @@ type HoneyProductCardProps = {
 export default function HoneyProductCard({
   product,
 }: HoneyProductCardProps) {
-  const [isAdding, setIsAdding] = useState(false)
-  const [isAdded, setIsAdded] = useState(false)
+  const { quantity, setQuantity } = useCartItem(product.variantId, product.handle)
   const [isOrdering, setIsOrdering] = useState(false)
   const router = useRouter()
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
-  // 1. Add to Cart (updates line items in Medusa backend & header cart count with instant Optimistic UI)
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  const resolvedThumbnail =
+    product.thumbnail ||
+    (product.images && product.images.length > 0 ? product.images[0]?.url : null) ||
+    (product.handle?.includes("sundarban") || product.handle?.includes("kholisha")
+      ? "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167286/c5582ba6-d0c3-43b3-afbf-57ead15f9b54_imgi_138_c9eefb3810ff098b0fc9651e2e21f012.jpg.jpg"
+      : product.handle?.includes("mustard") || product.handle?.includes("sorisha")
+      ? "https://res.cloudinary.com/dqseoiw8p/raw/upload/v1794166098/e9b3e553-c496-419a-a1ca-e817d73045f1_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg"
+      : product.handle?.includes("black-seed") || product.handle?.includes("kalijira")
+      ? "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg"
+      : null)
+
+  // 1. Initial Add to Cart (turns into Stepper [ - ] [ 1 ] [ + ])
+  const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!product.variantId || isAdding || isAdded || isOrdering) return
+    if (!product.variantId || isOrdering) return
 
-    // 1. Instant Optimistic Feedback (0ms)
-    setIsAdded(true)
-    setIsAdding(true)
-
-    const resolvedThumbnail =
-      product.thumbnail ||
-      (product.images && product.images.length > 0 ? product.images[0]?.url : null) ||
-      (product.handle?.includes("sundarban") || product.handle?.includes("kholisha")
-        ? "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167286/c5582ba6-d0c3-43b3-afbf-57ead15f9b54_imgi_138_c9eefb3810ff098b0fc9651e2e21f012.jpg.jpg"
-        : product.handle?.includes("mustard") || product.handle?.includes("sorisha")
-        ? "https://res.cloudinary.com/dqseoiw8p/raw/upload/v1794166098/e9b3e553-c496-419a-a1ca-e817d73045f1_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg"
-        : product.handle?.includes("black-seed") || product.handle?.includes("kalijira")
-        ? "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg"
-        : null)
+    setQuantity(1)
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(
@@ -77,35 +75,67 @@ export default function HoneyProductCard({
         })
       )
     }
+  }
 
-    const startTime = Date.now()
-    try {
-      const res = await addToCart({
-        variantId: product.variantId,
-        quantity: 1,
-        countryCode: "bd",
-      })
-      if (res && res.success === false) {
-        throw new Error(res.error || "Failed to add to cart")
-      }
-      router.refresh()
+  // 2. Increment Stepper [ + ]
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
 
-      // Ensure minimum visual dwell time of 1200ms so the user comfortably sees "যোগ হয়েছে"
-      const elapsed = Date.now() - startTime
-      const remainingTime = Math.max(0, 1200 - elapsed)
-      setTimeout(() => {
-        setIsAdded(false)
-        setIsAdding(false)
-      }, remainingTime)
-    } catch (err) {
-      console.error("Failed to add to cart:", err)
-      setIsAdded(false)
-      setIsAdding(false)
+    if (!product.variantId || isOrdering) return
+
+    const nextQty = quantity + 1
+    setQuantity(nextQty)
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-added", {
+          detail: {
+            id: `opt_${Date.now()}`,
+            title: product.title,
+            variant: product.weight || "১ কেজি",
+            price: product.price,
+            thumbnail: resolvedThumbnail,
+            handle: product.handle,
+            variantId: product.variantId,
+            quantity: 1,
+          },
+        })
+      )
+    }
+  }
+
+  // 3. Decrement Stepper [ - ]
+  const handleDecrement = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!product.variantId || isOrdering) return
+
+    if (quantity > 1) {
+      const nextQty = quantity - 1
+      setQuantity(nextQty)
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("cart:item-failed", {
+          new CustomEvent("cart:item-decremented", {
             detail: {
-              message: "কার্টে যোগ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+              variantId: product.variantId,
+              handle: product.handle,
+            },
+          })
+        )
+      }
+    } else {
+      // Quantity hits 0: reverts back to [ কার্ট-এ যোগ ]
+      setQuantity(0)
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-deleted", {
+            detail: {
+              variantId: product.variantId,
+              handle: product.handle,
             },
           })
         )
@@ -113,7 +143,7 @@ export default function HoneyProductCard({
     }
   }
 
-  // 2. Direct Medusa Checkout (adds item to cart and immediately navigates to /checkout?step=address)
+  // 4. Direct Medusa Checkout (adds item to cart and immediately navigates to /checkout)
   const handleOrderNow = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -207,38 +237,51 @@ export default function HoneyProductCard({
         </div>
       </div>
 
-      {/* Dual Buttons matching exact user screenshot */}
+      {/* Dual Buttons matching exact user screenshot (Image 1) */}
       <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
-        {/* Button 1: কার্ট-এ যোগ */}
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          disabled={isAdding || isAdded || isOrdering}
-          className={`flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
-            isAdded
-              ? "bg-emerald-50 text-emerald-700 border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-300"
-              : "border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-          }`}
-        >
-          {isAdded ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-              <span>যোগ হয়েছে</span>
-            </>
-          ) : (
-            <>
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>কার্ট-এ যোগ</span>
-            </>
-          )}
-        </button>
+        {/* Button 1: Dynamic Stepper (Image 1 top) or Add to Cart (Image 1 bottom) */}
+        {quantity > 0 ? (
+          <div className="flex-1 h-10 flex items-center rounded-xl overflow-hidden border border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
+            <button
+              type="button"
+              onClick={handleDecrement}
+              disabled={isOrdering}
+              className="w-9 sm:w-10 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+              aria-label="পরিমাণ কমান"
+            >
+              -
+            </button>
+            <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-xs sm:text-sm select-none border-x border-amber-600/30">
+              {formatSize(String(quantity))}
+            </span>
+            <button
+              type="button"
+              onClick={handleIncrement}
+              disabled={isOrdering}
+              className="w-9 sm:w-10 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+              aria-label="পরিমাণ বাড়ান"
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isOrdering}
+            className="flex-1 h-10 py-2 px-2.5 rounded-xl text-xs font-bold border border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
+          >
+            <ShoppingCart className="w-3.5 h-3.5 text-amber-600" />
+            <span>কার্ট-এ যোগ</span>
+          </button>
+        )}
 
-        {/* Button 2: অর্ডার করুন (Direct to Medusa Checkout) */}
+        {/* Button 2: অর্ডার করুন (Direct to Medusa Checkout - Untouched) */}
         <button
           type="button"
           onClick={handleOrderNow}
-          disabled={isOrdering || isAdding || isAdded}
-          className="flex-1 py-2.5 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80"
+          disabled={isOrdering}
+          className="flex-1 h-10 py-2 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80 cursor-pointer"
         >
           {isOrdering ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />

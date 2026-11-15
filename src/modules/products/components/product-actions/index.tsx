@@ -12,7 +12,9 @@ import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
 import { t } from "@lib/locales"
-import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2, Package, MessageCircle } from "lucide-react"
+import { ShoppingBag, Truck, PhoneCall, ShieldCheck, RefreshCw, Star, CheckCircle, Loader2, Package, MessageCircle, ShoppingCart } from "lucide-react"
+import { useCartItem } from "@lib/hooks/use-cart-item"
+import { formatSize } from "@lib/util/money"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -87,6 +89,8 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
+  const { quantity, setQuantity } = useCartItem(selectedVariant?.id, product.handle)
+
   // update the options when a variant is selected
   const setOptionValue = (optionId: string, value: string) => {
     setOptions((prev) => ({
@@ -143,15 +147,12 @@ export default function ProductActions({
   const actionsRef = useRef<HTMLDivElement>(null)
   const inView = useIntersection(actionsRef, "0px")
 
-  // Add the selected variant to the cart with instant Optimistic UI response
-  const handleAddToCart = async () => {
-    if (!selectedVariant?.id || isAdding || isOptimisticAdded || isOrdering) return null
+  // 1. Add to Cart with instant Optimistic UI feedback & Stepper transform
+  const handleAddToCart = () => {
+    if (!selectedVariant?.id || isOrdering) return null
 
-    // 1. INSTANT (0ms) OPTIMISTIC UI FEEDBACK
-    setIsOptimisticAdded(true)
-    setIsAdding(true)
+    setQuantity(1)
 
-    // Trigger instant toast and navbar cart badge jump
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("cart:item-added", {
@@ -168,39 +169,56 @@ export default function ProductActions({
         })
       )
     }
+  }
 
-    const startTime = Date.now()
-    try {
-      // 2. Background Server Sync
-      const res = await addToCart({
-        variantId: selectedVariant.id,
-        quantity: 1,
-        countryCode: "bd",
-      })
+  // 2. Increment Stepper [ + ]
+  const handleIncrement = () => {
+    if (!selectedVariant?.id || isOrdering) return null
+    const nextQty = quantity + 1
+    setQuantity(nextQty)
 
-      if (res && res.success === false) {
-        throw new Error(res.error || "Failed to add to cart")
-      }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-added", {
+          detail: {
+            id: `opt_${Date.now()}`,
+            title: product.title,
+            variant: selectedVariant.title,
+            price: rawPrice,
+            thumbnail: product.thumbnail || product.images?.[0]?.url,
+            handle: product.handle,
+            variantId: selectedVariant.id,
+            quantity: 1,
+          },
+        })
+      )
+    }
+  }
 
-      router.refresh()
-
-      // Ensure minimum visual dwell time of 1200ms so user comfortably sees "যোগ হয়েছে"
-      const elapsed = Date.now() - startTime
-      const remainingTime = Math.max(0, 1200 - elapsed)
-      setTimeout(() => {
-        setIsOptimisticAdded(false)
-        setIsAdding(false)
-      }, remainingTime)
-    } catch (err: any) {
-      console.error("Optimistic add to cart failed, rolling back:", err)
-      // 3. Rollback on failure
-      setIsOptimisticAdded(false)
-      setIsAdding(false)
+  // 3. Decrement Stepper [ - ]
+  const handleDecrement = () => {
+    if (!selectedVariant?.id || isOrdering) return null
+    if (quantity > 1) {
+      const nextQty = quantity - 1
+      setQuantity(nextQty)
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("cart:item-failed", {
+          new CustomEvent("cart:item-decremented", {
             detail: {
-              message: "ইন্টারনেট সংযোগে সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+              variantId: selectedVariant.id,
+              handle: product.handle,
+            },
+          })
+        )
+      }
+    } else {
+      setQuantity(0)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-deleted", {
+            detail: {
+              variantId: selectedVariant.id,
+              handle: product.handle,
             },
           })
         )
@@ -330,34 +348,48 @@ export default function ProductActions({
 
         {/* 4-Button Grid (Exact match with reference design) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-          {/* 1. Add To Cart Button (Top-Left: Instant Optimistic UI feedback) */}
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={
-              !inStock ||
-              !selectedVariant ||
-              !!disabled ||
-              isOrdering ||
-              isAdding ||
-              isOptimisticAdded ||
-              !isValidVariant
-            }
-            className={`w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base border-2 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer ${
-              isOptimisticAdded
-                ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-600 dark:border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-md shadow-emerald-500/20"
-                : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-            }`}
-          >
-            {isOptimisticAdded ? (
-              <>
-                <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in-75 duration-200" />
-                <span>কার্টে যোগ হয়েছে! ✓</span>
-              </>
-            ) : (
+          {/* 1. Add To Cart Button (Transforms to Stepper when quantity > 0) */}
+          {quantity > 0 ? (
+            <div className="w-full h-11 sm:h-12 flex items-center rounded-xl overflow-hidden border-2 border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={handleDecrement}
+                disabled={isOrdering}
+                className="w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-lg select-none transition-colors cursor-pointer"
+                aria-label="পরিমাণ কমান"
+              >
+                -
+              </button>
+              <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm sm:text-base select-none border-x border-amber-600/30">
+                {formatSize(String(quantity))}
+              </span>
+              <button
+                type="button"
+                onClick={handleIncrement}
+                disabled={isOrdering}
+                className="w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-lg select-none transition-colors cursor-pointer"
+                aria-label="পরিমাণ বাড়ান"
+              >
+                +
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={
+                !inStock ||
+                !selectedVariant ||
+                !!disabled ||
+                isOrdering ||
+                !isValidVariant
+              }
+              className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base border-2 border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer shadow-2xs"
+            >
+              <ShoppingCart className="w-5 h-5 text-amber-600" />
               <span>কার্টে যোগ করুন</span>
-            )}
-          </button>
+            </button>
+          )}
 
           {/* 2. Direct Order Button (Top-Right: Warm Amber matching "পণ্যের বিবরণ ও তথ্য" tab) */}
           <button

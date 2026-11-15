@@ -226,6 +226,23 @@ export default function CartDropdown({
     prevSignatureRef.current = serverSignature
   }, [serverSignature, rawServerItems])
 
+  // Sync active cart item quantities globally for product cards & sessionStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const cartMap: Record<string, { quantity: number; lineId?: string; variantId?: string }> = {}
+    displayItems.forEach((item) => {
+      const info = { quantity: item.quantity, lineId: item.lineId, variantId: item.variantId }
+      if (item.variantId) cartMap[item.variantId] = info
+      if (item.product_handle) cartMap[item.product_handle] = info
+      if (item.id) cartMap[item.id] = info
+    })
+    ;(window as any).__CART_MAP__ = cartMap
+    try {
+      sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
+  }, [displayItems])
+
   // =========================================================================
   // DEBOUNCED SYNC ENGINE (400ms Sweet Spot)
   // =========================================================================
@@ -416,12 +433,58 @@ export default function CartDropdown({
       }
     }
 
+    const handleItemDecremented = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      const targetVariantId = detail.variantId
+      const targetHandle = detail.handle
+      const targetId = detail.id
+
+      const existingItem = displayItems.find(
+        (i) =>
+          (targetId && (i.id === targetId || i.lineId === targetId)) ||
+          (targetVariantId && i.variantId === targetVariantId) ||
+          (targetHandle && i.product_handle === targetHandle)
+      )
+
+      if (existingItem) {
+        if (existingItem.quantity > 1) {
+          const newQty = existingItem.quantity - 1
+          setQuantityOverrides((prev) => ({ ...prev, [existingItem.id]: newQty }))
+          queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty)
+        } else {
+          handleRemove(existingItem)
+        }
+      }
+    }
+
+    const handleItemDeleted = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      const targetVariantId = detail.variantId
+      const targetHandle = detail.handle
+      const targetId = detail.id
+
+      const existingItem = displayItems.find(
+        (i) =>
+          (targetId && (i.id === targetId || i.lineId === targetId)) ||
+          (targetVariantId && i.variantId === targetVariantId) ||
+          (targetHandle && i.product_handle === targetHandle)
+      )
+
+      if (existingItem) {
+        handleRemove(existingItem)
+      }
+    }
+
     window.addEventListener("cart:item-added", handleItemAdded)
     window.addEventListener("cart:quantity-updated", handleQuantityUpdated)
+    window.addEventListener("cart:item-decremented", handleItemDecremented)
+    window.addEventListener("cart:item-deleted", handleItemDeleted)
 
     return () => {
       window.removeEventListener("cart:item-added", handleItemAdded)
       window.removeEventListener("cart:quantity-updated", handleQuantityUpdated)
+      window.removeEventListener("cart:item-decremented", handleItemDecremented)
+      window.removeEventListener("cart:item-deleted", handleItemDeleted)
     }
   }, [displayItems, rawServerItems])
 
