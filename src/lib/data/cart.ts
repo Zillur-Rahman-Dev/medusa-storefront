@@ -149,36 +149,66 @@ export async function addToCart({
       ...(await getAuthHeaders()),
     }
 
-    try {
-      await sdk.store.cart.createLineItem(
+    // Check if variant already exists in cart to prevent duplicate rows in database
+    const fullCart = await retrieveCart(cart.id)
+    const existingItems =
+      fullCart?.items?.filter((item) => item.variant_id === variantId) || []
+
+    if (existingItems.length > 0) {
+      // Variant already in cart: update primary line item with merged total
+      const primaryItem = existingItems[0]
+      const totalCurrentQty = existingItems.reduce((sum, item) => sum + item.quantity, 0)
+      const newTotalQty = totalCurrentQty + quantity
+
+      await sdk.store.cart.updateLineItem(
         cart.id,
-        {
-          variant_id: variantId,
-          quantity,
-        },
+        primaryItem.id,
+        { quantity: newTotalQty },
         {},
         headers
       )
-    } catch (err: any) {
-      console.warn("createLineItem failed on existing cart, creating fresh cart...", err?.message)
-      await removeCartId()
-      const locale = await getLocale()
-      const freshCartResp = await sdk.store.cart.create(
-        { region_id: BANGLADESH_REGION_ID, locale: locale || undefined },
-        {},
-        headers
-      )
-      cart = freshCartResp.cart
-      await setCartId(cart.id)
-      await sdk.store.cart.createLineItem(
-        cart.id,
-        {
-          variant_id: variantId,
-          quantity,
-        },
-        {},
-        headers
-      )
+
+      // Clean up any existing duplicate line items from past requests
+      for (let i = 1; i < existingItems.length; i++) {
+        try {
+          await sdk.store.cart.deleteLineItem(cart.id, existingItems[i].id, {}, headers)
+        } catch (e) {
+          console.warn("Cleaned up duplicate line item:", existingItems[i].id)
+        }
+      }
+    } else {
+      // First time adding this variant: create line item
+      try {
+        await sdk.store.cart.createLineItem(
+          cart.id,
+          {
+            variant_id: variantId,
+            quantity,
+          },
+          {},
+          headers
+        )
+      } catch (err: any) {
+        console.warn("createLineItem failed on existing cart, creating fresh cart...", err?.message)
+        await removeCartId()
+        const locale = await getLocale()
+        const freshCartResp = await sdk.store.cart.create(
+          { region_id: BANGLADESH_REGION_ID, locale: locale || undefined },
+          {},
+          headers
+        )
+        cart = freshCartResp.cart
+        await setCartId(cart.id)
+        await sdk.store.cart.createLineItem(
+          cart.id,
+          {
+            variant_id: variantId,
+            quantity,
+          },
+          {},
+          headers
+        )
+      }
     }
 
     const cartCacheTag = await getCacheTag("carts")

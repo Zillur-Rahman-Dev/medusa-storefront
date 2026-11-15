@@ -11,7 +11,7 @@ import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useRouter } from "next/navigation"
-import { Fragment, useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { ShoppingCart, X, Truck, Loader2 } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
@@ -77,6 +77,7 @@ function resolveProductImage(opts: {
 type UnifiedCartItem = {
   id: string
   lineId?: string
+  lineIds?: string[]
   variantId?: string
   title: string
   product_handle?: string
@@ -133,35 +134,54 @@ export default function CartDropdown({
   // 1. Raw server items from Medusa
   const rawServerItems = cartState?.items || []
 
-  // 2. Map server items into Unified format with overrides applied
-  const activeServerItems: UnifiedCartItem[] = rawServerItems
-    .filter((item) => !deletedItemIds.includes(item.id))
-    .map((item) => {
-      const activeQty = quantityOverrides[item.id] ?? item.quantity
-      return {
-        id: item.id,
-        lineId: item.id,
-        variantId: item.variant_id || item.variant?.id,
-        title: item.title,
-        product_handle: item.product_handle,
-        thumbnail: item.thumbnail,
-        metadata: item.metadata,
-        variantTitle: item.variant?.title || item.subtitle || "১ কেজি",
-        quantity: activeQty,
-        unit_price: item.unit_price,
-        created_at: item.created_at,
+  // 2. Consolidate server items by variant/product to eliminate duplicate rows in UI
+  const consolidatedServerItems: UnifiedCartItem[] = useMemo(() => {
+    const map = new Map<string, UnifiedCartItem>()
+
+    for (const item of rawServerItems) {
+      if (deletedItemIds.includes(item.id)) continue
+
+      const variantKey = item.variant_id || item.variant?.id || item.product_handle || item.id
+      const overrideQty = quantityOverrides[item.id]
+
+      if (map.has(variantKey)) {
+        const existing = map.get(variantKey)!
+        existing.lineIds = existing.lineIds ? [...existing.lineIds, item.id] : [existing.lineId || existing.id, item.id]
+        if (typeof overrideQty === "number") {
+          existing.quantity = overrideQty
+        } else {
+          existing.quantity += item.quantity
+        }
+      } else {
+        const activeQty = typeof overrideQty === "number" ? overrideQty : item.quantity
+        map.set(variantKey, {
+          id: item.id,
+          lineId: item.id,
+          lineIds: [item.id],
+          variantId: item.variant_id || item.variant?.id,
+          title: item.title,
+          product_handle: item.product_handle,
+          thumbnail: item.thumbnail,
+          metadata: item.metadata,
+          variantTitle: item.variant?.title || item.subtitle || "১ কেজি",
+          quantity: activeQty,
+          unit_price: item.unit_price,
+          created_at: item.created_at,
+        })
       }
-    })
-    .filter((item) => item.quantity > 0)
+    }
+
+    return Array.from(map.values()).filter((item) => item.quantity > 0)
+  }, [rawServerItems, deletedItemIds, quantityOverrides])
 
   // 3. Active optimistic new items (excluding any that server has now confirmed)
   const activeNewItems: UnifiedCartItem[] = optimisticNewItems
     .filter((newItem) => !deletedItemIds.includes(newItem.id))
     .filter(
       (newItem) =>
-        !rawServerItems.some(
+        !consolidatedServerItems.some(
           (srv) =>
-            (newItem.variantId && srv.variant_id === newItem.variantId) ||
+            (newItem.variantId && srv.variantId === newItem.variantId) ||
             srv.product_handle === newItem.product_handle
         )
     )
@@ -175,7 +195,7 @@ export default function CartDropdown({
     .filter((item) => item.quantity > 0)
 
   // 4. Unified Display List (0ms Single Source of Truth!)
-  const displayItems: UnifiedCartItem[] = [...activeNewItems, ...activeServerItems]
+  const displayItems: UnifiedCartItem[] = [...activeNewItems, ...consolidatedServerItems]
 
   // Totals
   const totalItems = displayItems.reduce((acc, item) => acc + item.quantity, 0)
@@ -246,7 +266,13 @@ export default function CartDropdown({
   // =========================================================================
   // DEBOUNCED SYNC ENGINE (400ms Sweet Spot)
   // =========================================================================
-  const queueSync = (itemId: string, lineId: string | undefined, variantId: string | undefined, newQty: number) => {
+  const queueSync = (
+    itemId: string,
+    lineId: string | undefined,
+    variantId: string | undefined,
+    newQty: number,
+    lineIds?: string[]
+  ) => {
     const key = lineId || itemId
     pendingUpdatesRef.current[key] = newQty
 
@@ -265,10 +291,15 @@ export default function CartDropdown({
 
       try {
         if (lineId) {
+          const allIds = lineIds && lineIds.length > 0 ? lineIds : [lineId]
           if (finalQty <= 0) {
-            await deleteLineItem(lineId)
+            await Promise.all(allIds.map((lid) => deleteLineItem(lid)))
           } else {
             await updateLineItem({ lineId, quantity: finalQty })
+            if (allIds.length > 1) {
+              const extraIds = allIds.filter((lid) => lid !== lineId)
+              await Promise.all(extraIds.map((lid) => deleteLineItem(lid)))
+            }
           }
         } else if (variantId && finalQty > 0) {
           await addToCart({ variantId, quantity: finalQty, countryCode: "bd" })
@@ -297,7 +328,7 @@ export default function CartDropdown({
     const newQty = item.quantity + 1
     // Instant 0ms UI update
     setQuantityOverrides((prev) => ({ ...prev, [item.id]: newQty }))
-    queueSync(item.id, item.lineId, item.variantId, newQty)
+    queueSync(item.id, item.lineId, item.variantId, newQty, item.lineIds)
   }
 
   // Handle [ - ] Button Click
@@ -306,7 +337,7 @@ export default function CartDropdown({
       const newQty = item.quantity - 1
       // Instant 0ms UI update
       setQuantityOverrides((prev) => ({ ...prev, [item.id]: newQty }))
-      queueSync(item.id, item.lineId, item.variantId, newQty)
+      queueSync(item.id, item.lineId, item.variantId, newQty, item.lineIds)
     } else {
       // If quantity is 1, decrementing removes the item
       handleRemove(item)
@@ -315,29 +346,71 @@ export default function CartDropdown({
 
   // Handle Remove / Delete Button Click (Instant 0ms removal)
   const handleRemove = async (item: UnifiedCartItem) => {
-    const key = item.lineId || item.id
+    const allIds = item.lineIds && item.lineIds.length > 0 ? item.lineIds : [item.lineId || item.id]
+
     // Cancel pending timer
-    if (debounceTimersRef.current[key]) {
-      clearTimeout(debounceTimersRef.current[key])
-      delete debounceTimersRef.current[key]
-      delete pendingUpdatesRef.current[key]
-    }
+    allIds.forEach((key) => {
+      if (debounceTimersRef.current[key]) {
+        clearTimeout(debounceTimersRef.current[key])
+        delete debounceTimersRef.current[key]
+        delete pendingUpdatesRef.current[key]
+      }
+    })
 
     // Instantly hide from UI in 0ms
-    setDeletedItemIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]))
-    setOptimisticNewItems((prev) => prev.filter((i) => i.id !== item.id))
+    setDeletedItemIds((prev) => [...prev, ...allIds])
+    setOptimisticNewItems((prev) => prev.filter((i) => !allIds.includes(i.id)))
+
+    if (item.variantId || item.product_handle) {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-deleted", {
+          detail: {
+            variantId: item.variantId,
+            handle: item.product_handle,
+          },
+        })
+      )
+    }
 
     // Background delete from server
-    if (item.lineId) {
-      try {
-        await deleteLineItem(item.lineId)
-      } catch (err) {
-        console.error("Failed to delete line item:", err)
-        // Rollback on failure
-        setDeletedItemIds((prev) => prev.filter((id) => id !== item.id))
-      }
+    try {
+      await Promise.all(allIds.map((lid) => deleteLineItem(lid)))
+    } catch (err) {
+      console.error("Failed to delete line item:", err)
+      // Rollback on failure
+      setDeletedItemIds((prev) => prev.filter((id) => !allIds.includes(id)))
     }
   }
+
+  // Auto-healing background task: permanently clean up duplicate line items from previous tests
+  const autoHealedRef = useRef(false)
+  useEffect(() => {
+    if (autoHealedRef.current || rawServerItems.length === 0) return
+    const groups: Record<string, HttpTypes.StoreCartLineItem[]> = {}
+    for (const item of rawServerItems) {
+      const key = item.variant_id || item.variant?.id || item.product_handle
+      if (key) {
+        groups[key] = groups[key] ? [...groups[key], item] : [item]
+      }
+    }
+
+    const duplicateGroups = Object.values(groups).filter((list) => list.length > 1)
+    if (duplicateGroups.length > 0) {
+      autoHealedRef.current = true
+      duplicateGroups.forEach(async (items) => {
+        const totalQty = items.reduce((sum, i) => sum + i.quantity, 0)
+        const primaryId = items[0].id
+        const extraIds = items.slice(1).map((i) => i.id)
+        try {
+          await updateLineItem({ lineId: primaryId, quantity: totalQty })
+          await Promise.all(extraIds.map((id) => deleteLineItem(id)))
+          router.refresh()
+        } catch (e) {
+          console.warn("Auto-healing error:", e)
+        }
+      })
+    }
+  }, [rawServerItems, router])
 
   // =========================================================================
   // INSTANT FLUSH ON CHECKOUT (Guarantees 100% Cart Accuracy on Checkout Page)
@@ -401,7 +474,7 @@ export default function CartDropdown({
         const currentQty = existingItem.quantity
         const newQty = currentQty + (detail.quantity || 1)
         setQuantityOverrides((prev) => ({ ...prev, [existingItem.id]: newQty }))
-        queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty)
+        queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty, existingItem.lineIds)
       } else {
         // Brand new item: Add directly as a full unified row in 0ms!
         const newItem: UnifiedCartItem = {
@@ -450,7 +523,7 @@ export default function CartDropdown({
         if (existingItem.quantity > 1) {
           const newQty = existingItem.quantity - 1
           setQuantityOverrides((prev) => ({ ...prev, [existingItem.id]: newQty }))
-          queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty)
+          queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty, existingItem.lineIds)
         } else {
           handleRemove(existingItem)
         }

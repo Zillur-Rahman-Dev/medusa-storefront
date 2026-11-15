@@ -146,9 +146,26 @@ const CartTemplate = ({
       0
     )
 
+    // Consolidate active items by variant so duplicate line items never show twice
+    const consolidatedMap = new Map<string, any>()
+    for (const item of activeItems) {
+      const key = item.variant_id || item.variant?.id || item.product_handle || item.id
+      if (consolidatedMap.has(key)) {
+        const existing = consolidatedMap.get(key)
+        existing.quantity += item.quantity
+        existing.subtotal += item.subtotal
+        existing.total += item.total
+        existing.raw_subtotal = { value: String(existing.subtotal), precision: 20 }
+        existing.raw_total = { value: String(existing.total), precision: 20 }
+      } else {
+        consolidatedMap.set(key, { ...item })
+      }
+    }
+    const finalItems = Array.from(consolidatedMap.values())
+
     return {
       ...cart,
-      items: activeItems,
+      items: finalItems,
       subtotal,
       total: subtotal,
       raw_subtotal: { value: String(subtotal), precision: 20 },
