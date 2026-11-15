@@ -295,16 +295,27 @@ export default function CartDropdown({
         if (lineId) {
           const allIds = lineIds && lineIds.length > 0 ? lineIds : [lineId]
           if (finalQty <= 0) {
-            await Promise.all(allIds.map((lid) => deleteLineItem(lid)))
+            await Promise.all(allIds.map((lid) => deleteLineItem(lid, variantId)))
           } else {
             await updateLineItem({ lineId, quantity: finalQty })
             if (allIds.length > 1) {
               const extraIds = allIds.filter((lid) => lid !== lineId)
-              await Promise.all(extraIds.map((lid) => deleteLineItem(lid)))
+              await Promise.all(extraIds.map((lid) => deleteLineItem(lid, variantId)))
             }
           }
         } else if (variantId && finalQty > 0) {
-          await addToCart({ variantId, quantity: finalQty, countryCode: "bd" })
+          const res = await addToCart({ variantId, quantity: finalQty, countryCode: "bd" })
+          if (res?.lineId) {
+            setOptimisticNewItems((prev) =>
+              prev.map((opt) =>
+                opt.id === itemId
+                  ? { ...opt, lineId: res.lineId, lineIds: res.lineIds || [res.lineId] }
+                  : opt
+              )
+            )
+          }
+        } else if (variantId && finalQty <= 0) {
+          await deleteLineItem(itemId, variantId)
         }
       } catch (err) {
         console.error("Failed to sync cart item quantity:", err)
@@ -350,7 +361,7 @@ export default function CartDropdown({
   const handleRemove = async (item: UnifiedCartItem) => {
     const allIds = item.lineIds && item.lineIds.length > 0 ? item.lineIds : [item.lineId || item.id]
 
-    // Cancel pending timer
+    // Cancel pending timers for this item
     allIds.forEach((key) => {
       if (debounceTimersRef.current[key]) {
         clearTimeout(debounceTimersRef.current[key])
@@ -358,10 +369,21 @@ export default function CartDropdown({
         delete pendingUpdatesRef.current[key]
       }
     })
+    if (debounceTimersRef.current[item.id]) {
+      clearTimeout(debounceTimersRef.current[item.id])
+      delete debounceTimersRef.current[item.id]
+      delete pendingUpdatesRef.current[item.id]
+    }
 
     // Instantly hide from UI in 0ms
-    setDeletedItemIds((prev) => [...prev, ...allIds])
-    setOptimisticNewItems((prev) => prev.filter((i) => !allIds.includes(i.id)))
+    setDeletedItemIds((prev) => [...prev, ...allIds, item.id])
+    setOptimisticNewItems((prev) => prev.filter((i) => !allIds.includes(i.id) && i.id !== item.id))
+    setQuantityOverrides((prev) => {
+      const next = { ...prev }
+      delete next[item.id]
+      if (item.lineId) delete next[item.lineId]
+      return next
+    })
 
     if (item.variantId || item.product_handle) {
       window.dispatchEvent(
@@ -374,13 +396,14 @@ export default function CartDropdown({
       )
     }
 
-    // Background delete from server
+    // Background delete from Medusa server (with variantId so optimistic & duplicate items are truly deleted)
     try {
-      await Promise.all(allIds.map((lid) => deleteLineItem(lid)))
+      await Promise.all(allIds.map((lid) => deleteLineItem(lid, item.variantId)))
+      router.refresh()
     } catch (err) {
       console.error("Failed to delete line item:", err)
       // Rollback on failure
-      setDeletedItemIds((prev) => prev.filter((id) => !allIds.includes(id)))
+      setDeletedItemIds((prev) => prev.filter((id) => !allIds.includes(id) && id !== item.id))
     }
   }
 

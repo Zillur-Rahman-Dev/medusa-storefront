@@ -28,6 +28,9 @@ const CartTemplate = ({
 
   // 1. Instant 0ms Optimistic Delete Handler for the Cart Page
   const handleOptimisticDelete = async (itemId: string) => {
+    const targetItem = rawItems.find((i) => i.id === itemId)
+    const variantId = targetItem?.variant_id || targetItem?.variant?.id
+
     // Instantly hide item from items table and recalculate summary in 0ms!
     setDeletedItemIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]))
 
@@ -35,13 +38,13 @@ const CartTemplate = ({
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("cart:item-deleted", {
-          detail: { id: itemId },
+          detail: { id: itemId, variantId },
         })
       )
     }
 
     try {
-      await deleteLineItem(itemId)
+      await deleteLineItem(itemId, variantId)
       router.refresh()
     } catch (err) {
       console.error("Failed to delete line item on cart page:", err)

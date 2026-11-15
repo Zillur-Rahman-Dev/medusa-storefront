@@ -157,6 +157,9 @@ export async function addToCart({
     const existingItems =
       cart.items?.filter((item) => item.variant_id === variantId) || []
 
+    let createdLineId: string | undefined
+    let allLineIds: string[] = []
+
     if (existingItems.length > 0) {
       // Variant already in cart: update primary line item with merged total
       const primaryItem = existingItems[0]
@@ -171,6 +174,9 @@ export async function addToCart({
         headers
       )
 
+      createdLineId = primaryItem.id
+      allLineIds = [primaryItem.id]
+
       // Clean up any existing duplicate line items from past requests
       for (let i = 1; i < existingItems.length; i++) {
         try {
@@ -182,7 +188,7 @@ export async function addToCart({
     } else {
       // First time adding this variant: create line item
       try {
-        await sdk.store.cart.createLineItem(
+        const createResp = await sdk.store.cart.createLineItem(
           cart.id,
           {
             variant_id: variantId,
@@ -191,6 +197,9 @@ export async function addToCart({
           {},
           headers
         )
+        const matched = createResp?.cart?.items?.find((i) => i.variant_id === variantId)
+        createdLineId = matched?.id
+        allLineIds = matched?.id ? [matched.id] : []
       } catch (err: any) {
         console.warn("createLineItem failed on existing cart, creating fresh cart...", err?.message)
         await removeCartId()
@@ -202,7 +211,7 @@ export async function addToCart({
         )
         cart = freshCartResp.cart
         await setCartId(cart.id)
-        await sdk.store.cart.createLineItem(
+        const createResp = await sdk.store.cart.createLineItem(
           cart.id,
           {
             variant_id: variantId,
@@ -211,16 +220,27 @@ export async function addToCart({
           {},
           headers
         )
+        const matched = createResp?.cart?.items?.find((i) => i.variant_id === variantId)
+        createdLineId = matched?.id
+        allLineIds = matched?.id ? [matched.id] : []
       }
     }
 
-    const cartCacheTag = await getCacheTag("carts")
-    safeRevalidateTag(cartCacheTag)
+    try {
+      revalidateTag("carts")
+      revalidateTag("cart")
+      const cartCacheTag = await getCacheTag("carts")
+      safeRevalidateTag(cartCacheTag)
+      const fulfillmentCacheTag = await getCacheTag("fulfillment")
+      safeRevalidateTag(fulfillmentCacheTag)
+    } catch {}
 
-    const fulfillmentCacheTag = await getCacheTag("fulfillment")
-    safeRevalidateTag(fulfillmentCacheTag)
-
-    return { success: true, cartId: cart.id }
+    return {
+      success: true,
+      cartId: cart.id,
+      lineId: createdLineId,
+      lineIds: allLineIds,
+    }
   } catch (err: any) {
     console.error("addToCart error:", err)
     return { success: false, error: err?.message || String(err) }
@@ -251,6 +271,10 @@ export async function updateLineItem({
   await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, headers)
     .then(async () => {
+      try {
+        revalidateTag("carts")
+        revalidateTag("cart")
+      } catch {}
       const cartCacheTag = await getCacheTag("carts")
       safeRevalidateTag(cartCacheTag)
 
@@ -260,31 +284,68 @@ export async function updateLineItem({
     .catch(medusaError)
 }
 
-export async function deleteLineItem(lineId: string) {
-  if (!lineId) {
-    throw new Error("Missing lineItem ID when deleting line item")
-  }
+export async function deleteLineItem(lineId: string, variantId?: string) {
+  try {
+    if (!lineId && !variantId) {
+      throw new Error("Missing lineItem ID or variant ID when deleting line item")
+    }
 
-  const cartId = await getCartId()
+    const cartId = await getCartId()
 
-  if (!cartId) {
-    throw new Error("Missing cart ID when deleting line item")
-  }
+    if (!cartId) {
+      return { success: true }
+    }
 
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+    const headers = {
+      ...(await getAuthHeaders()),
+    }
 
-  await sdk.store.cart
-    .deleteLineItem(cartId, lineId, {}, headers)
-    .then(async () => {
+    // 1. Fetch current live cart from Medusa with items to accurately locate the real line item ID(s)
+    const cart = await retrieveCart(cartId, "id,region_id,currency_code,*items.id,*items.variant_id")
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return { success: true }
+    }
+
+    // 2. Identify all matching item IDs:
+    // Matches by exact line item ID OR variant ID (handles optimistic 'opt_' IDs gracefully)
+    const matchingItems = cart.items.filter(
+      (item) =>
+        item.id === lineId ||
+        (variantId && item.variant_id === variantId) ||
+        (lineId.startsWith("opt_") && variantId && item.variant_id === variantId)
+    )
+
+    const targetIds =
+      matchingItems.length > 0
+        ? matchingItems.map((i) => i.id)
+        : !lineId.startsWith("opt_")
+        ? [lineId]
+        : []
+
+    // 3. Delete all matching line items from Medusa database
+    for (const tid of targetIds) {
+      try {
+        await sdk.store.cart.deleteLineItem(cartId, tid, {}, headers)
+      } catch (err: any) {
+        console.warn(`[deleteLineItem] Could not delete line item ${tid}:`, err?.message)
+      }
+    }
+
+    // 4. Force revalidate cache tags so Next.js never serves stale cart
+    try {
+      revalidateTag("carts")
+      revalidateTag("cart")
       const cartCacheTag = await getCacheTag("carts")
       safeRevalidateTag(cartCacheTag)
-
       const fulfillmentCacheTag = await getCacheTag("fulfillment")
       safeRevalidateTag(fulfillmentCacheTag)
-    })
-    .catch(medusaError)
+    } catch {}
+
+    return { success: true }
+  } catch (err: any) {
+    console.error("deleteLineItem error:", err)
+    return { success: false, error: err?.message || String(err) }
+  }
 }
 
 export async function setShippingMethod({
