@@ -34,43 +34,34 @@ export function CartProvider({
 
     const handleAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
-      const keys = [detail.variantId, detail.handle].filter(Boolean)
-      if (keys.length > 0) {
-        setQuantities((prev) => {
-          const next = { ...prev }
-          for (const k of keys) {
-            next[k] = (next[k] || 0) + (detail.quantity || 1)
-          }
-          return next
-        })
+      const key = detail.variantId || detail.handle
+      if (key) {
+        setQuantities((prev) => ({
+          ...prev,
+          [key]: (prev[key] || 0) + (detail.quantity || 1),
+        }))
       }
     }
 
     const handleDecremented = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
-      const keys = [detail.variantId, detail.handle].filter(Boolean)
-      if (keys.length > 0) {
-        setQuantities((prev) => {
-          const next = { ...prev }
-          for (const k of keys) {
-            next[k] = Math.max(0, (next[k] || 0) - 1)
-          }
-          return next
-        })
+      const key = detail.variantId || detail.handle
+      if (key) {
+        setQuantities((prev) => ({
+          ...prev,
+          [key]: Math.max(0, (prev[key] || 0) - 1),
+        }))
       }
     }
 
     const handleDeleted = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
-      const keys = [detail.variantId, detail.handle].filter(Boolean)
-      if (keys.length > 0) {
-        setQuantities((prev) => {
-          const next = { ...prev }
-          for (const k of keys) {
-            next[k] = 0
-          }
-          return next
-        })
+      const key = detail.variantId || detail.handle
+      if (key) {
+        setQuantities((prev) => ({
+          ...prev,
+          [key]: 0,
+        }))
       }
     }
 

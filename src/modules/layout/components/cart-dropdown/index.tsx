@@ -137,14 +137,14 @@ export default function CartDropdown({
   // 1. Raw server items from Medusa
   const rawServerItems = cartState?.items || []
 
-  // 2. Consolidate server items by variant/product to eliminate duplicate rows in UI
+  // 2. Consolidate server items by variant to eliminate duplicate rows in UI
   const consolidatedServerItems: UnifiedCartItem[] = useMemo(() => {
     const map = new Map<string, UnifiedCartItem>()
 
     for (const item of rawServerItems) {
       if (deletedItemIds.includes(item.id)) continue
 
-      const variantKey = item.variant_id || item.variant?.id || item.product_handle || item.id
+      const variantKey = item.variant_id || item.variant?.id || item.id
       const overrideQty = quantityOverrides[item.id]
 
       if (map.has(variantKey)) {
@@ -182,10 +182,10 @@ export default function CartDropdown({
     .filter((newItem) => !deletedItemIds.includes(newItem.id))
     .filter(
       (newItem) =>
-        !consolidatedServerItems.some(
-          (srv) =>
-            (newItem.variantId && srv.variantId === newItem.variantId) ||
-            srv.product_handle === newItem.product_handle
+        !consolidatedServerItems.some((srv) =>
+          newItem.variantId
+            ? srv.variantId === newItem.variantId
+            : srv.product_handle === newItem.product_handle
         )
     )
     .map((newItem) => {
@@ -226,10 +226,10 @@ export default function CartDropdown({
     setOptimisticNewItems((prev) =>
       prev.filter(
         (opt) =>
-          !rawServerItems.some(
-            (srv) =>
-              (opt.variantId && srv.variant_id === opt.variantId) ||
-              srv.product_handle === opt.product_handle
+          !rawServerItems.some((srv) =>
+            opt.variantId
+              ? srv.variant_id === opt.variantId
+              : srv.product_handle === opt.product_handle
           )
       )
     )
@@ -256,7 +256,6 @@ export default function CartDropdown({
     displayItems.forEach((item) => {
       const info = { quantity: item.quantity, lineId: item.lineId, variantId: item.variantId }
       if (item.variantId) cartMap[item.variantId] = info
-      if (item.product_handle) cartMap[item.product_handle] = info
       if (item.id) cartMap[item.id] = info
     })
     ;(window as any).__CART_MAP__ = cartMap
@@ -391,7 +390,7 @@ export default function CartDropdown({
     if (autoHealedRef.current || rawServerItems.length === 0) return
     const groups: Record<string, HttpTypes.StoreCartLineItem[]> = {}
     for (const item of rawServerItems) {
-      const key = item.variant_id || item.variant?.id || item.product_handle
+      const key = item.variant_id || item.variant?.id
       if (key) {
         groups[key] = groups[key] ? [...groups[key], item] : [item]
       }
@@ -480,11 +479,13 @@ export default function CartDropdown({
       const targetVariantId = detail.variantId
       const targetHandle = detail.handle
 
-      // 1. SMART MERGE: Check if item already exists in our active items
-      const existingItem = displayItems.find(
-        (i) =>
-          (targetVariantId && i.variantId === targetVariantId) ||
-          (targetHandle && i.product_handle === targetHandle)
+      // 1. SMART MERGE: Match by variantId strictly when available so different sizes/variants are never mixed!
+      const existingItem = displayItems.find((i) =>
+        targetVariantId
+          ? i.variantId === targetVariantId
+          : targetHandle
+          ? i.product_handle === targetHandle
+          : false
       )
 
       if (existingItem) {
@@ -532,12 +533,12 @@ export default function CartDropdown({
       const targetHandle = detail.handle
       const targetId = detail.id
 
-      const existingItem = displayItems.find(
-        (i) =>
-          (targetId && (i.id === targetId || i.lineId === targetId)) ||
-          (targetVariantId && i.variantId === targetVariantId) ||
-          (targetHandle && i.product_handle === targetHandle)
-      )
+      const existingItem = displayItems.find((i) => {
+        if (targetId) return i.id === targetId || i.lineId === targetId
+        if (targetVariantId) return i.variantId === targetVariantId
+        if (targetHandle) return i.product_handle === targetHandle
+        return false
+      })
 
       if (existingItem) {
         if (existingItem.quantity > 1) {
@@ -556,12 +557,12 @@ export default function CartDropdown({
       const targetHandle = detail.handle
       const targetId = detail.id
 
-      const existingItem = displayItems.find(
-        (i) =>
-          (targetId && (i.id === targetId || i.lineId === targetId)) ||
-          (targetVariantId && i.variantId === targetVariantId) ||
-          (targetHandle && i.product_handle === targetHandle)
-      )
+      const existingItem = displayItems.find((i) => {
+        if (targetId) return i.id === targetId || i.lineId === targetId
+        if (targetVariantId) return i.variantId === targetVariantId
+        if (targetHandle) return i.product_handle === targetHandle
+        return false
+      })
 
       if (existingItem) {
         handleRemove(existingItem)

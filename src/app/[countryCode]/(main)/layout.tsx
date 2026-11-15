@@ -42,8 +42,7 @@ export default async function PageLayout(props: {
     if (item.variant_id) {
       initialCartItems[item.variant_id] =
         (initialCartItems[item.variant_id] || 0) + item.quantity
-    }
-    if (item.product_handle) {
+    } else if (item.product_handle) {
       initialCartItems[item.product_handle] =
         (initialCartItems[item.product_handle] || 0) + item.quantity
     }

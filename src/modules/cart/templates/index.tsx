@@ -149,7 +149,7 @@ const CartTemplate = ({
     // Consolidate active items by variant so duplicate line items never show twice
     const consolidatedMap = new Map<string, any>()
     for (const item of activeItems) {
-      const key = item.variant_id || item.variant?.id || item.product_handle || item.id
+      const key = item.variant_id || item.variant?.id || item.id
       if (consolidatedMap.has(key)) {
         const existing = consolidatedMap.get(key)
         existing.quantity += item.quantity
