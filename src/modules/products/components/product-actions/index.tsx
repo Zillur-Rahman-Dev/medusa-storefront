@@ -162,6 +162,7 @@ export default function ProductActions({
             price: rawPrice,
             thumbnail: product.thumbnail || product.images?.[0]?.url,
             handle: product.handle,
+            variantId: selectedVariant.id,
             quantity: 1,
           },
         })

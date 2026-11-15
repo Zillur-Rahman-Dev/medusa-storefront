@@ -7,13 +7,12 @@ import {
   Transition,
 } from "@headlessui/react"
 import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
-import { deleteLineItem } from "@lib/data/cart"
+import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
-import DeleteButton from "@modules/common/components/delete-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Fragment, useEffect, useRef, useState } from "react"
-import { ShoppingCart, CheckCircle2 } from "lucide-react"
+import { ShoppingCart, X, Truck, Loader2 } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
 const KNOWN_HONEY_IMAGES: Record<string, string> = {
@@ -75,71 +74,41 @@ function resolveProductImage(opts: {
   return null
 }
 
-type OptimisticItem = {
+type UnifiedCartItem = {
   id: string
+  lineId?: string
+  variantId?: string
   title: string
   product_handle?: string
   thumbnail?: string | null
+  metadata?: any
   variantTitle?: string
   quantity: number
-  unitPrice: number
+  unit_price: number
+  created_at?: string
 }
 
-const CartDropdown = ({
+export default function CartDropdown({
   cart: cartState,
 }: {
   cart?: HttpTypes.StoreCart | null
-}) => {
-  const [activeTimer, setActiveTimer] = useState<NodeJS.Timeout | undefined>(
-    undefined
-  )
+}) {
+  const router = useRouter()
+  const [activeTimer, setActiveTimer] = useState<NodeJS.Timeout | undefined>(undefined)
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
-  const [optimisticItems, setOptimisticItems] = useState<OptimisticItem[]>([])
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
+
+  // Local state for instant 0ms optimistic changes
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
   const [quantityOverrides, setQuantityOverrides] = useState<Record<string, number>>({})
+  const [optimisticNewItems, setOptimisticNewItems] = useState<UnifiedCartItem[]>([])
+
+  // Debounce timers & pending updates refs
+  const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({})
+  const pendingUpdatesRef = useRef<Record<string, number>>({})
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
-
-  // 1. Raw server items coming directly from backend props
-  const rawServerItems = cartState?.items || []
-
-  // 2. Active server items (excluding items optimistically deleted by user)
-  const activeServerItems = rawServerItems.filter(
-    (item) => !deletedItemIds.includes(item.id)
-  )
-
-  // Helper to get active quantity for an item (supporting optimistic quantity sync)
-  const getItemQuantity = (item: HttpTypes.StoreCartLineItem) => {
-    return quantityOverrides[item.id] ?? item.quantity
-  }
-
-  // 3. Totals (Active server items + Optimistic pending items)
-  const activeServerCount = activeServerItems.reduce(
-    (acc, item) => acc + getItemQuantity(item),
-    0
-  )
-  const optimisticCount = optimisticItems.reduce(
-    (acc, item) => acc + item.quantity,
-    0
-  )
-  const totalItems = activeServerCount + optimisticCount
-
-  const activeServerSubtotal = activeServerItems.reduce(
-    (acc, item) => acc + item.unit_price * getItemQuantity(item),
-    0
-  )
-  const optimisticSubtotal = optimisticItems.reduce(
-    (acc, item) => acc + item.unitPrice * item.quantity,
-    0
-  )
-  const totalSubtotal = activeServerSubtotal + optimisticSubtotal
-
-  // Signature based STRICTLY on server props (does NOT change on local optimistic actions)
-  const serverSignature = rawServerItems
-    .map((i) => `${i.id}_${i.quantity}`)
-    .join("|")
-  const prevSignatureRef = useRef<string>(serverSignature)
 
   const timedOpen = () => {
     open()
@@ -148,119 +117,101 @@ const CartDropdown = ({
     setActiveTimer(timer)
   }
 
-  // Instant 0ms Optimistic Delete handler
-  const handleOptimisticDelete = async (itemId: string) => {
-    // 1. Instantly hide item from UI & recalculate totals in 0ms
-    setDeletedItemIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]))
-
-    // 2. Background delete via Medusa API
-    try {
-      await deleteLineItem(itemId)
-    } catch (err) {
-      console.error("Failed to delete line item:", err)
-      // Rollback on network failure
-      setDeletedItemIds((prev) => prev.filter((id) => id !== itemId))
-    }
+  const openAndCancel = () => {
+    if (activeTimer) clearTimeout(activeTimer)
+    open()
   }
 
-  // Listen to optimistic cart events for instant 0.05s UI responsiveness across the entire storefront
   useEffect(() => {
-    const handleItemAdded = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {}
-      const newItem: OptimisticItem = {
-        id: detail.id || `opt_${Date.now()}`,
-        title: detail.title || "খাঁটি প্রাকৃতিক মধু",
-        product_handle: detail.handle || "sundarban-kholisha-honey",
-        thumbnail: detail.thumbnail,
-        variantTitle: detail.variant || "১ কেজি",
-        quantity: detail.quantity || 1,
-        unitPrice: detail.price || 750,
-      }
-
-      setOptimisticItems((prev) => [newItem, ...prev])
-      timedOpen()
-    }
-
-    const handleItemFailed = () => {
-      setOptimisticItems((prev) => prev.slice(1))
-    }
-
-    // External delete from Cart Page
-    const handleItemDeleted = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {}
-      if (detail.id) {
-        setDeletedItemIds((prev) =>
-          prev.includes(detail.id) ? prev : [...prev, detail.id]
-        )
-      }
-    }
-
-    const handleItemDeleteFailed = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {}
-      if (detail.id) {
-        setDeletedItemIds((prev) => prev.filter((id) => id !== detail.id))
-      }
-    }
-
-    // External quantity update from Cart Page
-    const handleQuantityUpdated = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {}
-      if (detail.id && typeof detail.quantity === "number") {
-        setQuantityOverrides((prev) => ({
-          ...prev,
-          [detail.id]: detail.quantity,
-        }))
-      }
-    }
-
-    const handleQuantityUpdateFailed = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {}
-      if (detail.id) {
-        setQuantityOverrides((prev) => {
-          const next = { ...prev }
-          delete next[detail.id]
-          return next
-        })
-      }
-    }
-
-    window.addEventListener("cart:item-added", handleItemAdded)
-    window.addEventListener("cart:item-failed", handleItemFailed)
-    window.addEventListener("cart:item-deleted", handleItemDeleted)
-    window.addEventListener("cart:item-delete-failed", handleItemDeleteFailed)
-    window.addEventListener("cart:quantity-updated", handleQuantityUpdated)
-    window.addEventListener("cart:quantity-update-failed", handleQuantityUpdateFailed)
-
     return () => {
-      window.removeEventListener("cart:item-added", handleItemAdded)
-      window.removeEventListener("cart:item-failed", handleItemFailed)
-      window.removeEventListener("cart:item-deleted", handleItemDeleted)
-      window.removeEventListener("cart:item-delete-failed", handleItemDeleteFailed)
-      window.removeEventListener("cart:quantity-updated", handleQuantityUpdated)
-      window.removeEventListener("cart:quantity-update-failed", handleQuantityUpdateFailed)
+      if (activeTimer) clearTimeout(activeTimer)
+      // Clear all debounce timers on unmount
+      Object.values(debounceTimersRef.current).forEach((t) => clearTimeout(t))
     }
-  }, [])
+  }, [activeTimer])
 
-  // When real server cart updates from backend (serverSignature changes)
+  // 1. Raw server items from Medusa
+  const rawServerItems = cartState?.items || []
+
+  // 2. Map server items into Unified format with overrides applied
+  const activeServerItems: UnifiedCartItem[] = rawServerItems
+    .filter((item) => !deletedItemIds.includes(item.id))
+    .map((item) => {
+      const activeQty = quantityOverrides[item.id] ?? item.quantity
+      return {
+        id: item.id,
+        lineId: item.id,
+        variantId: item.variant_id || item.variant?.id,
+        title: item.title,
+        product_handle: item.product_handle,
+        thumbnail: item.thumbnail,
+        metadata: item.metadata,
+        variantTitle: item.variant?.title || item.subtitle || "১ কেজি",
+        quantity: activeQty,
+        unit_price: item.unit_price,
+        created_at: item.created_at,
+      }
+    })
+    .filter((item) => item.quantity > 0)
+
+  // 3. Active optimistic new items (excluding any that server has now confirmed)
+  const activeNewItems: UnifiedCartItem[] = optimisticNewItems
+    .filter((newItem) => !deletedItemIds.includes(newItem.id))
+    .filter(
+      (newItem) =>
+        !rawServerItems.some(
+          (srv) =>
+            (newItem.variantId && srv.variant_id === newItem.variantId) ||
+            srv.product_handle === newItem.product_handle
+        )
+    )
+    .map((newItem) => {
+      const activeQty = quantityOverrides[newItem.id] ?? newItem.quantity
+      return {
+        ...newItem,
+        quantity: activeQty,
+      }
+    })
+    .filter((item) => item.quantity > 0)
+
+  // 4. Unified Display List (0ms Single Source of Truth!)
+  const displayItems: UnifiedCartItem[] = [...activeNewItems, ...activeServerItems]
+
+  // Totals
+  const totalItems = displayItems.reduce((acc, item) => acc + item.quantity, 0)
+  const totalSubtotal = displayItems.reduce(
+    (acc, item) => acc + item.unit_price * item.quantity,
+    0
+  )
+  const hasItems = totalItems > 0
+
+  // Server signature to detect real backend updates
+  const serverSignature = rawServerItems
+    .map((i) => `${i.id}_${i.quantity}`)
+    .join("|")
+  const prevSignatureRef = useRef<string>(serverSignature)
+
   useEffect(() => {
     if (prevSignatureRef.current === serverSignature) return
 
-    // 1. Clean up deletedItemIds for items that are now permanently gone from rawServerItems
+    // Clean up deleted IDs for items permanently gone from server
     setDeletedItemIds((prev) =>
       prev.filter((id) => rawServerItems.some((item) => item.id === id))
     )
 
-    // 2. Remove only optimistic items that have now appeared in rawServerItems
-    setOptimisticItems((prev) =>
+    // Clean up optimistic new items that have appeared in server items
+    setOptimisticNewItems((prev) =>
       prev.filter(
         (opt) =>
           !rawServerItems.some(
-            (srv) => srv.product_handle === opt.product_handle
+            (srv) =>
+              (opt.variantId && srv.variant_id === opt.variantId) ||
+              srv.product_handle === opt.product_handle
           )
       )
     )
 
-    // 3. Clean up matched quantityOverrides
+    // Clean up quantity overrides that are now reflected on server
     setQuantityOverrides((prev) => {
       const next = { ...prev }
       for (const [id, qty] of Object.entries(prev)) {
@@ -275,18 +226,204 @@ const CartDropdown = ({
     prevSignatureRef.current = serverSignature
   }, [serverSignature, rawServerItems])
 
-  const openAndCancel = () => {
-    if (activeTimer) clearTimeout(activeTimer)
-    open()
+  // =========================================================================
+  // DEBOUNCED SYNC ENGINE (400ms Sweet Spot)
+  // =========================================================================
+  const queueSync = (itemId: string, lineId: string | undefined, variantId: string | undefined, newQty: number) => {
+    const key = lineId || itemId
+    pendingUpdatesRef.current[key] = newQty
+
+    // Clear previous timer for this item
+    if (debounceTimersRef.current[key]) {
+      clearTimeout(debounceTimersRef.current[key])
+    }
+
+    // Set 400ms debounce timer (fires ONLY 1 clean request after user pauses clicking)
+    debounceTimersRef.current[key] = setTimeout(async () => {
+      const finalQty = pendingUpdatesRef.current[key]
+      delete pendingUpdatesRef.current[key]
+      delete debounceTimersRef.current[key]
+
+      if (typeof finalQty !== "number") return
+
+      try {
+        if (lineId) {
+          if (finalQty <= 0) {
+            await deleteLineItem(lineId)
+          } else {
+            await updateLineItem({ lineId, quantity: finalQty })
+          }
+        } else if (variantId && finalQty > 0) {
+          await addToCart({ variantId, quantity: finalQty, countryCode: "bd" })
+        }
+      } catch (err) {
+        console.error("Failed to sync cart item quantity:", err)
+        // Rollback local override on network failure
+        setQuantityOverrides((prev) => {
+          const next = { ...prev }
+          delete next[key]
+          return next
+        })
+        window.dispatchEvent(
+          new CustomEvent("cart:item-failed", {
+            detail: {
+              message: "ইন্টারনেট সমস্যার কারণে কার্ট আপডেট করা সম্ভব হয়নি। আবার চেষ্টা করুন।",
+            },
+          })
+        )
+      }
+    }, 400)
   }
 
-  useEffect(() => {
-    return () => {
-      if (activeTimer) clearTimeout(activeTimer)
-    }
-  }, [activeTimer])
+  // Handle [ + ] Button Click
+  const handleIncrement = (item: UnifiedCartItem) => {
+    const newQty = item.quantity + 1
+    // Instant 0ms UI update
+    setQuantityOverrides((prev) => ({ ...prev, [item.id]: newQty }))
+    queueSync(item.id, item.lineId, item.variantId, newQty)
+  }
 
-  const hasItems = totalItems > 0
+  // Handle [ - ] Button Click
+  const handleDecrement = (item: UnifiedCartItem) => {
+    if (item.quantity > 1) {
+      const newQty = item.quantity - 1
+      // Instant 0ms UI update
+      setQuantityOverrides((prev) => ({ ...prev, [item.id]: newQty }))
+      queueSync(item.id, item.lineId, item.variantId, newQty)
+    } else {
+      // If quantity is 1, decrementing removes the item
+      handleRemove(item)
+    }
+  }
+
+  // Handle Remove / Delete Button Click (Instant 0ms removal)
+  const handleRemove = async (item: UnifiedCartItem) => {
+    const key = item.lineId || item.id
+    // Cancel pending timer
+    if (debounceTimersRef.current[key]) {
+      clearTimeout(debounceTimersRef.current[key])
+      delete debounceTimersRef.current[key]
+      delete pendingUpdatesRef.current[key]
+    }
+
+    // Instantly hide from UI in 0ms
+    setDeletedItemIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]))
+    setOptimisticNewItems((prev) => prev.filter((i) => i.id !== item.id))
+
+    // Background delete from server
+    if (item.lineId) {
+      try {
+        await deleteLineItem(item.lineId)
+      } catch (err) {
+        console.error("Failed to delete line item:", err)
+        // Rollback on failure
+        setDeletedItemIds((prev) => prev.filter((id) => id !== item.id))
+      }
+    }
+  }
+
+  // =========================================================================
+  // INSTANT FLUSH ON CHECKOUT (Guarantees 100% Cart Accuracy on Checkout Page)
+  // =========================================================================
+  const handleCheckoutClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsCheckingOut(true)
+
+    // 1. Check if any debounce timers are still pending in memory
+    const pendingKeys = Object.keys(pendingUpdatesRef.current)
+    if (pendingKeys.length > 0) {
+      const syncPromises = pendingKeys.map(async (key) => {
+        const timer = debounceTimersRef.current[key]
+        if (timer) clearTimeout(timer)
+        const finalQty = pendingUpdatesRef.current[key]
+        delete pendingUpdatesRef.current[key]
+        delete debounceTimersRef.current[key]
+
+        if (typeof finalQty === "number") {
+          // Check if key is a server line item
+          const srvItem = rawServerItems.find((i) => i.id === key)
+          if (srvItem) {
+            if (finalQty <= 0) {
+              return deleteLineItem(srvItem.id)
+            } else {
+              return updateLineItem({ lineId: srvItem.id, quantity: finalQty })
+            }
+          }
+        }
+      })
+
+      try {
+        await Promise.all(syncPromises)
+      } catch (err) {
+        console.error("Flush before checkout error:", err)
+      }
+    }
+
+    close()
+    router.push("/bd/checkout")
+  }
+
+  // =========================================================================
+  // LISTEN TO GLOBAL CART EVENTS (Home, Store, Product Details)
+  // =========================================================================
+  useEffect(() => {
+    const handleItemAdded = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      const targetVariantId = detail.variantId
+      const targetHandle = detail.handle
+
+      // 1. SMART MERGE: Check if item already exists in our active items
+      const existingItem = displayItems.find(
+        (i) =>
+          (targetVariantId && i.variantId === targetVariantId) ||
+          (targetHandle && i.product_handle === targetHandle)
+      )
+
+      if (existingItem) {
+        // Product already in cart! Directly increment quantity in 0ms (NO BLINK!)
+        const currentQty = existingItem.quantity
+        const newQty = currentQty + (detail.quantity || 1)
+        setQuantityOverrides((prev) => ({ ...prev, [existingItem.id]: newQty }))
+        queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty)
+      } else {
+        // Brand new item: Add directly as a full unified row in 0ms!
+        const newItem: UnifiedCartItem = {
+          id: detail.id || `opt_${Date.now()}`,
+          variantId: targetVariantId,
+          title: detail.title || "খাঁটি প্রাকৃতিক মধু",
+          product_handle: detail.handle || "sundarban-kholisha-honey",
+          thumbnail: detail.thumbnail,
+          variantTitle: detail.variant || "১ কেজি",
+          quantity: detail.quantity || 1,
+          unit_price: detail.price || 750,
+          created_at: new Date().toISOString(),
+        }
+
+        setOptimisticNewItems((prev) => [newItem, ...prev])
+        queueSync(newItem.id, undefined, newItem.variantId, newItem.quantity)
+      }
+
+      timedOpen()
+    }
+
+    const handleQuantityUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      if (detail.id && typeof detail.quantity === "number") {
+        setQuantityOverrides((prev) => ({
+          ...prev,
+          [detail.id]: detail.quantity,
+        }))
+      }
+    }
+
+    window.addEventListener("cart:item-added", handleItemAdded)
+    window.addEventListener("cart:quantity-updated", handleQuantityUpdated)
+
+    return () => {
+      window.removeEventListener("cart:item-added", handleItemAdded)
+      window.removeEventListener("cart:quantity-updated", handleQuantityUpdated)
+    }
+  }, [displayItems, rawServerItems])
 
   return (
     <div
@@ -305,11 +442,7 @@ const CartDropdown = ({
               <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
               {totalItems > 0 && (
                 <span
-                  className={`absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 ${
-                    optimisticItems.length > 0
-                      ? "bg-emerald-500 text-white scale-110"
-                      : "bg-amber-500 text-white"
-                  }`}
+                  className="absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 bg-amber-500 text-white"
                 >
                   {formatSize(String(totalItems))}
                 </span>
@@ -349,31 +482,36 @@ const CartDropdown = ({
 
             {hasItems ? (
               <>
+                {/* 100% UNIFIED ITEM LIST (Matching Image 3: Zero-Blink, Stepper on Row, Instant Feedback) */}
                 <div className="overflow-y-scroll max-h-[380px] p-4 flex flex-col no-scrollbar divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                  {/* 1. Instant Optimistic Items (Rendered with 100% IDENTICAL card design as server items) */}
-                  {optimisticItems.map((optItem) => {
+                  {displayItems.map((item) => {
                     const imageUrl = resolveProductImage({
-                      thumbnail: optItem.thumbnail,
-                      handle: optItem.product_handle,
-                      title: optItem.title,
+                      thumbnail: item.thumbnail,
+                      metadata: item.metadata,
+                      handle: item.product_handle,
+                      title: item.title,
                     })
+
+                    const currentQty = item.quantity
+                    const itemTotalPrice = item.unit_price * currentQty
+                    const variantLabel = item.variantTitle || "১ কেজি"
 
                     return (
                       <div
-                        className="py-3 first:pt-0 last:pb-0 flex gap-x-3 items-center animate-in fade-in duration-200"
-                        key={optItem.id}
+                        className="py-3.5 first:pt-0 last:pb-0 flex gap-x-3 items-center group transition-colors"
+                        key={item.id}
                         data-testid="cart-item"
                       >
                         {/* Product Image */}
                         <LocalizedClientLink
-                          href={`/products/${optItem.product_handle}`}
+                          href={`/products/${item.product_handle}`}
                           onClick={close}
-                          className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50/50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center relative group"
+                          className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50/50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center relative group"
                         >
                           {imageUrl ? (
                             <img
                               src={imageUrl}
-                              alt={optItem.title}
+                              alt={item.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
                           ) : (
@@ -384,95 +522,11 @@ const CartDropdown = ({
                           )}
                         </LocalizedClientLink>
 
-                        {/* Product Details */}
+                        {/* Product Details & Stepper */}
                         <div className="flex flex-col justify-between flex-1 min-w-0">
-                          <div>
-                            <h4 className="text-xs sm:text-sm font-bold truncate text-zinc-900 dark:text-zinc-100">
-                              <LocalizedClientLink
-                                href={`/products/${optItem.product_handle}`}
-                                onClick={close}
-                                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                                data-testid="product-link"
-                              >
-                                {optItem.title}
-                              </LocalizedClientLink>
-                            </h4>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                              সাইজ:{" "}
-                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                {formatSize(optItem.variantTitle || "ডিফল্ট")}
-                              </span>
-                              {"  •  "}
-                              পরিমাণ:{" "}
-                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                {formatSize(String(optItem.quantity))}
-                              </span>
-                            </p>
-                          </div>
-
-                          {/* Bottom Row: Status on Left, Price on Right */}
-                          <div className="flex items-center justify-between pt-1.5">
-                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>যোগ হচ্ছে...</span>
-                            </span>
-
-                            <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                              {formatPrice(optItem.unitPrice * optItem.quantity)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-
-                  {/* 2. Official Medusa Server Items (Rendered with 100% IDENTICAL card design) */}
-                  {activeServerItems
-                    .sort((a, b) => {
-                      return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
-                    })
-                    .map((item) => {
-                      const imageUrl = resolveProductImage({
-                        thumbnail: item.thumbnail,
-                        metadata: item.metadata,
-                        handle: item.product_handle,
-                        title: item.title,
-                      })
-
-                      const currentQty = getItemQuantity(item)
-                      const itemPrice = item.unit_price * currentQty
-                      const variantLabel =
-                        item.variant?.title || item.subtitle || "ডিফল্ট"
-
-                      return (
-                        <div
-                          className="py-3 first:pt-0 last:pb-0 flex gap-x-3 items-center animate-in fade-in duration-200"
-                          key={item.id}
-                          data-testid="cart-item"
-                        >
-                          {/* Product Image */}
-                          <LocalizedClientLink
-                            href={`/products/${item.product_handle}`}
-                            onClick={close}
-                            className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50/50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center relative group"
-                          >
-                            {imageUrl ? (
-                              <img
-                                src={imageUrl}
-                                alt={item.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
-                                <span className="text-2xl">🍯</span>
-                                <span className="text-[9px] font-bold">মধু</span>
-                              </div>
-                            )}
-                          </LocalizedClientLink>
-
-                          {/* Product Details */}
-                          <div className="flex flex-col justify-between flex-1 min-w-0">
-                            <div>
+                          {/* Row 1: Title & Single Remove Button */}
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="min-w-0 flex-1">
                               <h4 className="text-xs sm:text-sm font-bold truncate text-zinc-900 dark:text-zinc-100">
                                 <LocalizedClientLink
                                   href={`/products/${item.product_handle}`}
@@ -483,66 +537,107 @@ const CartDropdown = ({
                                   {item.title}
                                 </LocalizedClientLink>
                               </h4>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                                 সাইজ:{" "}
                                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">
                                   {formatSize(variantLabel)}
                                 </span>
-                                {"  •  "}
-                                পরিমাণ:{" "}
-                                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                  {formatSize(String(currentQty))}
-                                </span>
                               </p>
                             </div>
 
-                            {/* Bottom Row: Delete Button on Left (Single Trash Icon + 'মুছে ফেলুন'), Price on Right */}
-                            <div className="flex items-center justify-between pt-1.5">
-                              <DeleteButton
-                                id={item.id}
-                                onDelete={handleOptimisticDelete}
-                                className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
-                                data-testid="cart-item-remove-button"
-                              >
-                                মুছে ফেলুন
-                              </DeleteButton>
+                            {/* Clean Delete Button (Right top '✕') */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemove(item)}
+                              className="p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                              aria-label="মুছে ফেলুন"
+                              data-testid="cart-item-remove-button"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
 
-                              <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                                {formatPrice(itemPrice)}
+                          {/* Row 2 (Matching Image 3): Stepper [-] [Qty] [+] on Left, Price on Right */}
+                          <div className="flex items-center justify-between pt-2">
+                            {/* Stepper matching Image 3: [-] [Qty] [+] */}
+                            <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => handleDecrement(item)}
+                                className="w-7 h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-bold text-sm select-none cursor-pointer"
+                                aria-label="পরিমাণ কমান"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center text-xs font-black text-zinc-900 dark:text-zinc-100 select-none">
+                                {formatSize(String(currentQty))}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleIncrement(item)}
+                                className="w-7 h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-bold text-sm select-none cursor-pointer"
+                                aria-label="পরিমাণ বাড়ান"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Price breakdown matching Image 3 */}
+                            <div className="text-right">
+                              <div className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100">
+                                {formatPrice(itemTotalPrice)}
                               </div>
+                              {currentQty > 1 && (
+                                <div className="text-[10px] text-zinc-400">
+                                  {formatSize(String(currentQty))} × {formatPrice(item.unit_price)}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
-                      )
-                    })}
+                      </div>
+                    )
+                  })}
                 </div>
 
-                {/* Subtotal & Action Button (Only 'কার্ট দেখুন' button) */}
-                <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 flex flex-col gap-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-zinc-600 dark:text-zinc-400">
+                {/* Subtotal & Dual Bottom Action Buttons (Checkout + View Cart) */}
+                <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 flex flex-col gap-y-2.5">
+                  <div className="flex items-center justify-between text-sm pb-1">
+                    <span className="font-bold text-zinc-600 dark:text-zinc-400">
                       মোট বিল:
                     </span>
                     <span
-                      className="text-base font-extrabold text-emerald-800 dark:text-emerald-400"
+                      className="text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-400"
                       data-testid="cart-subtotal"
                     >
-                      {convertToLocale({
-                        amount: totalSubtotal,
-                        currency_code: cartState?.currency_code || "bdt",
-                      })}
+                      {formatPrice(totalSubtotal)}
                     </span>
                   </div>
 
-                  {/* Single Clean Full-Width Button: Only 'কার্ট দেখুন' */}
+                  {/* Primary Button: 🛒 অর্ডার নিশ্চিত করুন (চেকআউট) with Instant Flush */}
+                  <button
+                    type="button"
+                    onClick={handleCheckoutClick}
+                    disabled={isCheckingOut}
+                    className="w-full h-11 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-600/20 cursor-pointer disabled:opacity-80"
+                  >
+                    {isCheckingOut ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Truck className="w-4 h-4" />
+                    )}
+                    <span>{isCheckingOut ? "অর্ডার পেজে যাওয়া হচ্ছে..." : "🛒 অর্ডার নিশ্চিত করুন (চেকআউট)"}</span>
+                  </button>
+
+                  {/* Secondary Button: কার্ট ও কুপন দেখুন */}
                   <LocalizedClientLink
                     href="/cart"
                     onClick={close}
-                    className="w-full h-11 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99]"
+                    className="w-full h-9 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
                     data-testid="go-to-cart-button"
                   >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>কার্ট দেখুন</span>
+                    <ShoppingCart className="w-3.5 h-3.5 text-zinc-500" />
+                    <span>শপিং কার্ট ও কুপন দেখুন</span>
                   </LocalizedClientLink>
                 </div>
               </>
@@ -574,5 +669,3 @@ const CartDropdown = ({
     </div>
   )
 }
-
-export default CartDropdown

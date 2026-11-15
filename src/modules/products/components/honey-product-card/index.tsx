@@ -71,6 +71,7 @@ export default function HoneyProductCard({
             price: product.price,
             thumbnail: resolvedThumbnail,
             handle: product.handle,
+            variantId: product.variantId,
             quantity: 1,
           },
         })

@@ -64,6 +64,7 @@ export default function PreviewAddToCart({
             price: price || 750,
             thumbnail: resolvedThumbnail,
             handle: productHandle,
+            variantId: variantId,
             quantity: 1,
           },
         })
