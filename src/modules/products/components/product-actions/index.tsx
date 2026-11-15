@@ -56,7 +56,12 @@ export default function ProductActions({
   const [isAdding, setIsAdding] = useState(false)
   const [isOrdering, setIsOrdering] = useState(false)
   const [isOptimisticAdded, setIsOptimisticAdded] = useState(false)
-  const countryCode = useParams().countryCode as string
+  const countryCode = (useParams().countryCode as string) || "bd"
+
+  // Prefetch checkout page early so navigation is instant
+  useEffect(() => {
+    router.prefetch(`/${countryCode}/checkout`)
+  }, [router, countryCode])
 
   // Pre-select variant: Default to the 1st variant (or variant from URL `?v_id=...`)
   useEffect(() => {
@@ -231,17 +236,50 @@ export default function ProductActions({
   // direct checkout: immediate feedback and fast route to /checkout
   const handleDirectCheckout = async () => {
     if (!selectedVariant?.id) return
+
+    // Flush any pending background debounced sync immediately
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("cart:flush-sync"))
+    }
+
+    // FAST-PATH: If this variant is ALREADY in the customer's cart, navigate immediately (0ms delay)!
+    if (quantity > 0) {
+      router.push(`/${countryCode}/checkout`)
+      return
+    }
+
+    // Item not yet in cart: Optimistically update local quantity & context in 0ms
     setIsOrdering(true)
+    setQuantity(1)
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-added", {
+          detail: {
+            id: `opt_${Date.now()}`,
+            title: product.title,
+            variant: selectedVariant.title,
+            price: rawPrice,
+            thumbnail: product.thumbnail || product.images?.[0]?.url,
+            handle: product.handle,
+            variantId: selectedVariant.id,
+            quantity: 1,
+            openDropdown: false,
+          },
+        })
+      )
+    }
+
     try {
       await addToCart({
         variantId: selectedVariant.id,
         quantity: 1,
-        countryCode: "bd",
+        countryCode,
       })
-      router.push("/bd/checkout")
+      router.push(`/${countryCode}/checkout`)
     } catch (err) {
       console.error("Direct checkout add to cart error:", err)
-      router.push("/bd/checkout")
+      router.push(`/${countryCode}/checkout`)
     } finally {
       setIsOrdering(false)
     }
@@ -397,6 +435,8 @@ export default function ProductActions({
           <button
             type="button"
             onClick={handleDirectCheckout}
+            onMouseEnter={() => router.prefetch(`/${countryCode}/checkout`)}
+            onTouchStart={() => router.prefetch(`/${countryCode}/checkout`)}
             disabled={!inStock || !selectedVariant || isOrdering}
             className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
           >

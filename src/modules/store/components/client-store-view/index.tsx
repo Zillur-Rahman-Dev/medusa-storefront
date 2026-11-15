@@ -796,7 +796,11 @@ export default function ClientStoreView({
               >
                 {displayedProducts.map((product) => (
                   <li key={product.id}>
-                    <ProductPreview product={product} region={region} />
+                    <ProductPreview
+                      product={product}
+                      region={region}
+                      selectedWeight={selectedWeight}
+                    />
                   </li>
                 ))}
               </ul>

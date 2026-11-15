@@ -569,16 +569,22 @@ export default function CartDropdown({
       }
     }
 
+    const handleFlushSync = () => {
+      flushPendingUpdates()
+    }
+
     window.addEventListener("cart:item-added", handleItemAdded)
     window.addEventListener("cart:quantity-updated", handleQuantityUpdated)
     window.addEventListener("cart:item-decremented", handleItemDecremented)
     window.addEventListener("cart:item-deleted", handleItemDeleted)
+    window.addEventListener("cart:flush-sync", handleFlushSync)
 
     return () => {
       window.removeEventListener("cart:item-added", handleItemAdded)
       window.removeEventListener("cart:quantity-updated", handleQuantityUpdated)
       window.removeEventListener("cart:item-decremented", handleItemDecremented)
       window.removeEventListener("cart:item-deleted", handleItemDeleted)
+      window.removeEventListener("cart:flush-sync", handleFlushSync)
     }
   }, [displayItems, rawServerItems])
 

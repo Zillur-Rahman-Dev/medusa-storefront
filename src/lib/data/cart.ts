@@ -70,8 +70,8 @@ export async function retrieveCart(cartId?: string, fields?: string) {
     })
 }
 
-export async function getOrSetCart(countryCode: string = "bd") {
-  let cart = await retrieveCart(undefined, "id,region_id,currency_code")
+export async function getOrSetCart(countryCode: string = "bd", fields?: string) {
+  let cart = await retrieveCart(undefined, fields || "id,region_id,currency_code")
 
   const headers = {
     ...(await getAuthHeaders()),
@@ -139,7 +139,11 @@ export async function addToCart({
       throw new Error("Missing variant ID when adding to cart")
     }
 
-    let cart = await getOrSetCart("bd")
+    // Fast single roundtrip: Retrieve or create cart including line items to avoid duplicate network requests
+    let cart = await getOrSetCart(
+      "bd",
+      "id,region_id,currency_code,*items.id,*items.variant_id,*items.quantity"
+    )
 
     if (!cart) {
       throw new Error("Error retrieving or creating cart")
@@ -150,9 +154,8 @@ export async function addToCart({
     }
 
     // Check if variant already exists in cart to prevent duplicate rows in database
-    const fullCart = await retrieveCart(cart.id)
     const existingItems =
-      fullCart?.items?.filter((item) => item.variant_id === variantId) || []
+      cart.items?.filter((item) => item.variant_id === variantId) || []
 
     if (existingItems.length > 0) {
       // Variant already in cart: update primary line item with merged total

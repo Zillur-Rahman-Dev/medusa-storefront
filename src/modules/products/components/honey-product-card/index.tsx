@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -38,6 +38,11 @@ export default function HoneyProductCard({
   const router = useRouter()
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
+
+  // Prefetch checkout page early so navigation is instant
+  useEffect(() => {
+    router.prefetch(`/${countryCode}/checkout`)
+  }, [router, countryCode])
 
   const resolvedThumbnail =
     product.thumbnail ||
@@ -145,27 +150,59 @@ export default function HoneyProductCard({
     }
   }
 
-  // 4. Direct Medusa Checkout (adds item to cart and immediately navigates to /checkout)
+  // 4. Direct Medusa Checkout (adds item to cart if needed and navigates to /checkout immediately)
   const handleOrderNow = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
     if (!product.variantId) {
-      router.push("/bd/checkout")
+      router.push(`/${countryCode}/checkout`)
       return
     }
 
+    // Flush any pending background debounced sync immediately
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("cart:flush-sync"))
+    }
+
+    // FAST-PATH: If this product is ALREADY in the customer's cart, navigate immediately (0ms delay)!
+    if (quantity > 0) {
+      router.push(`/${countryCode}/checkout`)
+      return
+    }
+
+    // Item not yet in cart: Optimistically update local quantity & context in 0ms
     setIsOrdering(true)
+    setQuantity(1)
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("cart:item-added", {
+          detail: {
+            id: `opt_${Date.now()}`,
+            title: product.title,
+            variant: product.weight || "১ কেজি",
+            price: product.price,
+            thumbnail: resolvedThumbnail,
+            handle: product.handle,
+            variantId: product.variantId,
+            quantity: 1,
+            openDropdown: false,
+          },
+        })
+      )
+    }
+
     try {
       await addToCart({
         variantId: product.variantId,
         quantity: 1,
-        countryCode: "bd",
+        countryCode,
       })
-      router.push("/bd/checkout")
+      router.push(`/${countryCode}/checkout`)
     } catch (err) {
       console.error("Failed to add to cart for direct checkout:", err)
-      router.push("/bd/checkout")
+      router.push(`/${countryCode}/checkout`)
     } finally {
       setIsOrdering(false)
     }
@@ -278,10 +315,12 @@ export default function HoneyProductCard({
           </button>
         )}
 
-        {/* Button 2: অর্ডার করুন (Direct to Medusa Checkout - Untouched) */}
+        {/* Button 2: অর্ডার করুন (Direct to Medusa Checkout - Instant) */}
         <button
           type="button"
           onClick={handleOrderNow}
+          onMouseEnter={() => router.prefetch(`/${countryCode}/checkout`)}
+          onTouchStart={() => router.prefetch(`/${countryCode}/checkout`)}
           disabled={isOrdering}
           className="flex-1 h-10 py-2 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80 cursor-pointer"
         >
