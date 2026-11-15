@@ -24,46 +24,44 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [codeValue, setCodeValue] = useState("")
   const [isApplying, setIsApplying] = useState(false)
   const [removingCode, setRemovingCode] = useState<string | null>(null)
-  const [activeAction, setActiveAction] = useState<"apply" | "remove" | null>(null)
 
   const { promotions = [] } = cart
+  const isTransitioningRef = useRef(false)
   const prevPromotionsCountRef = useRef(promotions.length)
 
-  // Track Server Component updates to smoothly transition states with ZERO BLINK
+  // 1. When Server Component updates cart.promotions:
   useEffect(() => {
     // If a promotion was successfully added on the server:
     if (promotions.length > prevPromotionsCountRef.current) {
       setIsOpen(false)
       setIsApplying(false)
-      setActiveAction(null)
     }
     // If a promotion was removed on the server:
     if (promotions.length < prevPromotionsCountRef.current) {
       setRemovingCode(null)
-      setActiveAction(null)
     }
     prevPromotionsCountRef.current = promotions.length
   }, [promotions.length])
 
-  // Reset loading when transition finishes even if promotions count didn't change
+  // 2. Track startTransition(() => router.refresh()) completion without wiping states early:
   useEffect(() => {
-    if (!isPending) {
-      if (activeAction === "apply" && !isApplying) {
-        setActiveAction(null)
-      } else if (activeAction === "remove") {
-        setRemovingCode(null)
-        setActiveAction(null)
-      }
+    if (isPending) {
+      // Transition is active (Next.js is fetching server updates over network)
+      isTransitioningRef.current = true
+    } else if (isTransitioningRef.current) {
+      // Transition was running and has now completed!
+      isTransitioningRef.current = false
+      setIsApplying(false)
+      setRemovingCode(null)
     }
-  }, [isPending, activeAction, isApplying])
+  }, [isPending])
 
-  const isApplyLoading = isApplying || (activeAction === "apply" && isPending)
-  const isRemoveLoading = (code: string) =>
-    removingCode === code || (activeAction === "remove" && isPending && removingCode === code)
+  const isApplyLoading = isApplying || isPending
+  const isRemoveLoading = (code: string) => removingCode === code
 
   const removePromotionCode = async (code: string) => {
+    // Instant 0ms visual feedback on the very 1st click!
     setRemovingCode(code)
-    setActiveAction("remove")
     setErrorMessage("")
 
     const validPromotions = promotions.filter(
@@ -77,9 +75,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       if (res && !res.success) {
         setErrorMessage(res.error || "প্রোমো কোড মুছতে সমস্যা হয়েছে।")
         setRemovingCode(null)
-        setActiveAction(null)
       } else {
-        // Keep loading active until router.refresh() delivers the updated props from the server!
+        // Backend removed successfully! Keep loading active until router.refresh() finishes:
         startTransition(() => {
           router.refresh()
         })
@@ -87,7 +84,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     } catch (e: any) {
       setErrorMessage("প্রোমো কোড মুছতে সমস্যা হয়েছে।")
       setRemovingCode(null)
-      setActiveAction(null)
     }
   }
 
@@ -113,7 +109,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     const updatedCodes = [...currentCodes, cleanCode]
 
     setIsApplying(true)
-    setActiveAction("apply")
 
     try {
       const res = await applyPromotions(updatedCodes)
@@ -123,7 +118,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
         )
         setIsApplying(false)
-        setActiveAction(null)
       } else {
         // Backend saved successfully! Keep loading state active until Next.js Server Component finishes rendering!
         setCodeValue("")
@@ -137,7 +131,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
       )
       setIsApplying(false)
-      setActiveAction(null)
     }
   }
 
