@@ -165,6 +165,7 @@ export default function ProductActions({
             handle: product.handle,
             variantId: selectedVariant.id,
             quantity: 1,
+            openDropdown: true,
           },
         })
       )
@@ -189,6 +190,7 @@ export default function ProductActions({
             handle: product.handle,
             variantId: selectedVariant.id,
             quantity: 1,
+            openDropdown: false,
           },
         })
       )

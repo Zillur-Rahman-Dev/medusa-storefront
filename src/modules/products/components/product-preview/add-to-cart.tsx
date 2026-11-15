@@ -61,6 +61,7 @@ export default function PreviewAddToCart({
             handle: productHandle,
             variantId: variantId,
             quantity: 1,
+            openDropdown: true,
           },
         })
       )
@@ -89,6 +90,7 @@ export default function PreviewAddToCart({
             handle: productHandle,
             variantId: variantId,
             quantity: 1,
+            openDropdown: false,
           },
         })
       )

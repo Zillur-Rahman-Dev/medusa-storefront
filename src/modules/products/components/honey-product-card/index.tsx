@@ -71,6 +71,7 @@ export default function HoneyProductCard({
             handle: product.handle,
             variantId: product.variantId,
             quantity: 1,
+            openDropdown: true,
           },
         })
       )
@@ -99,6 +100,7 @@ export default function HoneyProductCard({
             handle: product.handle,
             variantId: product.variantId,
             quantity: 1,
+            openDropdown: false,
           },
         })
       )

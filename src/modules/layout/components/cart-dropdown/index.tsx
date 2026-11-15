@@ -493,7 +493,9 @@ export default function CartDropdown({
         queueSync(newItem.id, undefined, newItem.variantId, newItem.quantity)
       }
 
-      timedOpen()
+      if (detail.openDropdown !== false) {
+        timedOpen()
+      }
     }
 
     const handleQuantityUpdated = (e: Event) => {

@@ -3,6 +3,7 @@
 import { Table, Text, clx } from "@medusajs/ui"
 import { updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
+import CartItemSelect from "@modules/cart/components/cart-item-select"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
@@ -95,46 +96,29 @@ const Item = ({
 
       {type === "full" && (
         <Table.Cell>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center w-28">
             <DeleteButton
               id={item.id}
               onDelete={onDelete}
               data-testid="product-delete-button"
             />
-            {/* Unified Stepper matching Image 1: Correctly displays any quantity (e.g. ৫৭) in Bengali */}
-            <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => {
-                  if (item.quantity > 1) {
-                    changeQuantity(item.quantity - 1)
-                  } else if (onDelete) {
-                    onDelete(item.id)
-                  }
-                }}
-                disabled={updating}
-                className="w-8 h-8 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-bold text-sm cursor-pointer disabled:opacity-50 select-none"
-                aria-label="পরিমাণ কমান"
-              >
-                -
-              </button>
-              <span className="min-w-10 px-2 text-center text-xs font-black text-zinc-900 dark:text-zinc-100 select-none">
-                {updating ? (
-                  <span className="inline-block w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  formatSize(String(item.quantity))
-                )}
-              </span>
-              <button
-                type="button"
-                onClick={() => changeQuantity(item.quantity + 1)}
-                disabled={updating}
-                className="w-8 h-8 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-bold text-sm cursor-pointer disabled:opacity-50 select-none"
-                aria-label="পরিমাণ বাড়ান"
-              >
-                +
-              </button>
-            </div>
+            <CartItemSelect
+              value={item.quantity}
+              onChange={(value) => changeQuantity(parseInt(value.target.value))}
+              className="w-14 h-10 p-4"
+              data-testid="product-select-button"
+            >
+              {Array.from(
+                {
+                  length: Math.max(10, item.quantity),
+                },
+                (_, i) => (
+                  <option value={i + 1} key={i}>
+                    {formatSize(String(i + 1))}
+                  </option>
+                )
+              )}
+            </CartItemSelect>
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />
         </Table.Cell>

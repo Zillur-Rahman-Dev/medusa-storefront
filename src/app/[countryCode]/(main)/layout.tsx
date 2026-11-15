@@ -11,6 +11,7 @@ import Nav from "@modules/layout/templates/nav"
 import MobileBottomNav from "@modules/layout/components/mobile-bottom-nav"
 import WhatsAppButton from "@modules/layout/components/whatsapp-button"
 import FreeShippingPriceNudge from "@modules/shipping/components/free-shipping-price-nudge"
+import { CartProvider } from "@lib/context/cart-context"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -35,24 +36,39 @@ export default async function PageLayout(props: {
     shippingOptions = shipping_options
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-300 pb-16 md:pb-0">
-      <Nav />
-      {customer && cart && (
-        <CartMismatchBanner customer={customer} cart={cart} />
-      )}
+  // Pre-calculate server-side cart item quantities for instant 0ms SSR rendering (eliminates hydration flash)
+  const initialCartItems: Record<string, number> = {}
+  cart?.items?.forEach((item) => {
+    if (item.variant_id) {
+      initialCartItems[item.variant_id] =
+        (initialCartItems[item.variant_id] || 0) + item.quantity
+    }
+    if (item.product_handle) {
+      initialCartItems[item.product_handle] =
+        (initialCartItems[item.product_handle] || 0) + item.quantity
+    }
+  })
 
-      {cart && (
-        <FreeShippingPriceNudge
-          variant="popup"
-          cart={cart}
-          shippingOptions={shippingOptions}
-        />
-      )}
-      <main className="flex-1">{props.children}</main>
-      <Footer />
-      <MobileBottomNav />
-      <WhatsAppButton />
-    </div>
+  return (
+    <CartProvider initialItems={initialCartItems}>
+      <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-300 pb-16 md:pb-0">
+        <Nav />
+        {customer && cart && (
+          <CartMismatchBanner customer={customer} cart={cart} />
+        )}
+
+        {cart && (
+          <FreeShippingPriceNudge
+            variant="popup"
+            cart={cart}
+            shippingOptions={shippingOptions}
+          />
+        )}
+        <main className="flex-1">{props.children}</main>
+        <Footer />
+        <MobileBottomNav />
+        <WhatsAppButton />
+      </div>
+    </CartProvider>
   )
 }
