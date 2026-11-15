@@ -1,7 +1,7 @@
 "use client"
 
 import { Badge, Heading, Input, Label, Text } from "@medusajs/ui"
-import React, { useState } from "react"
+import React, { useState, useTransition, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
@@ -18,16 +18,52 @@ type DiscountCodeProps = {
 
 const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [isOpen, setIsOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [codeValue, setCodeValue] = useState("")
   const [isApplying, setIsApplying] = useState(false)
   const [removingCode, setRemovingCode] = useState<string | null>(null)
+  const [activeAction, setActiveAction] = useState<"apply" | "remove" | null>(null)
 
   const { promotions = [] } = cart
+  const prevPromotionsCountRef = useRef(promotions.length)
+
+  // Track Server Component updates to smoothly transition states with ZERO BLINK
+  useEffect(() => {
+    // If a promotion was successfully added on the server:
+    if (promotions.length > prevPromotionsCountRef.current) {
+      setIsOpen(false)
+      setIsApplying(false)
+      setActiveAction(null)
+    }
+    // If a promotion was removed on the server:
+    if (promotions.length < prevPromotionsCountRef.current) {
+      setRemovingCode(null)
+      setActiveAction(null)
+    }
+    prevPromotionsCountRef.current = promotions.length
+  }, [promotions.length])
+
+  // Reset loading when transition finishes even if promotions count didn't change
+  useEffect(() => {
+    if (!isPending) {
+      if (activeAction === "apply" && !isApplying) {
+        setActiveAction(null)
+      } else if (activeAction === "remove") {
+        setRemovingCode(null)
+        setActiveAction(null)
+      }
+    }
+  }, [isPending, activeAction, isApplying])
+
+  const isApplyLoading = isApplying || (activeAction === "apply" && isPending)
+  const isRemoveLoading = (code: string) =>
+    removingCode === code || (activeAction === "remove" && isPending && removingCode === code)
 
   const removePromotionCode = async (code: string) => {
     setRemovingCode(code)
+    setActiveAction("remove")
     setErrorMessage("")
 
     const validPromotions = promotions.filter(
@@ -40,13 +76,18 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       )
       if (res && !res.success) {
         setErrorMessage(res.error || "প্রোমো কোড মুছতে সমস্যা হয়েছে।")
+        setRemovingCode(null)
+        setActiveAction(null)
       } else {
-        router.refresh()
+        // Keep loading active until router.refresh() delivers the updated props from the server!
+        startTransition(() => {
+          router.refresh()
+        })
       }
     } catch (e: any) {
       setErrorMessage("প্রোমো কোড মুছতে সমস্যা হয়েছে।")
-    } finally {
       setRemovingCode(null)
+      setActiveAction(null)
     }
   }
 
@@ -72,19 +113,31 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     const updatedCodes = [...currentCodes, cleanCode]
 
     setIsApplying(true)
+    setActiveAction("apply")
+
     try {
       const res = await applyPromotions(updatedCodes)
       if (res && !res.success) {
-        setErrorMessage(res.error || "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।")
+        setErrorMessage(
+          res.error ||
+            "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
+        )
+        setIsApplying(false)
+        setActiveAction(null)
       } else {
+        // Backend saved successfully! Keep loading state active until Next.js Server Component finishes rendering!
         setCodeValue("")
         setErrorMessage("")
-        router.refresh()
+        startTransition(() => {
+          router.refresh()
+        })
       }
     } catch (err: any) {
-      setErrorMessage("প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।")
-    } finally {
+      setErrorMessage(
+        "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
+      )
       setIsApplying(false)
+      setActiveAction(null)
     }
   }
 
@@ -117,18 +170,18 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                     setCodeValue(e.target.value)
                     if (errorMessage) setErrorMessage("")
                   }}
-                  disabled={isApplying}
+                  disabled={isApplyLoading}
                   placeholder="কুপন বা প্রোমো কোড লিখুন"
                   autoFocus={false}
                   data-testid="discount-input"
                 />
                 <button
                   type="submit"
-                  disabled={isApplying}
+                  disabled={isApplyLoading}
                   className="h-10 px-5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white font-medium text-sm flex items-center justify-center gap-1.5 shrink-0 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                   data-testid="discount-apply-button"
                 >
-                  {isApplying ? (
+                  {isApplyLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>প্রয়োগ হচ্ছে...</span>
@@ -160,7 +213,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
               </Heading>
 
               {promotions.map((promotion) => {
-                const isThisRemoving = removingCode === promotion.code
+                const isThisRemoving = isRemoveLoading(promotion.code || "")
 
                 return (
                   <div
@@ -196,32 +249,32 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                       </span>
                     </Text>
                     {!promotion.is_automatic && (
-                      <button
-                        type="button"
-                        className="flex items-center gap-1.5 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-100/60 dark:hover:bg-red-950/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold"
-                        disabled={isThisRemoving || isApplying || !!removingCode}
-                        onClick={() => {
-                          if (!promotion.code || removingCode) return
-                          removePromotionCode(promotion.code)
-                        }}
-                        data-testid="remove-discount-button"
-                        title="প্রোমো কোড মুছুন"
-                      >
+                      <div className="shrink-0 flex items-center">
                         {isThisRemoving ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                          <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-semibold text-xs px-2 py-1 bg-red-50 dark:bg-red-950/60 rounded-md">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600 shrink-0" />
                             <span>মুছছে...</span>
-                          </>
+                          </div>
                         ) : (
-                          <>
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-100/60 dark:hover:bg-red-950/60 transition-colors disabled:opacity-50 cursor-pointer text-xs font-semibold"
+                            disabled={Boolean(removingCode) || isApplyLoading}
+                            onClick={() => {
+                              if (!promotion.code || removingCode) return
+                              removePromotionCode(promotion.code)
+                            }}
+                            data-testid="remove-discount-button"
+                            title="প্রোমো কোড মুছুন"
+                          >
                             <Trash size={14} />
                             <span>মুছুন</span>
-                          </>
+                            <span className="sr-only">
+                              Remove discount code from order
+                            </span>
+                          </button>
                         )}
-                        <span className="sr-only">
-                          Remove discount code from order
-                        </span>
-                      </button>
+                      </div>
                     )}
                   </div>
                 )
