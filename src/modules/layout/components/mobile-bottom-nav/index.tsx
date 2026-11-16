@@ -5,16 +5,39 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import React, { useEffect, useState } from "react"
 
 export default function MobileBottomNav() {
-  const [optimisticCount, setOptimisticCount] = useState(0)
+  const [cartCount, setCartCount] = useState(0)
 
   useEffect(() => {
-    const handleAdded = () => setOptimisticCount((prev) => prev + 1)
-    const handleFailed = () => setOptimisticCount((prev) => Math.max(0, prev - 1))
-    window.addEventListener("cart:item-added", handleAdded)
-    window.addEventListener("cart:item-failed", handleFailed)
+    const updateCountFromStorage = () => {
+      try {
+        const stored = localStorage.getItem("purehoney_cart_v2")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.items)) {
+            const sum = parsed.items.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0)
+            setCartCount(sum)
+            return
+          }
+        }
+      } catch (e) {}
+    }
+
+    updateCountFromStorage()
+
+    const handleStorageChange = () => {
+      updateCountFromStorage()
+    }
+
+    window.addEventListener("cart:item-added", handleStorageChange)
+    window.addEventListener("cart:sync-state", handleStorageChange)
+    window.addEventListener("cart:item-deleted", handleStorageChange)
+    window.addEventListener("cart:quantity-updated", handleStorageChange)
+
     return () => {
-      window.removeEventListener("cart:item-added", handleAdded)
-      window.removeEventListener("cart:item-failed", handleFailed)
+      window.removeEventListener("cart:item-added", handleStorageChange)
+      window.removeEventListener("cart:sync-state", handleStorageChange)
+      window.removeEventListener("cart:item-deleted", handleStorageChange)
+      window.removeEventListener("cart:quantity-updated", handleStorageChange)
     }
   }, [])
 
@@ -52,30 +75,31 @@ export default function MobileBottomNav() {
           <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300">অর্ডার</span>
         </a>
 
-        {/* Cart / Checkout */}
-        <LocalizedClientLink
-          href="/checkout"
-          onClick={async (e) => {
+        {/* Cart / Drawer Trigger */}
+        <button
+          type="button"
+          onClick={(e) => {
             e.preventDefault()
-            try {
-              if (typeof window !== "undefined" && typeof (window as any).__FLUSH_CART_SYNC__ === "function") {
-                await (window as any).__FLUSH_CART_SYNC__()
+            if (typeof window !== "undefined") {
+              if (window.location.pathname.includes("/checkout")) {
+                window.location.href = "/bd/checkout"
+                return
               }
-            } catch (err) {}
-            window.location.href = "/bd/checkout"
+              window.dispatchEvent(new CustomEvent("cart:open-drawer"))
+            }
           }}
-          className="flex flex-col items-center justify-center gap-1 py-1 text-zinc-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 active:scale-95 transition-all relative"
+          className="flex flex-col items-center justify-center gap-1 py-1 text-zinc-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 active:scale-95 transition-all relative w-full cursor-pointer focus:outline-none"
         >
           <div className="relative">
             <ShoppingCart className="w-5 h-5" />
-            {optimisticCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-emerald-500 text-white font-bold text-[9px] min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center shadow-sm animate-bounce">
-                +{optimisticCount}
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-2 bg-amber-500 text-white font-bold text-[9px] min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center shadow-sm">
+                {cartCount}
               </span>
             )}
           </div>
           <span className="text-[11px] font-semibold">কার্ট</span>
-        </LocalizedClientLink>
+        </button>
       </div>
     </div>
   )

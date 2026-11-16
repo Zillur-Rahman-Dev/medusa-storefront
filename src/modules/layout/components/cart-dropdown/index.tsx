@@ -1,11 +1,5 @@
 "use client"
 
-import {
-  Popover,
-  PopoverButton,
-  PopoverPanel,
-  Transition,
-} from "@headlessui/react"
 import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
 import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
@@ -97,10 +91,10 @@ export default function CartDropdown({
   const router = useRouter()
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
-  const [activeTimer, setActiveTimer] = useState<NodeJS.Timeout | undefined>(undefined)
-  const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isBadgePulsing, setIsBadgePulsing] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
-  const [isNavigatingToCart, setIsNavigatingToCart] = useState(false)
+  const badgeTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Local state for instant 0ms optimistic changes
   const [items, setItems] = useState<UnifiedCartItem[]>([])
@@ -119,27 +113,51 @@ export default function CartDropdown({
   const pendingSyncRef = useRef(false)
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const open = () => setCartDropdownOpen(true)
-  const close = () => setCartDropdownOpen(false)
+  // Manage drawer state
+  const openDrawer = () => setIsDrawerOpen(true)
+  const closeDrawer = () => setIsDrawerOpen(false)
 
-  const timedOpen = () => {
-    open()
-    if (activeTimer) clearTimeout(activeTimer)
-    const timer = setTimeout(close, 4500)
-    setActiveTimer(timer)
-  }
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isDrawerOpen])
 
-  const openAndCancel = () => {
-    if (activeTimer) clearTimeout(activeTimer)
-    open()
-  }
+  // Handle escape key to close drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isDrawerOpen) {
+        setIsDrawerOpen(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isDrawerOpen])
+
+  // Global drawer events
+  useEffect(() => {
+    const handleOpen = () => setIsDrawerOpen(true)
+    const handleClose = () => setIsDrawerOpen(false)
+    window.addEventListener("cart:open-drawer", handleOpen)
+    window.addEventListener("cart:close-drawer", handleClose)
+    return () => {
+      window.removeEventListener("cart:open-drawer", handleOpen)
+      window.removeEventListener("cart:close-drawer", handleClose)
+    }
+  }, [])
 
   useEffect(() => {
     return () => {
-      if (activeTimer) clearTimeout(activeTimer)
+      if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
     }
-  }, [activeTimer])
+  }, [])
 
   // Save local snapshot helper
   const saveLocalSnapshot = (curItems: UnifiedCartItem[], curOrder: string[]) => {
@@ -547,23 +565,11 @@ export default function CartDropdown({
   }
 
   // Navigation handlers
-  const handleGoToCartClick = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsNavigatingToCart(true)
-    await performServerSync()
-    close()
-    if (itemsRef.current.length > 0) {
-      window.location.href = `/${countryCode}/checkout`
-    } else {
-      window.location.href = `/${countryCode}/store`
-    }
-  }
-
   const handleCheckoutClick = async (e: React.MouseEvent) => {
     e.preventDefault()
     setIsCheckingOut(true)
     await performServerSync()
-    close()
+    closeDrawer()
     window.location.href = `/${countryCode}/checkout`
   }
 
@@ -589,11 +595,19 @@ export default function CartDropdown({
 
       if (existingIndex !== -1) {
         // Product already in cart: increment in-place!
+        // DO NOT pulse badge for existing product!
         nextItems = currentItems.map((it, idx) =>
           idx === existingIndex ? { ...it, quantity: it.quantity + (detail.quantity || 1) } : it
         )
       } else {
         // Brand new item: Put at TOP of variantOrder and items!
+        // ONLY FOR BRAND NEW PRODUCT: Trigger Badge Pop & Pulse!
+        setIsBadgePulsing(true)
+        if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
+        badgeTimerRef.current = setTimeout(() => {
+          setIsBadgePulsing(false)
+        }, 250)
+
         const newItem: UnifiedCartItem = {
           id: detail.id || `opt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           variantId: targetVariantId,
@@ -616,8 +630,8 @@ export default function CartDropdown({
       saveLocalSnapshot(nextItems, nextOrder)
       scheduleServerSync()
 
-      if (detail.openDropdown !== false) {
-        timedOpen()
+      if (detail.openDrawer === true) {
+        openDrawer()
       }
     }
 
@@ -696,223 +710,241 @@ export default function CartDropdown({
   }, [])
 
   return (
-    <div
-      className="h-full z-50"
-      onMouseEnter={openAndCancel}
-      onMouseLeave={close}
-    >
-      <Popover className="relative h-full flex items-center">
-        <PopoverButton className="h-full flex items-center focus:outline-none">
-          <LocalizedClientLink
-            className="flex flex-col items-center justify-center p-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors relative cursor-pointer"
-            href="/checkout"
-            onClick={handleGoToCartClick}
-            data-testid="nav-cart-link"
-          >
-            <div className="relative">
-              <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-              {totalItems > 0 && (
-                <span
-                  className="absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 bg-amber-500 text-white"
-                >
-                  {formatSize(String(totalItems))}
-                </span>
+    <div className="h-full flex items-center">
+      {/* Header Cart Button with Badge Pop & Pulse */}
+      <button
+        type="button"
+        onClick={openDrawer}
+        className="flex flex-col items-center justify-center p-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors relative cursor-pointer focus:outline-none"
+        data-testid="nav-cart-button"
+        aria-label="শপিং কার্ট খুলুন"
+      >
+        <div className="relative">
+          <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
+          {totalItems > 0 && (
+            <>
+              {/* Pulse Ring for New Product Add */}
+              {isBadgePulsing && (
+                <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-amber-400 animate-ping opacity-75 pointer-events-none" />
               )}
-            </div>
-            <span className="text-[11px] font-semibold mt-0.5 leading-tight">কার্ট</span>
-          </LocalizedClientLink>
-        </PopoverButton>
-
-        <Transition
-          show={cartDropdownOpen}
-          as={Fragment}
-          enter="transition ease-out duration-200"
-          enterFrom="opacity-0 translate-y-1"
-          enterTo="opacity-100 translate-y-0"
-          leave="transition ease-in duration-150"
-          leaveFrom="opacity-100 translate-y-0"
-          leaveTo="opacity-0 translate-y-1"
-        >
-          <PopoverPanel
-            static
-            className="hidden small:block absolute top-[calc(100%+1px)] right-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl w-[400px] text-zinc-900 dark:text-zinc-100 overflow-hidden"
-            data-testid="nav-cart-dropdown"
-          >
-            {/* Header */}
-            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/70 dark:bg-zinc-950/40">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🍯</span>
-                <h3 className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
-                  আপনার শপিং কার্ট
-                </h3>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                {totalItems > 0 ? `${formatSize(String(totalItems))} টি পণ্য` : "খালি"}
+              {/* Badge Pop */}
+              <span
+                className={`absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm text-white select-none transition-transform duration-200 ease-out ${
+                  isBadgePulsing
+                    ? "scale-135 bg-amber-500 shadow-md shadow-amber-500/60 ring-2 ring-amber-300"
+                    : "scale-100 bg-amber-500"
+                }`}
+              >
+                {formatSize(String(totalItems))}
               </span>
-            </div>
+            </>
+          )}
+        </div>
+        <span className="text-[11px] font-semibold mt-0.5 leading-tight">কার্ট</span>
+      </button>
 
-            {hasItems ? (
-              <>
-                {/* 100% UNIFIED ITEM LIST (Matching Image 1 & 2) */}
-                <div className="overflow-y-scroll max-h-[380px] p-4 flex flex-col gap-2.5 no-scrollbar">
-                  {displayItems.map((item) => {
-                    const imageUrl = resolveProductImage({
-                      thumbnail: item.thumbnail,
-                      metadata: item.metadata,
-                      handle: item.product_handle,
-                      title: item.title,
-                    })
+      {/* Drawer Overlay Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[999] transition-opacity duration-300 ease-in-out ${
+          isDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={closeDrawer}
+        aria-hidden="true"
+      />
 
-                    const currentQty = item.quantity
-                    const itemTotalPrice = item.unit_price * currentQty
-                    const variantLabel = item.variantTitle || "১ কেজি"
+      {/* Slide-over Drawer Panel (Sliding in from Right to Left) */}
+      <aside
+        className={`fixed inset-y-0 right-0 z-[1000] w-full max-w-[420px] bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full transform transition-transform duration-300 ease-in-out border-l border-zinc-200 dark:border-zinc-800 ${
+          isDrawerOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-modal="true"
+        role="dialog"
+      >
+        {/* Drawer Header */}
+        <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-950/50 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🍯</span>
+            <h3 className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-100">
+              আপনার শপিং কার্ট
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+              {totalItems > 0 ? `${formatSize(String(totalItems))} টি পণ্য` : "খালি"}
+            </span>
+            <button
+              type="button"
+              onClick={closeDrawer}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              aria-label="কার্ট বন্ধ করুন"
+              data-testid="close-cart-drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-                    return (
-                      <div
-                        className="p-3 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
-                        key={item.id}
-                        data-testid="cart-item"
-                      >
-                        {/* Product Image */}
+        {/* Drawer Body */}
+        {hasItems ? (
+          <>
+            {/* Scrollable Items List */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 no-scrollbar">
+              {displayItems.map((item) => {
+                const imageUrl = resolveProductImage({
+                  thumbnail: item.thumbnail,
+                  metadata: item.metadata,
+                  handle: item.product_handle,
+                  title: item.title,
+                })
+
+                const currentQty = item.quantity
+                const itemTotalPrice = item.unit_price * currentQty
+                const variantLabel = item.variantTitle || "১ কেজি"
+
+                return (
+                  <div
+                    className="p-3 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
+                    key={item.id}
+                    data-testid="cart-item"
+                  >
+                    {/* Product Image */}
+                    <LocalizedClientLink
+                      href={`/products/${item.product_handle}`}
+                      onClick={closeDrawer}
+                      className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/80 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
+                    >
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
+                          <span className="text-2xl">🍯</span>
+                          <span className="text-[9px] font-normal">মধু</span>
+                        </div>
+                      )}
+                    </LocalizedClientLink>
+
+                    {/* Product Details & Stepper */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title & variant: font-normal, not bold */}
+                      <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
                         <LocalizedClientLink
                           href={`/products/${item.product_handle}`}
-                          onClick={close}
-                          className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/80 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
+                          onClick={closeDrawer}
+                          className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
+                          data-testid="product-link"
+                          title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
                         >
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
-                              <span className="text-2xl">🍯</span>
-                              <span className="text-[9px] font-normal">মধু</span>
-                            </div>
-                          )}
+                          {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
                         </LocalizedClientLink>
+                      </h4>
 
-                        {/* Product Details & Stepper */}
-                        <div className="flex-1 min-w-0">
-                          {/* Title & variant: font-normal, not bold */}
-                          <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
-                            <LocalizedClientLink
-                              href={`/products/${item.product_handle}`}
-                              onClick={close}
-                              className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
-                              data-testid="product-link"
-                              title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
-                            >
-                              {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
-                            </LocalizedClientLink>
-                          </h4>
-
-                          {/* Stepper + Math row matching Image 1 & 2 */}
-                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            {/* Pill Stepper (Image 2) */}
-                            <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
-                              <button
-                                type="button"
-                                onClick={() => handleDecrement(item)}
-                                className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
-                                aria-label="পরিমাণ কমান"
-                              >
-                                <Minus className="w-3 h-3 text-orange-500" />
-                              </button>
-                              <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
-                                {formatSize(String(currentQty))}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleIncrement(item)}
-                                className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
-                                aria-label="পরিমাণ বাড়ান"
-                              >
-                                <Plus className="w-3 h-3 text-orange-500" />
-                              </button>
-                            </div>
-
-                            {/* Math formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
-                            <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
-                              <span>×</span>
-                              <span>{formatPrice(item.unit_price)}</span>
-                              <span>=</span>
-                              <span className="text-gray-900 dark:text-zinc-100 font-normal">{formatPrice(itemTotalPrice)}</span>
-                            </span>
-                          </div>
+                      {/* Stepper + Math row matching Image 1 & 2 */}
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {/* Pill Stepper (Image 2) */}
+                        <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleDecrement(item)}
+                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                            aria-label="পরিমাণ কমান"
+                          >
+                            <Minus className="w-3 h-3 text-orange-500" />
+                          </button>
+                          <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
+                            {formatSize(String(currentQty))}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleIncrement(item)}
+                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                            aria-label="পরিমাণ বাড়ান"
+                          >
+                            <Plus className="w-3 h-3 text-orange-500" />
+                          </button>
                         </div>
 
-                        {/* Close button (Right '✕', matching Image 1) */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(item)}
-                          className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
-                          aria-label="মুছে ফেলুন"
-                          data-testid="cart-item-remove-button"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        {/* Math formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
+                        <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
+                          <span>×</span>
+                          <span>{formatPrice(item.unit_price)}</span>
+                          <span>=</span>
+                          <span className="text-gray-900 dark:text-zinc-100 font-normal">{formatPrice(itemTotalPrice)}</span>
+                        </span>
                       </div>
-                    )
-                  })}
-                </div>
+                    </div>
 
-                {/* Subtotal & Dual Bottom Action Buttons (Checkout + View Cart) */}
-                <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 flex flex-col gap-y-2.5">
-                  <div className="flex items-center justify-between text-sm pb-1">
-                    <span className="font-bold text-zinc-600 dark:text-zinc-400">
-                      মোট বিল:
-                    </span>
-                    <span
-                      className="text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-400"
-                      data-testid="cart-subtotal"
+                    {/* Close button (Right '✕', matching Image 1) */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(item)}
+                      className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
+                      aria-label="মুছে ফেলুন"
+                      data-testid="cart-item-remove-button"
                     >
-                      {formatPrice(totalSubtotal)}
-                    </span>
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
+                )
+              })}
+            </div>
 
-                  {/* Primary Button: 🛒 অর্ডার নিশ্চিত করুন with Instant Flush */}
-                  <button
-                    type="button"
-                    onClick={handleCheckoutClick}
-                    disabled={isCheckingOut}
-                    className="w-full h-11 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-600/20 cursor-pointer disabled:opacity-80"
-                  >
-                    {isCheckingOut ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Truck className="w-4 h-4" />
-                    )}
-                    <span>{isCheckingOut ? "অর্ডার পেজে যাওয়া হচ্ছে..." : "🛒 অর্ডার নিশ্চিত করুন"}</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-xl mb-3">
-                  🍯
-                </div>
-                <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                  আপনার শপিং কার্ট খালি
-                </h4>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-[220px]">
-                  পছন্দের খাঁটি মধু বেছে নিয়ে কার্টে যোগ করুন।
-                </p>
-                <div className="mt-4">
-                  <LocalizedClientLink
-                    href="/store"
-                    onClick={close}
-                    className="inline-flex h-9 items-center justify-center px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors"
-                  >
-                    মধু ব্রাউজ করুন ➔
-                  </LocalizedClientLink>
-                </div>
+            {/* Subtotal & Primary Checkout Button */}
+            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex flex-col gap-y-3 shrink-0">
+              <div className="flex items-center justify-between text-sm pb-1">
+                <span className="font-bold text-zinc-600 dark:text-zinc-400">
+                  মোট বিল:
+                </span>
+                <span
+                  className="text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-400"
+                  data-testid="cart-subtotal"
+                >
+                  {formatPrice(totalSubtotal)}
+                </span>
               </div>
-            )}
-          </PopoverPanel>
-        </Transition>
-      </Popover>
+
+              {/* Primary Button: 🛒 অর্ডার নিশ্চিত করুন */}
+              <button
+                type="button"
+                onClick={handleCheckoutClick}
+                disabled={isCheckingOut}
+                className="w-full h-12 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-600/20 cursor-pointer disabled:opacity-80"
+              >
+                {isCheckingOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Truck className="w-4 h-4" />
+                )}
+                <span>{isCheckingOut ? "অর্ডার পেজে যাওয়া হচ্ছে..." : "🛒 অর্ডার নিশ্চিত করুন"}</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+            <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-3xl mb-4">
+              🍯
+            </div>
+            <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+              আপনার শপিং কার্ট খালি
+            </h4>
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-[240px]">
+              পছন্দের খাঁটি মধু বেছে নিয়ে কার্টে যোগ করুন।
+            </p>
+            <div className="mt-5">
+              <LocalizedClientLink
+                href="/store"
+                onClick={closeDrawer}
+                className="inline-flex h-10 items-center justify-center px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shadow-sm"
+              >
+                মধু ব্রাউজ করুন ➔
+              </LocalizedClientLink>
+            </div>
+          </div>
+        )}
+      </aside>
     </div>
   )
 }
