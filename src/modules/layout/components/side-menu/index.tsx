@@ -17,7 +17,7 @@ const SideMenuItems = {
   "আমাদের সম্পর্কে": "/about",
   যোগাযোগ: "/contact",
   অ্যাকাউন্ট: "/account",
-  কার্ট: "/cart",
+  চেকআউট: "/checkout",
 }
 
 type SideMenuProps = {

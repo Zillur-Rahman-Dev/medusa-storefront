@@ -8,6 +8,14 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json(result)
     if (body.clearAll || result.cartDeleted) {
       response.cookies.set("_medusa_cart_id", "", { maxAge: -1, path: "/" })
+    } else if (result.cartId) {
+      response.cookies.set("_medusa_cart_id", result.cartId, {
+        maxAge: 60 * 60 * 24 * 7,
+        httpOnly: true,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      })
     }
     return response
   } catch (err: any) {

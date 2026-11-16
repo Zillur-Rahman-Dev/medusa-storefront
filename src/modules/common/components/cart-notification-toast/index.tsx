@@ -101,19 +101,12 @@ export default function CartNotificationToast() {
           {toast.type === "success" && (
             <div className="mt-2.5 flex items-center gap-2">
               <LocalizedClientLink
-                href="/cart"
-                onClick={() => setVisible(false)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
-              >
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>কার্ট দেখুন</span>
-              </LocalizedClientLink>
-              <LocalizedClientLink
                 href="/checkout"
                 onClick={() => setVisible(false)}
-                className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm"
               >
-                <span>অর্ডার করুন</span>
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>অর্ডার সম্পন্ন করুন</span>
               </LocalizedClientLink>
             </div>
           )}

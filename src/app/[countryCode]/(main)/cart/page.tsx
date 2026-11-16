@@ -22,13 +22,10 @@ export default async function Cart(props: {
   })
 
   // Direct-to-Checkout Funnel:
-  // Auto-redirect regular shoppers to /checkout if cart has items, or to /store if empty.
+  // Unconditionally redirect regular shoppers to /checkout.
   // Preserves CartTemplate code intact; ?view=raw allows developer access if needed.
   if (searchParams.view !== "raw") {
-    if (cart && (cart.items?.length ?? 0) > 0) {
-      redirect(`/${countryCode}/checkout`)
-    }
-    redirect(`/${countryCode}/store`)
+    redirect(`/${countryCode}/checkout`)
   }
 
   const customer = await retrieveCustomer()

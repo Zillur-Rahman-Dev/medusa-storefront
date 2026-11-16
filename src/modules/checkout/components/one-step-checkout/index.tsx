@@ -35,7 +35,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
   const defaultShippingId =
     cart.shipping_methods?.at(-1)?.shipping_option_id ||
     shippingMethods?.[0]?.id ||
-    ""
+    "so_dhaka_inside"
 
   const [selectedShippingId, setSelectedShippingId] = useState<string>(
     defaultShippingId
@@ -133,7 +133,28 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
     })
   }
 
-  const cleanMethods = shippingMethods?.filter(
+  const fallbackMethods: HttpTypes.StoreCartShippingOption[] = useMemo(
+    () => [
+      {
+        id: "so_dhaka_inside",
+        name: "ঢাকার ভেতরে (হোম ডেলিভারি)",
+        amount: 60,
+        service_zone: { fulfillment_set: { type: "shipping" } },
+      } as any,
+      {
+        id: "so_dhaka_outside",
+        name: "ঢাকার বাইরে সারা বাংলাদেশ",
+        amount: 120,
+        service_zone: { fulfillment_set: { type: "shipping" } },
+      } as any,
+    ],
+    []
+  )
+
+  const availableMethods =
+    shippingMethods && shippingMethods.length > 0 ? shippingMethods : fallbackMethods
+
+  const cleanMethods = availableMethods.filter(
     (sm) => sm.service_zone?.fulfillment_set?.type !== "pickup"
   )
 

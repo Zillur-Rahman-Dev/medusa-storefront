@@ -52,9 +52,9 @@ export default function MobileBottomNav() {
           <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300">অর্ডার</span>
         </a>
 
-        {/* Cart */}
+        {/* Cart / Checkout */}
         <LocalizedClientLink
-          href="/cart"
+          href="/checkout"
           className="flex flex-col items-center justify-center gap-1 py-1 text-zinc-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 active:scale-95 transition-all relative"
         >
           <div className="relative">

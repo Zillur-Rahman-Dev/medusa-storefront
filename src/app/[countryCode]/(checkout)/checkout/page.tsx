@@ -1,13 +1,14 @@
-import { retrieveCart } from "@lib/data/cart"
+import { retrieveCart, getOrSetCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
 import PaymentWrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import { Metadata } from "next"
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
-  title: "Checkout",
+  title: "চেকআউট | PURE HONEY",
+  description: "অর্ডার সম্পন্ন করুন",
 }
 
 type Props = {
@@ -19,16 +20,20 @@ export default async function Checkout(props: Props) {
   if (countryCode && countryCode.toLowerCase() !== "bd") {
     redirect("/bd/checkout")
   }
-  const cart = await retrieveCart()
+  let cart = await retrieveCart()
 
   if (!cart) {
-    return notFound()
+    cart = await getOrSetCart("bd")
+  }
+
+  if (!cart || !cart.items || cart.items.length === 0) {
+    redirect(`/${countryCode || "bd"}/store`)
   }
 
   const customer = await retrieveCustomer()
 
   return (
-    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
+    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-12 lg:gap-x-20 py-8 lg:py-12">
       <PaymentWrapper cart={cart}>
         <CheckoutForm cart={cart} customer={customer} />
       </PaymentWrapper>

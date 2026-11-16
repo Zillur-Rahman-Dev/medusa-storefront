@@ -702,7 +702,7 @@ export default function CartDropdown({
         <PopoverButton className="h-full flex items-center focus:outline-none">
           <LocalizedClientLink
             className="flex flex-col items-center justify-center p-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors relative cursor-pointer"
-            href="/cart"
+            href="/checkout"
             onClick={handleGoToCartClick}
             data-testid="nav-cart-link"
           >

@@ -81,7 +81,7 @@ export default async function Nav() {
               fallback={
                 <LocalizedClientLink
                   className="flex flex-col items-center justify-center p-1 rounded-xl text-zinc-700 dark:text-zinc-200 relative"
-                  href="/cart"
+                  href="/checkout"
                   data-testid="nav-cart-link"
                 >
                   <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />

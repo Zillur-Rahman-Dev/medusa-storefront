@@ -89,9 +89,9 @@ export default function Footer() {
               <li>
                 <LocalizedClientLink
                   className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                  href="/cart"
+                  href="/checkout"
                 >
-                  শপিং কার্ট
+                  চেকআউট ও কার্ট
                 </LocalizedClientLink>
               </li>
             </ul>
