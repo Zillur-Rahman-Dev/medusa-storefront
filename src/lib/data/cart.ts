@@ -348,6 +348,176 @@ export async function deleteLineItem(lineId: string, variantId?: string) {
   }
 }
 
+export type BatchSyncPayload = {
+  clearAll?: boolean
+  cartId?: string
+  deletions?: Array<{ lineId?: string; variantId?: string }>
+  updates?: Array<{ lineId: string; quantity: number }>
+  additions?: Array<{ variantId: string; quantity: number }>
+}
+
+export async function clearEntireCart() {
+  try {
+    const cartId = await getCartId()
+    if (cartId) {
+      const headers = {
+        ...(await getAuthHeaders()),
+      }
+      const cart = await retrieveCart(cartId, "id,*items.id")
+      if (cart?.items && cart.items.length > 0) {
+        for (const item of cart.items) {
+          try {
+            await sdk.store.cart.deleteLineItem(cartId, item.id, {}, headers)
+          } catch (e) {}
+        }
+      }
+    }
+    await removeCartId()
+    try {
+      revalidateTag("carts")
+      revalidateTag("cart")
+      const cartCacheTag = await getCacheTag("carts")
+      safeRevalidateTag(cartCacheTag)
+      const fulfillmentCacheTag = await getCacheTag("fulfillment")
+      safeRevalidateTag(fulfillmentCacheTag)
+    } catch {}
+    return { success: true }
+  } catch (err: any) {
+    console.error("clearEntireCart error:", err)
+    return { success: false, error: err?.message || String(err) }
+  }
+}
+
+export async function batchSyncCart(payload: BatchSyncPayload) {
+  try {
+    if (payload.clearAll) {
+      return await clearEntireCart()
+    }
+
+    const cartId = payload.cartId || (await getCartId())
+    const headers = {
+      ...(await getAuthHeaders()),
+    }
+
+    let cart = await getOrSetCart(
+      "bd",
+      "id,region_id,currency_code,*items.id,*items.variant_id,*items.quantity"
+    )
+
+    if (!cart) {
+      return { success: false, error: "Cart not found" }
+    }
+
+    // 1. Process deletions
+    if (payload.deletions && payload.deletions.length > 0) {
+      const deletedLineIds = new Set<string>()
+      for (const del of payload.deletions) {
+        const matching =
+          cart.items?.filter(
+            (i) =>
+              (del.lineId && i.id === del.lineId) ||
+              (del.variantId && i.variant_id === del.variantId) ||
+              (del.lineId?.startsWith("opt_") &&
+                del.variantId &&
+                i.variant_id === del.variantId)
+          ) || []
+
+        for (const item of matching) {
+          try {
+            await sdk.store.cart.deleteLineItem(cart.id, item.id, {}, headers)
+            deletedLineIds.add(item.id)
+          } catch (e) {
+            console.warn(`[batchSyncCart] Delete item ${item.id} failed:`, e)
+          }
+        }
+      }
+      if (cart.items) {
+        cart.items = cart.items.filter((i) => !deletedLineIds.has(i.id))
+      }
+    }
+
+    // 2. Process quantity updates
+    if (payload.updates && payload.updates.length > 0) {
+      for (const upd of payload.updates) {
+        if (upd.quantity <= 0) {
+          try {
+            await sdk.store.cart.deleteLineItem(cart.id, upd.lineId, {}, headers)
+            if (cart.items) {
+              cart.items = cart.items.filter((i) => i.id !== upd.lineId)
+            }
+          } catch (e) {}
+        } else {
+          try {
+            await sdk.store.cart.updateLineItem(
+              cart.id,
+              upd.lineId,
+              { quantity: upd.quantity },
+              {},
+              headers
+            )
+            const item = cart.items?.find((i) => i.id === upd.lineId)
+            if (item) item.quantity = upd.quantity
+          } catch (e) {
+            console.warn(`[batchSyncCart] Update lineItem ${upd.lineId} failed:`, e)
+          }
+        }
+      }
+    }
+
+    // 3. Process additions
+    if (payload.additions && payload.additions.length > 0) {
+      for (const add of payload.additions) {
+        if (!add.variantId || add.quantity <= 0) continue
+        const existing = cart.items?.find((i) => i.variant_id === add.variantId)
+        if (existing) {
+          try {
+            await sdk.store.cart.updateLineItem(
+              cart.id,
+              existing.id,
+              { quantity: existing.quantity + add.quantity },
+              {},
+              headers
+            )
+            existing.quantity += add.quantity
+          } catch (e) {}
+        } else {
+          try {
+            const res = await sdk.store.cart.createLineItem(
+              cart.id,
+              { variant_id: add.variantId, quantity: add.quantity },
+              {},
+              headers
+            )
+            if (res?.cart?.items) {
+              cart.items = res.cart.items
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    // 4. Check if cart is now empty
+    const finalCart = await retrieveCart(cart.id, "id,*items.id")
+    if (!finalCart?.items || finalCart.items.length === 0) {
+      await removeCartId()
+    }
+
+    try {
+      revalidateTag("carts")
+      revalidateTag("cart")
+      const cartCacheTag = await getCacheTag("carts")
+      safeRevalidateTag(cartCacheTag)
+      const fulfillmentCacheTag = await getCacheTag("fulfillment")
+      safeRevalidateTag(fulfillmentCacheTag)
+    } catch {}
+
+    return { success: true, cartId: cart.id, items: finalCart?.items || [] }
+  } catch (err: any) {
+    console.error("batchSyncCart error:", err)
+    return { success: false, error: err?.message || String(err) }
+  }
+}
+
 export async function setShippingMethod({
   cartId,
   shippingMethodId,

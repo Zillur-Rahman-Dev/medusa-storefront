@@ -106,10 +106,14 @@ export default function CartDropdown({
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([])
   const [quantityOverrides, setQuantityOverrides] = useState<Record<string, number>>({})
   const [optimisticNewItems, setOptimisticNewItems] = useState<UnifiedCartItem[]>([])
+  const [variantOrder, setVariantOrder] = useState<string[]>([])
 
   // Debounce timers & pending updates refs
   const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({})
   const pendingUpdatesRef = useRef<Record<string, number>>({})
+  const pendingDeletionsRef = useRef<Array<{ lineId?: string; variantId?: string }>>([])
+  const pendingAdditionsRef = useRef<Array<{ variantId: string; quantity: number }>>([])
+  const batchDeleteTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
@@ -131,6 +135,7 @@ export default function CartDropdown({
       if (activeTimer) clearTimeout(activeTimer)
       // Clear all debounce timers on unmount
       Object.values(debounceTimersRef.current).forEach((t) => clearTimeout(t))
+      if (batchDeleteTimerRef.current) clearTimeout(batchDeleteTimerRef.current)
     }
   }, [activeTimer])
 
@@ -197,8 +202,33 @@ export default function CartDropdown({
     })
     .filter((item) => item.quantity > 0)
 
-  // 4. Unified Display List (0ms Single Source of Truth!)
-  const displayItems: UnifiedCartItem[] = [...activeNewItems, ...consolidatedServerItems]
+  // 4. Unified Display List strictly sorted by variantOrder
+  // Ensures newly added items stay at the TOP even after backend save!
+  const displayItems: UnifiedCartItem[] = useMemo(() => {
+    const combined = [...activeNewItems, ...consolidatedServerItems]
+    const seen = new Set<string>()
+    const unique: UnifiedCartItem[] = []
+    for (const it of combined) {
+      const key = it.variantId || it.product_handle || it.id
+      if (!seen.has(key)) {
+        seen.add(key)
+        unique.push(it)
+      }
+    }
+
+    return unique.sort((a, b) => {
+      const keyA = a.variantId || a.product_handle || a.id
+      const keyB = b.variantId || b.product_handle || b.id
+      const idxA = variantOrder.indexOf(keyA)
+      const idxB = variantOrder.indexOf(keyB)
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB
+      if (idxA !== -1) return -1
+      if (idxB !== -1) return 1
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0
+      return timeB - timeA
+    })
+  }, [activeNewItems, consolidatedServerItems, variantOrder])
 
   // Totals
   const totalItems = displayItems.reduce((acc, item) => acc + item.quantity, 0)
@@ -246,8 +276,143 @@ export default function CartDropdown({
       return next
     })
 
+    // Populate variantOrder with any server items not currently in variantOrder
+    setVariantOrder((prev) => {
+      const existing = new Set(prev)
+      const newKeys: string[] = []
+      const sortedServer = [...rawServerItems].sort((a, b) => {
+        const tA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const tB = b.created_at ? new Date(b.created_at).getTime() : 0
+        return tB - tA
+      })
+      for (const item of sortedServer) {
+        const k = item.variant_id || item.product_handle || item.id
+        if (!existing.has(k)) {
+          newKeys.push(k)
+        }
+      }
+      return [...prev, ...newKeys]
+    })
+
     prevSignatureRef.current = serverSignature
   }, [serverSignature, rawServerItems])
+
+  // Save current cart snapshot to localStorage for instant reload recovery
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const snapshot = {
+        items: displayItems.map((i) => ({
+          id: i.id,
+          lineId: i.lineId,
+          lineIds: i.lineIds,
+          variantId: i.variantId,
+          title: i.title,
+          product_handle: i.product_handle,
+          thumbnail: i.thumbnail,
+          variantTitle: i.variantTitle,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          created_at: i.created_at,
+        })),
+        order: variantOrder,
+        timestamp: Date.now(),
+      }
+      localStorage.setItem("purehoney_cart_v2", JSON.stringify(snapshot))
+    } catch (e) {}
+  }, [displayItems, variantOrder])
+
+  // Instant Mount Reconciliation: Restore cart state if page was instantly reloaded
+  const isMountedRef = useRef(false)
+  useEffect(() => {
+    if (isMountedRef.current || typeof window === "undefined") return
+    isMountedRef.current = true
+
+    try {
+      const stored = localStorage.getItem("purehoney_cart_v2")
+      if (!stored) return
+      const parsed = JSON.parse(stored)
+      const isRecent = Date.now() - (parsed.timestamp || 0) < 60000 // 60 seconds
+
+      if (isRecent) {
+        if (Array.isArray(parsed.order) && parsed.order.length > 0) {
+          setVariantOrder(parsed.order)
+        }
+
+        // Case 1: Cart was completely emptied right before reload
+        if (Array.isArray(parsed.items) && parsed.items.length === 0 && rawServerItems.length > 0) {
+          setDeletedItemIds(rawServerItems.map((i) => i.id))
+          fetch("/api/cart/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ clearAll: true }),
+            keepalive: true,
+          })
+          return
+        }
+
+        // Case 2: Items in localStorage missing on server due to instant reload
+        if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+          const missingOnServer: UnifiedCartItem[] = []
+          const missingAdditions: Array<{ variantId: string; quantity: number }> = []
+
+          for (const item of parsed.items) {
+            const onServer = rawServerItems.some(
+              (s) =>
+                (item.variantId && s.variant_id === item.variantId) ||
+                (item.product_handle && s.product_handle === item.product_handle)
+            )
+            if (!onServer) {
+              missingOnServer.push(item)
+              if (item.variantId) {
+                missingAdditions.push({ variantId: item.variantId, quantity: item.quantity })
+              }
+            }
+          }
+
+          if (missingOnServer.length > 0) {
+            setOptimisticNewItems(missingOnServer)
+            if (missingAdditions.length > 0) {
+              fetch("/api/cart/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ additions: missingAdditions }),
+                keepalive: true,
+              }).then(() => router.refresh())
+            }
+          }
+
+          // Case 3: Items on server that were deleted locally right before reload
+          const deletedOnClient: string[] = []
+          const deletionsPayload: Array<{ lineId: string; variantId?: string }> = []
+          for (const s of rawServerItems) {
+            const inStored = parsed.items.some(
+              (it: any) =>
+                (it.variantId && s.variant_id === it.variantId) ||
+                (it.lineId && s.id === it.lineId) ||
+                (it.product_handle && s.product_handle === it.product_handle)
+            )
+            if (!inStored) {
+              deletedOnClient.push(s.id)
+              deletionsPayload.push({ lineId: s.id, variantId: s.variant_id || undefined })
+            }
+          }
+
+          if (deletedOnClient.length > 0) {
+            setDeletedItemIds(deletedOnClient)
+            fetch("/api/cart/batch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ deletions: deletionsPayload }),
+              keepalive: true,
+            }).then(() => router.refresh())
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Cart reconciliation error:", e)
+    }
+  }, [rawServerItems, router])
 
   // Sync active cart item quantities globally for product cards & sessionStorage
   useEffect(() => {
@@ -265,9 +430,52 @@ export default function CartDropdown({
     window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
   }, [displayItems])
 
-  // =========================================================================
-  // DEBOUNCED SYNC ENGINE (400ms Sweet Spot)
-  // =========================================================================
+  // Flush pending updates on beforeunload / pagehide with keepalive: true
+  useEffect(() => {
+    const handleUnload = () => {
+      const hasDeletions = pendingDeletionsRef.current.length > 0
+      const hasUpdates = Object.keys(pendingUpdatesRef.current).length > 0
+      const hasAdditions = pendingAdditionsRef.current.length > 0
+
+      if (displayItems.length === 0 && rawServerItems.length > 0) {
+        fetch("/api/cart/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clearAll: true }),
+          keepalive: true,
+        })
+        return
+      }
+
+      if (hasDeletions || hasUpdates || hasAdditions) {
+        const payload: any = {}
+        if (hasDeletions) payload.deletions = [...pendingDeletionsRef.current]
+        if (hasUpdates) {
+          payload.updates = Object.entries(pendingUpdatesRef.current).map(([lineId, quantity]) => ({
+            lineId,
+            quantity,
+          }))
+        }
+        if (hasAdditions) payload.additions = [...pendingAdditionsRef.current]
+
+        fetch("/api/cart/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        })
+      }
+    }
+
+    window.addEventListener("pagehide", handleUnload)
+    window.addEventListener("beforeunload", handleUnload)
+    return () => {
+      window.removeEventListener("pagehide", handleUnload)
+      window.removeEventListener("beforeunload", handleUnload)
+    }
+  }, [displayItems, rawServerItems])
+
+  // Fast Debounced Sync Engine (120ms)
   const queueSync = (
     itemId: string,
     lineId: string | undefined,
@@ -278,12 +486,10 @@ export default function CartDropdown({
     const key = lineId || itemId
     pendingUpdatesRef.current[key] = newQty
 
-    // Clear previous timer for this item
     if (debounceTimersRef.current[key]) {
       clearTimeout(debounceTimersRef.current[key])
     }
 
-    // Set 400ms debounce timer (fires ONLY 1 clean request after user pauses clicking)
     debounceTimersRef.current[key] = setTimeout(async () => {
       const finalQty = pendingUpdatesRef.current[key]
       delete pendingUpdatesRef.current[key]
@@ -295,16 +501,35 @@ export default function CartDropdown({
         if (lineId) {
           const allIds = lineIds && lineIds.length > 0 ? lineIds : [lineId]
           if (finalQty <= 0) {
-            await Promise.all(allIds.map((lid) => deleteLineItem(lid, variantId)))
+            await fetch("/api/cart/batch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                deletions: allIds.map((lid) => ({ lineId: lid, variantId })),
+              }),
+              keepalive: true,
+            })
+            router.refresh()
           } else {
             await updateLineItem({ lineId, quantity: finalQty })
             if (allIds.length > 1) {
               const extraIds = allIds.filter((lid) => lid !== lineId)
-              await Promise.all(extraIds.map((lid) => deleteLineItem(lid, variantId)))
+              await fetch("/api/cart/batch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  deletions: extraIds.map((lid) => ({ lineId: lid, variantId })),
+                }),
+                keepalive: true,
+              })
             }
+            router.refresh()
           }
         } else if (variantId && finalQty > 0) {
           const res = await addToCart({ variantId, quantity: finalQty, countryCode: "bd" })
+          if (variantId) {
+            pendingAdditionsRef.current = pendingAdditionsRef.current.filter((a) => a.variantId !== variantId)
+          }
           if (res?.lineId) {
             setOptimisticNewItems((prev) =>
               prev.map((opt) =>
@@ -314,32 +539,32 @@ export default function CartDropdown({
               )
             )
           }
+          router.refresh()
         } else if (variantId && finalQty <= 0) {
-          await deleteLineItem(itemId, variantId)
+          await fetch("/api/cart/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              deletions: [{ lineId: itemId, variantId }],
+            }),
+            keepalive: true,
+          })
+          router.refresh()
         }
       } catch (err) {
         console.error("Failed to sync cart item quantity:", err)
-        // Rollback local override on network failure
         setQuantityOverrides((prev) => {
           const next = { ...prev }
           delete next[key]
           return next
         })
-        window.dispatchEvent(
-          new CustomEvent("cart:item-failed", {
-            detail: {
-              message: "ইন্টারনেট সমস্যার কারণে কার্ট আপডেট করা সম্ভব হয়নি। আবার চেষ্টা করুন।",
-            },
-          })
-        )
       }
-    }, 400)
+    }, 120)
   }
 
   // Handle [ + ] Button Click
   const handleIncrement = (item: UnifiedCartItem) => {
     const newQty = item.quantity + 1
-    // Instant 0ms UI update
     setQuantityOverrides((prev) => ({ ...prev, [item.id]: newQty }))
     queueSync(item.id, item.lineId, item.variantId, newQty, item.lineIds)
   }
@@ -348,20 +573,17 @@ export default function CartDropdown({
   const handleDecrement = (item: UnifiedCartItem) => {
     if (item.quantity > 1) {
       const newQty = item.quantity - 1
-      // Instant 0ms UI update
       setQuantityOverrides((prev) => ({ ...prev, [item.id]: newQty }))
       queueSync(item.id, item.lineId, item.variantId, newQty, item.lineIds)
     } else {
-      // If quantity is 1, decrementing removes the item
       handleRemove(item)
     }
   }
 
-  // Handle Remove / Delete Button Click (Instant 0ms removal)
+  // Handle Remove / Delete Button Click (Instant 0ms removal + Atomic Batch Sync)
   const handleRemove = async (item: UnifiedCartItem) => {
     const allIds = item.lineIds && item.lineIds.length > 0 ? item.lineIds : [item.lineId || item.id]
 
-    // Cancel pending timers for this item
     allIds.forEach((key) => {
       if (debounceTimersRef.current[key]) {
         clearTimeout(debounceTimersRef.current[key])
@@ -375,15 +597,39 @@ export default function CartDropdown({
       delete pendingUpdatesRef.current[item.id]
     }
 
+    if (item.variantId) {
+      pendingAdditionsRef.current = pendingAdditionsRef.current.filter((a) => a.variantId !== item.variantId)
+    }
+
+    const remainingItems = displayItems.filter((i) => {
+      if (item.variantId && i.variantId === item.variantId) return false
+      if (item.product_handle && i.product_handle === item.product_handle) return false
+      if (i.id === item.id) return false
+      return true
+    })
+
+    const isCartNowEmpty = remainingItems.length === 0
+
     // Instantly hide from UI in 0ms
     setDeletedItemIds((prev) => [...prev, ...allIds, item.id])
-    setOptimisticNewItems((prev) => prev.filter((i) => !allIds.includes(i.id) && i.id !== item.id))
+    setOptimisticNewItems((prev) =>
+      prev.filter(
+        (i) =>
+          !allIds.includes(i.id) &&
+          i.id !== item.id &&
+          (item.variantId ? i.variantId !== item.variantId : true)
+      )
+    )
     setQuantityOverrides((prev) => {
       const next = { ...prev }
       delete next[item.id]
       if (item.lineId) delete next[item.lineId]
+      allIds.forEach((lid) => delete next[lid])
       return next
     })
+    setVariantOrder((prev) =>
+      prev.filter((k) => k !== (item.variantId || item.product_handle || item.id))
+    )
 
     if (item.variantId || item.product_handle) {
       window.dispatchEvent(
@@ -396,14 +642,55 @@ export default function CartDropdown({
       )
     }
 
-    // Background delete from Medusa server (with variantId so optimistic & duplicate items are truly deleted)
-    try {
-      await Promise.all(allIds.map((lid) => deleteLineItem(lid, item.variantId)))
-      router.refresh()
-    } catch (err) {
-      console.error("Failed to delete line item:", err)
-      // Rollback on failure
-      setDeletedItemIds((prev) => prev.filter((id) => !allIds.includes(id) && id !== item.id))
+    if (isCartNowEmpty) {
+      pendingDeletionsRef.current = []
+      pendingUpdatesRef.current = {}
+      pendingAdditionsRef.current = []
+
+      try {
+        localStorage.setItem(
+          "purehoney_cart_v2",
+          JSON.stringify({ items: [], order: [], timestamp: Date.now() })
+        )
+      } catch (e) {}
+
+      try {
+        await fetch("/api/cart/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clearAll: true }),
+          keepalive: true,
+        })
+        router.refresh()
+      } catch (err) {
+        console.error("Failed to clear cart:", err)
+      }
+    } else {
+      allIds.forEach((lid) => {
+        pendingDeletionsRef.current.push({ lineId: lid, variantId: item.variantId })
+      })
+
+      if (batchDeleteTimerRef.current) {
+        clearTimeout(batchDeleteTimerRef.current)
+      }
+
+      batchDeleteTimerRef.current = setTimeout(async () => {
+        const deletions = [...pendingDeletionsRef.current]
+        pendingDeletionsRef.current = []
+        if (deletions.length === 0) return
+
+        try {
+          await fetch("/api/cart/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deletions }),
+            keepalive: true,
+          })
+          router.refresh()
+        } catch (err) {
+          console.error("Failed to batch delete line items:", err)
+        }
+      }, 80)
     }
   }
 
@@ -428,7 +715,14 @@ export default function CartDropdown({
         const extraIds = items.slice(1).map((i) => i.id)
         try {
           await updateLineItem({ lineId: primaryId, quantity: totalQty })
-          await Promise.all(extraIds.map((id) => deleteLineItem(id)))
+          await fetch("/api/cart/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              deletions: extraIds.map((id) => ({ lineId: id })),
+            }),
+            keepalive: true,
+          })
           router.refresh()
         } catch (e) {
           console.warn("Auto-healing error:", e)
@@ -437,35 +731,53 @@ export default function CartDropdown({
     }
   }, [rawServerItems, router])
 
-  // =========================================================================
-  // FLUSH PENDING DEBOUNCED UPDATES TO SERVER IMMEDIATELY
-  // =========================================================================
+  // Flush pending updates immediately
   const flushPendingUpdates = async () => {
-    const pendingKeys = Object.keys(pendingUpdatesRef.current)
-    if (pendingKeys.length > 0) {
-      const syncPromises = pendingKeys.map(async (key) => {
-        const timer = debounceTimersRef.current[key]
-        if (timer) clearTimeout(timer)
-        const finalQty = pendingUpdatesRef.current[key]
-        delete pendingUpdatesRef.current[key]
-        delete debounceTimersRef.current[key]
+    Object.keys(debounceTimersRef.current).forEach((k) => {
+      clearTimeout(debounceTimersRef.current[k])
+      delete debounceTimersRef.current[k]
+    })
+    if (batchDeleteTimerRef.current) {
+      clearTimeout(batchDeleteTimerRef.current)
+      batchDeleteTimerRef.current = null
+    }
 
-        if (typeof finalQty === "number") {
-          const srvItem = rawServerItems.find((i) => i.id === key)
-          if (srvItem) {
-            if (finalQty <= 0) {
-              return deleteLineItem(srvItem.id)
-            } else {
-              return updateLineItem({ lineId: srvItem.id, quantity: finalQty })
-            }
-          }
-        }
-      })
+    const payload: any = {}
+    if (displayItems.length === 0 && rawServerItems.length > 0) {
+      payload.clearAll = true
+    } else {
+      if (pendingDeletionsRef.current.length > 0) {
+        payload.deletions = [...pendingDeletionsRef.current]
+        pendingDeletionsRef.current = []
+      }
+      if (Object.keys(pendingUpdatesRef.current).length > 0) {
+        payload.updates = Object.entries(pendingUpdatesRef.current).map(([lineId, quantity]) => ({
+          lineId,
+          quantity,
+        }))
+        pendingUpdatesRef.current = {}
+      }
+      if (pendingAdditionsRef.current.length > 0) {
+        payload.additions = [...pendingAdditionsRef.current]
+        pendingAdditionsRef.current = []
+      }
+    }
 
+    if (
+      payload.clearAll ||
+      (payload.deletions && payload.deletions.length > 0) ||
+      (payload.updates && payload.updates.length > 0) ||
+      (payload.additions && payload.additions.length > 0)
+    ) {
       try {
-        await Promise.all(syncPromises)
+        await fetch("/api/cart/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        })
       } catch (err) {
-        console.error("Flush before cart navigation error:", err)
+        console.error("Flush pending updates error:", err)
       }
     }
   }
@@ -493,16 +805,15 @@ export default function CartDropdown({
     router.push(`/${countryCode}/checkout`)
   }
 
-  // =========================================================================
-  // LISTEN TO GLOBAL CART EVENTS (Home, Store, Product Details)
-  // =========================================================================
+  // Listen to Global Cart Events
   useEffect(() => {
     const handleItemAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail || {}
       const targetVariantId = detail.variantId
       const targetHandle = detail.handle
+      const itemKey = targetVariantId || targetHandle || detail.id
 
-      // 1. SMART MERGE: Match by variantId strictly when available so different sizes/variants are never mixed!
+      // Check if item is already in cart
       const existingItem = displayItems.find((i) =>
         targetVariantId
           ? i.variantId === targetVariantId
@@ -512,13 +823,15 @@ export default function CartDropdown({
       )
 
       if (existingItem) {
-        // Product already in cart! Directly increment quantity in 0ms (NO BLINK!)
+        // Product already in cart: update quantity in-place, position unchanged
         const currentQty = existingItem.quantity
         const newQty = currentQty + (detail.quantity || 1)
         setQuantityOverrides((prev) => ({ ...prev, [existingItem.id]: newQty }))
         queueSync(existingItem.id, existingItem.lineId, existingItem.variantId, newQty, existingItem.lineIds)
       } else {
-        // Brand new item: Add directly as a full unified row in 0ms!
+        // Brand new item: Put at TOP of variantOrder
+        setVariantOrder((prev) => [itemKey, ...prev.filter((k) => k !== itemKey)])
+
         const newItem: UnifiedCartItem = {
           id: detail.id || `opt_${Date.now()}`,
           variantId: targetVariantId,
@@ -529,6 +842,13 @@ export default function CartDropdown({
           quantity: detail.quantity || 1,
           unit_price: detail.price || 750,
           created_at: new Date().toISOString(),
+        }
+
+        if (targetVariantId) {
+          pendingAdditionsRef.current.push({
+            variantId: targetVariantId,
+            quantity: newItem.quantity,
+          })
         }
 
         setOptimisticNewItems((prev) => [newItem, ...prev])
