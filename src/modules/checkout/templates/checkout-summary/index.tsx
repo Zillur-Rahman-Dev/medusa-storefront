@@ -300,16 +300,16 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
         <div className="h-px w-full border-b border-gray-200 my-4" />
 
-        {/* Interactive Products List (Matching Image 1 & 2: No scrollbar, all products shown directly) */}
+        {/* Interactive Products List (Matching Image 1 & 2: Compact gap and padding) */}
         <div className="flex flex-col gap-2">
           {items.map((item) => {
             return (
               <div
                 key={item.id || item.variantId}
-                className="p-2 sm:p-2.5 rounded-xl border border-gray-200/80 bg-white shadow-2xs flex items-center gap-2.5 transition-colors"
+                className="px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/80 bg-white shadow-2xs flex items-center gap-2.5 transition-colors"
               >
                 {/* Thumbnail */}
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
                   <Thumbnail
                     thumbnail={item.thumbnail}
                     images={item.images}
@@ -334,28 +334,28 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                       <button
                         type="button"
                         onClick={() => handleDecrement(item)}
-                        className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-xs font-normal select-none"
+                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
                         title="১টি কমান"
                         aria-label="১টি কমান"
                       >
-                        <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
+                        <Minus className="w-3 h-3 text-orange-500" />
                       </button>
-                      <span className="px-2 h-5 sm:h-6 flex items-center justify-center bg-white border-x border-gray-200 text-xs font-normal text-gray-800 select-none">
+                      <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white border-x border-gray-200 text-xs sm:text-sm font-normal text-gray-800 select-none">
                         {formatSize(String(item.quantity))}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleIncrement(item)}
-                        className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-xs font-normal select-none"
+                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
                         title="১টি বাড়ান"
                         aria-label="১টি বাড়ান"
                       >
-                        <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
+                        <Plus className="w-3 h-3 text-orange-500" />
                       </button>
                     </div>
 
                     {/* Formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
-                    <span className="text-xs sm:text-sm font-normal text-gray-700 flex items-center gap-1 select-none">
+                    <span className="text-xs sm:text-sm font-normal text-gray-700 flex items-center gap-1.5 select-none">
                       <span>×</span>
                       <span>{formatPrice(item.unit_price)}</span>
                       <span>=</span>
