@@ -263,23 +263,23 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
         {/* Live Totals Section */}
         <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle">
           <div className="flex items-center justify-between">
-            <span className="text-gray-700">পণ্যের মোট মূল্য</span>
-            <span data-testid="cart-subtotal" className="font-semibold text-gray-900">
+            <span className="text-gray-700 font-normal">পণ্যের মোট মূল্য</span>
+            <span data-testid="cart-subtotal" className="text-gray-900 font-normal">
               {formatPrice(liveSubtotal)}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-gray-700">ডেলিভারি চার্জ</span>
-            <span data-testid="cart-shipping" className="font-semibold text-gray-900">
+            <span className="text-gray-700 font-normal">ডেলিভারি চার্জ</span>
+            <span data-testid="cart-shipping" className="text-gray-900 font-normal">
               {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
             </span>
           </div>
 
           {liveDiscount > 0 && (
             <div className="flex items-center justify-between">
-              <span className="text-emerald-700 font-medium">ডিসকাউন্ট</span>
-              <span className="text-emerald-600 font-semibold" data-testid="cart-discount">
+              <span className="text-emerald-700 font-normal">ডিসকাউন্ট</span>
+              <span className="text-emerald-600 font-normal" data-testid="cart-discount">
                 - {formatPrice(liveDiscount)}
               </span>
             </div>
@@ -289,9 +289,9 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
         <div className="h-px w-full border-b border-gray-200 my-4" />
 
         <div className="flex items-center justify-between text-ui-fg-base mb-2 txt-medium">
-          <span className="font-bold text-lg text-gray-900">সর্বমোট বিল</span>
+          <span className="text-lg text-gray-900 font-normal">সর্বমোট বিল</span>
           <span
-            className="txt-xlarge-plus font-bold text-amber-700"
+            className="txt-xlarge-plus text-amber-700 font-bold"
             data-testid="cart-total"
           >
             {formatPrice(liveTotal)}
@@ -300,16 +300,16 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
         <div className="h-px w-full border-b border-gray-200 my-4" />
 
-        {/* Interactive Products List with Instant Add/Remove/Update */}
-        <div className="flex flex-col divide-y divide-gray-100 max-h-[460px] overflow-y-auto no-scrollbar">
+        {/* Interactive Products List (Matching Image 1 & 2: No scrollbar, all products shown directly) */}
+        <div className="flex flex-col gap-2.5">
           {items.map((item) => {
             return (
               <div
                 key={item.id || item.variantId}
-                className="py-3 sm:py-4 flex items-center justify-between gap-3 group"
+                className="p-3 rounded-2xl border border-gray-200/80 bg-white shadow-2xs flex items-center gap-3 transition-colors"
               >
                 {/* Thumbnail */}
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0 border border-stone-200">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-1 flex items-center justify-center">
                   <Thumbnail
                     thumbnail={item.thumbnail}
                     images={item.images}
@@ -318,63 +318,62 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                   />
                 </div>
 
-                {/* Details & Live Quantity Stepper */}
+                {/* Details & Pill Stepper + Math row (Matching Image 1 & 2) */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-xs sm:text-sm text-gray-900 truncate">
-                    {item.title}
+                  <h4
+                    className="text-xs sm:text-sm font-normal text-gray-800 truncate"
+                    title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
+                  >
+                    {item.title} {item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}
                   </h4>
-                  <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
-                    সাইজ / ওজন: {formatSize(item.variantTitle)}
-                  </p>
 
-                  <div className="flex items-center gap-2 mt-2">
-                    {/* Inline Stepper [-] qty [+] */}
-                    <div className="inline-flex items-center border border-gray-200 rounded-lg bg-stone-50 overflow-hidden shadow-xs">
+                  {/* Stepper + Math Formula Row */}
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {/* Pill Stepper (Matching Image 2) */}
+                    <div className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 overflow-hidden shadow-2xs">
                       <button
                         type="button"
                         onClick={() => handleDecrement(item)}
-                        className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-amber-700 hover:bg-amber-100/60 active:scale-95 transition-colors cursor-pointer"
+                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
                         title="১টি কমান"
                         aria-label="১টি কমান"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3 h-3 text-orange-500" />
                       </button>
-                      <span className="w-7 text-center font-bold text-xs text-gray-900 select-none">
+                      <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white border-x border-gray-200 text-xs sm:text-sm font-normal text-gray-800 select-none">
                         {formatSize(String(item.quantity))}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleIncrement(item)}
-                        className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-amber-700 hover:bg-amber-100/60 active:scale-95 transition-colors cursor-pointer"
+                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
                         title="১টি বাড়ান"
                         aria-label="১টি বাড়ান"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3 h-3 text-orange-500" />
                       </button>
                     </div>
 
-                    {/* Delete item button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(item)}
-                      className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="আইটেমটি কার্ট থেকে মুছুন"
-                      aria-label="আইটেমটি কার্ট থেকে মুছুন"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
+                    <span className="text-xs sm:text-sm font-normal text-gray-700 flex items-center gap-1.5 select-none">
+                      <span>×</span>
+                      <span>{formatPrice(item.unit_price)}</span>
+                      <span>=</span>
+                      <span className="text-gray-900 font-normal">{formatPrice(item.total)}</span>
+                    </span>
                   </div>
                 </div>
 
-                {/* Right Price Display */}
-                <div className="text-right flex-shrink-0 flex flex-col items-end">
-                  <span className="text-xs text-gray-500 font-medium">
-                    {formatSize(String(item.quantity))}x {formatPrice(item.unit_price)}
-                  </span>
-                  <span className="font-bold text-sm sm:text-base text-gray-900 mt-0.5">
-                    {formatPrice(item.total)}
-                  </span>
-                </div>
+                {/* Red Delete Button (Replacing Close Icon on Checkout Page as requested) */}
+                <button
+                  type="button"
+                  onClick={() => handleRemove(item)}
+                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0 ml-auto"
+                  title="আইটেমটি মুছুন"
+                  aria-label="আইটেমটি মুছুন"
+                >
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </button>
               </div>
             )
           })}

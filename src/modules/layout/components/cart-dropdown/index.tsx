@@ -12,7 +12,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useParams, useRouter } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { ShoppingCart, X, Truck, Loader2 } from "lucide-react"
+import { ShoppingCart, X, Truck, Loader2, Minus, Plus } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
 const KNOWN_HONEY_IMAGES: Record<string, string> = {
@@ -753,8 +753,8 @@ export default function CartDropdown({
 
             {hasItems ? (
               <>
-                {/* 100% UNIFIED ITEM LIST (Matching Image 3: Zero-Blink, Stepper on Row, Instant Feedback) */}
-                <div className="overflow-y-scroll max-h-[380px] p-4 flex flex-col no-scrollbar divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                {/* 100% UNIFIED ITEM LIST (Matching Image 1 & 2) */}
+                <div className="overflow-y-scroll max-h-[380px] p-4 flex flex-col gap-2.5 no-scrollbar">
                   {displayItems.map((item) => {
                     const imageUrl = resolveProductImage({
                       thumbnail: item.thumbnail,
@@ -769,7 +769,7 @@ export default function CartDropdown({
 
                     return (
                       <div
-                        className="py-3.5 first:pt-0 last:pb-0 flex gap-x-3 items-center group transition-colors"
+                        className="p-3 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
                         key={item.id}
                         data-testid="cart-item"
                       >
@@ -777,7 +777,7 @@ export default function CartDropdown({
                         <LocalizedClientLink
                           href={`/products/${item.product_handle}`}
                           onClick={close}
-                          className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-amber-50/50 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center relative group"
+                          className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/80 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
                         >
                           {imageUrl ? (
                             <img
@@ -788,84 +788,71 @@ export default function CartDropdown({
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
                               <span className="text-2xl">🍯</span>
-                              <span className="text-[9px] font-bold">মধু</span>
+                              <span className="text-[9px] font-normal">মধু</span>
                             </div>
                           )}
                         </LocalizedClientLink>
 
                         {/* Product Details & Stepper */}
-                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                          {/* Row 1: Title & Single Remove Button */}
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-xs sm:text-sm font-bold truncate text-zinc-900 dark:text-zinc-100">
-                                <LocalizedClientLink
-                                  href={`/products/${item.product_handle}`}
-                                  onClick={close}
-                                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                                  data-testid="product-link"
-                                >
-                                  {item.title}
-                                </LocalizedClientLink>
-                              </h4>
-                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                সাইজ:{" "}
-                                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                                  {formatSize(variantLabel)}
-                                </span>
-                              </p>
-                            </div>
-
-                            {/* Clean Delete Button (Right top '✕') */}
-                            <button
-                              type="button"
-                              onClick={() => handleRemove(item)}
-                              className="p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                              aria-label="মুছে ফেলুন"
-                              data-testid="cart-item-remove-button"
+                        <div className="flex-1 min-w-0">
+                          {/* Title & variant: font-normal, not bold */}
+                          <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
+                            <LocalizedClientLink
+                              href={`/products/${item.product_handle}`}
+                              onClick={close}
+                              className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
+                              data-testid="product-link"
+                              title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
                             >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
+                              {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
+                            </LocalizedClientLink>
+                          </h4>
 
-                          {/* Row 2 (Matching Image 3): Stepper [-] [Qty] [+] on Left, Price on Right */}
-                          <div className="flex items-center justify-between pt-2">
-                            {/* Stepper matching Image 3: [-] [Qty] [+] */}
-                            <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 shadow-2xs">
+                          {/* Stepper + Math row matching Image 1 & 2 */}
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {/* Pill Stepper (Image 2) */}
+                            <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                               <button
                                 type="button"
                                 onClick={() => handleDecrement(item)}
-                                className="w-7 h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-bold text-sm select-none cursor-pointer"
+                                className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
                                 aria-label="পরিমাণ কমান"
                               >
-                                -
+                                <Minus className="w-3 h-3 text-orange-500" />
                               </button>
-                              <span className="w-8 text-center text-xs font-black text-zinc-900 dark:text-zinc-100 select-none">
+                              <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
                                 {formatSize(String(currentQty))}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleIncrement(item)}
-                                className="w-7 h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-bold text-sm select-none cursor-pointer"
+                                className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
                                 aria-label="পরিমাণ বাড়ান"
                               >
-                                +
+                                <Plus className="w-3 h-3 text-orange-500" />
                               </button>
                             </div>
 
-                            {/* Price breakdown matching Image 3 */}
-                            <div className="text-right">
-                              <div className="text-xs sm:text-sm font-black text-zinc-900 dark:text-zinc-100">
-                                {formatPrice(itemTotalPrice)}
-                              </div>
-                              {currentQty > 1 && (
-                                <div className="text-[10px] text-zinc-400">
-                                  {formatSize(String(currentQty))} × {formatPrice(item.unit_price)}
-                                </div>
-                              )}
-                            </div>
+                            {/* Math formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
+                            <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
+                              <span>×</span>
+                              <span>{formatPrice(item.unit_price)}</span>
+                              <span>=</span>
+                              <span className="text-gray-900 dark:text-zinc-100 font-normal">{formatPrice(itemTotalPrice)}</span>
+                            </span>
                           </div>
                         </div>
+
+                        {/* Close button (Right '✕', matching Image 1) */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(item)}
+                          className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
+                          aria-label="মুছে ফেলুন"
+                          data-testid="cart-item-remove-button"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     )
                   })}
