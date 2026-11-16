@@ -790,8 +790,8 @@ export default function CartDropdown({
               {/* Drawer Body (Full height scrollable list matching Image 2) */}
               {hasItems ? (
                 <>
-                  {/* Scrollable Items List */}
-                  <div className="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col gap-3">
+                  {/* Scrollable Items List - Reduced vertical space between items */}
+                  <div className="flex-1 overflow-y-auto min-h-0 px-3.5 py-3 flex flex-col gap-2">
                     {displayItems.map((item) => {
                       const imageUrl = resolveProductImage({
                         thumbnail: item.thumbnail,
@@ -806,7 +806,7 @@ export default function CartDropdown({
 
                       return (
                         <div
-                          className="p-3 sm:p-3.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
+                          className="p-2 sm:p-2.5 rounded-xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-2.5 transition-colors"
                           key={item.id}
                           data-testid="cart-item"
                         >
@@ -814,7 +814,7 @@ export default function CartDropdown({
                           <LocalizedClientLink
                             href={`/products/${item.product_handle}`}
                             onClick={closeDrawer}
-                            className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
+                            className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-lg overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-0.5 relative group"
                           >
                             {imageUrl ? (
                               <img
@@ -845,33 +845,33 @@ export default function CartDropdown({
                               </LocalizedClientLink>
                             </h4>
 
-                            {/* Stepper + Math row matching Image 2 */}
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {/* Stepper + Math row matching Image 2 with compact spacing */}
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
                               {/* Pill Stepper */}
                               <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                                 <button
                                   type="button"
                                   onClick={() => handleDecrement(item)}
-                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-xs font-normal select-none"
                                   aria-label="পরিমাণ কমান"
                                 >
-                                  <Minus className="w-3 h-3 text-orange-500" />
+                                  <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
                                 </button>
-                                <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
+                                <span className="px-2 h-5 sm:h-6 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs font-normal text-gray-800 dark:text-zinc-200 select-none">
                                   {formatSize(String(currentQty))}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => handleIncrement(item)}
-                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-xs font-normal select-none"
                                   aria-label="পরিমাণ বাড়ান"
                                 >
-                                  <Plus className="w-3 h-3 text-orange-500" />
+                                  <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
                                 </button>
                               </div>
 
                               {/* Math formula: × ৳১,৬০০.০০ = ৳১৪,৪০০.০০ */}
-                              <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
+                              <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1 select-none">
                                 <span>×</span>
                                 <span>{formatPrice(item.unit_price)}</span>
                                 <span>=</span>
@@ -884,7 +884,7 @@ export default function CartDropdown({
                           <button
                             type="button"
                             onClick={() => handleRemove(item)}
-                            className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
+                            className="p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
                             aria-label="মুছে ফেলুন"
                             data-testid="cart-item-remove-button"
                           >
