@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useParams, useRouter } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { ShoppingCart, X, Truck, Loader2, Minus, Plus, ArrowRight } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
@@ -94,7 +95,12 @@ export default function CartDropdown({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBadgePulsing, setIsBadgePulsing] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const badgeTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Local state for instant 0ms optimistic changes
   const [items, setItems] = useState<UnifiedCartItem[]>([])
@@ -743,203 +749,210 @@ export default function CartDropdown({
         <span className="text-[11px] font-semibold mt-0.5 leading-tight">কার্ট</span>
       </button>
 
-      {/* Drawer Overlay Backdrop */}
-      <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[999] transition-opacity duration-300 ease-in-out ${
-          isDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={closeDrawer}
-        aria-hidden="true"
-      />
-
-      {/* Slide-over Drawer Panel (Sliding in from Right to Left, matching Image) */}
-      <aside
-        className={`fixed inset-y-0 right-0 z-[1000] w-full max-w-[420px] bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full transform transition-transform duration-300 ease-in-out border-l border-zinc-200 dark:border-zinc-800 ${
-          isDrawerOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-        aria-modal="true"
-        role="dialog"
-      >
-        {/* Drawer Header (Matching Image: SHOPPING CART / Close →) */}
-        <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 shrink-0">
-          <h3 className="font-bold text-sm sm:text-base tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
-            শপিং কার্ট
-          </h3>
-          <button
-            type="button"
-            onClick={closeDrawer}
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer group"
-            aria-label="কার্ট বন্ধ করুন"
-            data-testid="close-cart-drawer"
-          >
-            <span>বন্ধ করুন</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-
-        {/* Drawer Body */}
-        {hasItems ? (
+      {/* Render Backdrop & Drawer directly into document.body to avoid parent CSS containing block constraints */}
+      {mounted &&
+        createPortal(
           <>
-            {/* Scrollable Items List */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-              {displayItems.map((item) => {
-                const imageUrl = resolveProductImage({
-                  thumbnail: item.thumbnail,
-                  metadata: item.metadata,
-                  handle: item.product_handle,
-                  title: item.title,
-                })
+            {/* Drawer Overlay Backdrop */}
+            <div
+              className={`fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[9999] transition-opacity duration-300 ease-in-out ${
+                isDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+              }`}
+              onClick={closeDrawer}
+              aria-hidden="true"
+            />
 
-                const currentQty = item.quantity
-                const itemTotalPrice = item.unit_price * currentQty
-                const variantLabel = item.variantTitle || "১ কেজি"
-
-                return (
-                  <div
-                    className="p-3 sm:p-3.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
-                    key={item.id}
-                    data-testid="cart-item"
-                  >
-                    {/* Product Image */}
-                    <LocalizedClientLink
-                      href={`/products/${item.product_handle}`}
-                      onClick={closeDrawer}
-                      className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
-                    >
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
-                          <span className="text-2xl">🍯</span>
-                          <span className="text-[9px] font-normal">মধু</span>
-                        </div>
-                      )}
-                    </LocalizedClientLink>
-
-                    {/* Product Details & Stepper */}
-                    <div className="flex-1 min-w-0">
-                      {/* Title & variant: font-normal, not bold */}
-                      <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
-                        <LocalizedClientLink
-                          href={`/products/${item.product_handle}`}
-                          onClick={closeDrawer}
-                          className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
-                          data-testid="product-link"
-                          title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
-                        >
-                          {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
-                        </LocalizedClientLink>
-                      </h4>
-
-                      {/* Stepper + Math row matching Image */}
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {/* Pill Stepper */}
-                        <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => handleDecrement(item)}
-                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
-                            aria-label="পরিমাণ কমান"
-                          >
-                            <Minus className="w-3 h-3 text-orange-500" />
-                          </button>
-                          <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
-                            {formatSize(String(currentQty))}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleIncrement(item)}
-                            className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
-                            aria-label="পরিমাণ বাড়ান"
-                          >
-                            <Plus className="w-3 h-3 text-orange-500" />
-                          </button>
-                        </div>
-
-                        {/* Math formula: × ৳১,৬০০.০০ = ৳১৪,৪০০.০০ */}
-                        <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
-                          <span>×</span>
-                          <span>{formatPrice(item.unit_price)}</span>
-                          <span>=</span>
-                          <span className="text-gray-900 dark:text-zinc-100 font-normal">{formatPrice(itemTotalPrice)}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Close button (Right '✕', matching Image) */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(item)}
-                      className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
-                      aria-label="মুছে ফেলুন"
-                      data-testid="cart-item-remove-button"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Subtotal & Orange CHECKOUT Button (Matching Image, all content in Bengali) */}
-            <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-4 shrink-0">
-              <div className="flex items-center justify-between text-base">
-                <span className="font-normal text-zinc-800 dark:text-zinc-300">
-                  মোট:
-                </span>
-                <span
-                  className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
-                  data-testid="cart-subtotal"
+            {/* Slide-over Drawer Panel (Full Screen Height, Right to Left, matching Image 2) */}
+            <aside
+              className={`fixed inset-y-0 right-0 z-[10000] w-full max-w-[420px] bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-screen max-h-screen transform transition-transform duration-300 ease-in-out border-l border-zinc-200 dark:border-zinc-800 ${
+                isDrawerOpen ? "translate-x-0" : "translate-x-full"
+              }`}
+              aria-modal="true"
+              role="dialog"
+            >
+              {/* Drawer Header (Matching Image: SHOPPING CART / Close →) */}
+              <div className="p-4 sm:p-5 border-b border-gray-150 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 shrink-0">
+                <h3 className="font-bold text-sm sm:text-base tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
+                  শপিং কার্ট
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeDrawer}
+                  className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer group"
+                  aria-label="কার্ট বন্ধ করুন"
+                  data-testid="close-cart-drawer"
                 >
-                  {formatPrice(totalSubtotal)}
-                </span>
+                  <span>বন্ধ করুন</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </button>
               </div>
 
-              {/* Full-width vibrant Orange CHECKOUT button */}
-              <button
-                type="button"
-                onClick={handleCheckoutClick}
-                disabled={isCheckingOut}
-                className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/25 cursor-pointer disabled:opacity-80 uppercase tracking-wide"
-              >
-                {isCheckingOut ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>চেকআউটে যাওয়া হচ্ছে...</span>
-                  </>
-                ) : (
-                  <span>চেকআউট</span>
-                )}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-            <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-zinc-800 flex items-center justify-center text-3xl mb-4">
-              🍯
-            </div>
-            <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
-              আপনার শপিং কার্ট খালি
-            </h4>
-            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-[240px]">
-              পছন্দের খাঁটি মধু বেছে নিয়ে কার্টে যোগ করুন।
-            </p>
-            <div className="mt-5">
-              <LocalizedClientLink
-                href="/store"
-                onClick={closeDrawer}
-                className="inline-flex h-10 items-center justify-center px-5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-colors shadow-sm"
-              >
-                মধু ব্রাউজ করুন ➔
-              </LocalizedClientLink>
-            </div>
-          </div>
+              {/* Drawer Body (Full height scrollable list matching Image 2) */}
+              {hasItems ? (
+                <>
+                  {/* Scrollable Items List */}
+                  <div className="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col gap-3">
+                    {displayItems.map((item) => {
+                      const imageUrl = resolveProductImage({
+                        thumbnail: item.thumbnail,
+                        metadata: item.metadata,
+                        handle: item.product_handle,
+                        title: item.title,
+                      })
+
+                      const currentQty = item.quantity
+                      const itemTotalPrice = item.unit_price * currentQty
+                      const variantLabel = item.variantTitle || "১ কেজি"
+
+                      return (
+                        <div
+                          className="p-3 sm:p-3.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
+                          key={item.id}
+                          data-testid="cart-item"
+                        >
+                          {/* Product Image */}
+                          <LocalizedClientLink
+                            href={`/products/${item.product_handle}`}
+                            onClick={closeDrawer}
+                            className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
+                          >
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 text-amber-700 dark:text-amber-400">
+                                <span className="text-2xl">🍯</span>
+                                <span className="text-[9px] font-normal">মধু</span>
+                              </div>
+                            )}
+                          </LocalizedClientLink>
+
+                          {/* Product Details & Stepper */}
+                          <div className="flex-1 min-w-0">
+                            {/* Title & variant: font-normal, not bold */}
+                            <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
+                              <LocalizedClientLink
+                                href={`/products/${item.product_handle}`}
+                                onClick={closeDrawer}
+                                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
+                                data-testid="product-link"
+                                title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
+                              >
+                                {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
+                              </LocalizedClientLink>
+                            </h4>
+
+                            {/* Stepper + Math row matching Image 2 */}
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              {/* Pill Stepper */}
+                              <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDecrement(item)}
+                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                                  aria-label="পরিমাণ কমান"
+                                >
+                                  <Minus className="w-3 h-3 text-orange-500" />
+                                </button>
+                                <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
+                                  {formatSize(String(currentQty))}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleIncrement(item)}
+                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                                  aria-label="পরিমাণ বাড়ান"
+                                >
+                                  <Plus className="w-3 h-3 text-orange-500" />
+                                </button>
+                              </div>
+
+                              {/* Math formula: × ৳১,৬০০.০০ = ৳১৪,৪০০.০০ */}
+                              <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
+                                <span>×</span>
+                                <span>{formatPrice(item.unit_price)}</span>
+                                <span>=</span>
+                                <span className="text-gray-900 dark:text-zinc-100 font-normal">{formatPrice(itemTotalPrice)}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Close button (Right '✕', matching Image 2) */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(item)}
+                            className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
+                            aria-label="মুছে ফেলুন"
+                            data-testid="cart-item-remove-button"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Subtotal & Orange CHECKOUT Button (Matching Image 2, all content in Bengali) */}
+                  <div className="p-4 sm:p-5 border-t border-gray-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-4 shrink-0">
+                    <div className="flex items-center justify-between text-base">
+                      <span className="font-normal text-zinc-800 dark:text-zinc-300">
+                        মোট:
+                      </span>
+                      <span
+                        className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
+                        data-testid="cart-subtotal"
+                      >
+                        {formatPrice(totalSubtotal)}
+                      </span>
+                    </div>
+
+                    {/* Full-width vibrant Orange CHECKOUT button */}
+                    <button
+                      type="button"
+                      onClick={handleCheckoutClick}
+                      disabled={isCheckingOut}
+                      className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/25 cursor-pointer disabled:opacity-80 uppercase tracking-wide"
+                    >
+                      {isCheckingOut ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>চেকআউটে যাওয়া হচ্ছে...</span>
+                        </>
+                      ) : (
+                        <span>চেকআউট</span>
+                      )}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 min-h-0">
+                  <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-zinc-800 flex items-center justify-center text-3xl mb-4">
+                    🍯
+                  </div>
+                  <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                    আপনার শপিং কার্ট খালি
+                  </h4>
+                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-[240px]">
+                    পছন্দের খাঁটি মধু বেছে নিয়ে কার্টে যোগ করুন।
+                  </p>
+                  <div className="mt-5">
+                    <LocalizedClientLink
+                      href="/store"
+                      onClick={closeDrawer}
+                      className="inline-flex h-10 items-center justify-center px-5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-colors shadow-sm"
+                    >
+                      মধু ব্রাউজ করুন ➔
+                    </LocalizedClientLink>
+                  </div>
+                </div>
+              )}
+            </aside>
+          </>,
+          document.body
         )}
-      </aside>
     </div>
   )
 }
