@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const body: BatchSyncPayload = await req.json()
     const result = await batchSyncCart(body)
     const response = NextResponse.json(result)
-    if (body.clearAll || (result.success && (!result.items || result.items.length === 0))) {
+    if (body.clearAll || result.cartDeleted) {
       response.cookies.set("_medusa_cart_id", "", { maxAge: -1, path: "/" })
     }
     return response

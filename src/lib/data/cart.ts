@@ -64,8 +64,8 @@ export async function retrieveCart(cartId?: string, fields?: string) {
       }
       return cart
     })
-    .catch(async () => {
-      await removeCartId()
+    .catch(async (err) => {
+      console.warn("[retrieveCart] fetch error:", err?.message || err)
       return null
     })
 }
@@ -411,6 +411,8 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
     // 1. Process deletions
     if (payload.deletions && payload.deletions.length > 0) {
       const deletedLineIds = new Set<string>()
+      const deletePromises: Promise<any>[] = []
+
       for (const del of payload.deletions) {
         const matching =
           cart.items?.filter(
@@ -423,14 +425,21 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
           ) || []
 
         for (const item of matching) {
-          try {
-            await sdk.store.cart.deleteLineItem(cart.id, item.id, {}, headers)
+          if (!deletedLineIds.has(item.id)) {
             deletedLineIds.add(item.id)
-          } catch (e) {
-            console.warn(`[batchSyncCart] Delete item ${item.id} failed:`, e)
+            deletePromises.push(
+              sdk.store.cart.deleteLineItem(cart.id, item.id, {}, headers).catch((e) => {
+                console.warn(`[batchSyncCart] Delete item ${item.id} failed:`, e)
+              })
+            )
           }
         }
       }
+
+      if (deletePromises.length > 0) {
+        await Promise.allSettled(deletePromises)
+      }
+
       if (cart.items) {
         cart.items = cart.items.filter((i) => !deletedLineIds.has(i.id))
       }
@@ -479,7 +488,9 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
               headers
             )
             existing.quantity += add.quantity
-          } catch (e) {}
+          } catch (e) {
+            console.warn(`[batchSyncCart] Update lineItem ${existing.id} failed:`, e)
+          }
         } else {
           try {
             const res = await sdk.store.cart.createLineItem(
@@ -491,15 +502,25 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
             if (res?.cart?.items) {
               cart.items = res.cart.items
             }
-          } catch (e) {}
+          } catch (e) {
+            console.warn(`[batchSyncCart] Create lineItem for ${add.variantId} failed:`, e)
+          }
         }
       }
     }
 
     // 4. Check if cart is now empty
+    let isCartEmpty = false
     const finalCart = await retrieveCart(cart.id, "id,*items.id")
-    if (!finalCart?.items || finalCart.items.length === 0) {
+    if (
+      finalCart &&
+      Array.isArray(finalCart.items) &&
+      finalCart.items.length === 0 &&
+      payload.deletions &&
+      payload.deletions.length > 0
+    ) {
       await removeCartId()
+      isCartEmpty = true
     }
 
     try {
@@ -511,7 +532,12 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
       safeRevalidateTag(fulfillmentCacheTag)
     } catch {}
 
-    return { success: true, cartId: cart.id, items: finalCart?.items || [] }
+    return {
+      success: true,
+      cartId: cart.id,
+      items: finalCart?.items || cart.items || [],
+      cartDeleted: isCartEmpty,
+    }
   } catch (err: any) {
     console.error("batchSyncCart error:", err)
     return { success: false, error: err?.message || String(err) }

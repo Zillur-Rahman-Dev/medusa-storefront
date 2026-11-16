@@ -233,56 +233,44 @@ export default function ProductActions({
     }
   }
 
-  // direct checkout: immediate feedback and fast route to /checkout
+  // direct checkout: immediate feedback and fast route to /checkout with full sync
   const handleDirectCheckout = async () => {
-    if (!selectedVariant?.id) return
-
-    // Flush any pending background debounced sync immediately
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("cart:flush-sync"))
-    }
-
-    // FAST-PATH: If this variant is ALREADY in the customer's cart, navigate immediately (0ms delay)!
-    if (quantity > 0) {
-      router.push(`/${countryCode}/checkout`)
-      return
-    }
+    if (!selectedVariant?.id || isOrdering) return
+    setIsOrdering(true)
 
     // Item not yet in cart: Optimistically update local quantity & context in 0ms
-    setIsOrdering(true)
-    setQuantity(1)
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("cart:item-added", {
-          detail: {
-            id: `opt_${Date.now()}`,
-            title: product.title,
-            variant: selectedVariant.title,
-            price: rawPrice,
-            thumbnail: product.thumbnail || product.images?.[0]?.url,
-            handle: product.handle,
-            variantId: selectedVariant.id,
-            quantity: 1,
-            openDropdown: false,
-          },
-        })
-      )
+    if (quantity === 0) {
+      setQuantity(1)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-added", {
+            detail: {
+              id: `opt_${Date.now()}`,
+              title: product.title,
+              variant: selectedVariant.title,
+              price: rawPrice,
+              thumbnail: product.thumbnail || product.images?.[0]?.url,
+              handle: product.handle,
+              variantId: selectedVariant.id,
+              quantity: 1,
+              openDropdown: false,
+            },
+          })
+        )
+      }
     }
 
+    // Flush and await full cart sync so ALL items in cart are 100% saved in Medusa before navigating
     try {
-      await addToCart({
-        variantId: selectedVariant.id,
-        quantity: 1,
-        countryCode,
-      })
-      router.push(`/${countryCode}/checkout`)
+      if (typeof window !== "undefined" && typeof (window as any).__FLUSH_CART_SYNC__ === "function") {
+        await (window as any).__FLUSH_CART_SYNC__()
+      }
     } catch (err) {
-      console.error("Direct checkout add to cart error:", err)
-      router.push(`/${countryCode}/checkout`)
-    } finally {
-      setIsOrdering(false)
+      console.warn("Direct checkout flush error:", err)
     }
+
+    router.push(`/${countryCode}/checkout`)
+    setIsOrdering(false)
   }
 
   const rawPrice =

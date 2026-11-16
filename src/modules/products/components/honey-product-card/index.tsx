@@ -150,62 +150,47 @@ export default function HoneyProductCard({
     }
   }
 
-  // 4. Direct Medusa Checkout (adds item to cart if needed and navigates to /checkout immediately)
+  // 4. Direct Medusa Checkout (adds item to cart if needed, awaits full cart sync, and navigates to /checkout)
   const handleOrderNow = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!product.variantId) {
-      router.push(`/${countryCode}/checkout`)
-      return
-    }
-
-    // Flush any pending background debounced sync immediately
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("cart:flush-sync"))
-    }
-
-    // FAST-PATH: If this product is ALREADY in the customer's cart, navigate immediately (0ms delay)!
-    if (quantity > 0) {
-      router.push(`/${countryCode}/checkout`)
-      return
-    }
-
-    // Item not yet in cart: Optimistically update local quantity & context in 0ms
+    if (!product.variantId || isOrdering) return
     setIsOrdering(true)
-    setQuantity(1)
 
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("cart:item-added", {
-          detail: {
-            id: `opt_${Date.now()}`,
-            title: product.title,
-            variant: product.weight || "১ কেজি",
-            price: product.price,
-            thumbnail: resolvedThumbnail,
-            handle: product.handle,
-            variantId: product.variantId,
-            quantity: 1,
-            openDropdown: false,
-          },
-        })
-      )
+    // If item not yet in cart: Optimistically update local quantity & context in 0ms
+    if (quantity === 0) {
+      setQuantity(1)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cart:item-added", {
+            detail: {
+              id: `opt_${Date.now()}`,
+              title: product.title,
+              variant: product.weight || "১ কেজি",
+              price: product.price,
+              thumbnail: resolvedThumbnail,
+              handle: product.handle,
+              variantId: product.variantId,
+              quantity: 1,
+              openDropdown: false,
+            },
+          })
+        )
+      }
     }
 
+    // Flush and await full cart sync so ALL items in cart are 100% saved in Medusa before navigating
     try {
-      await addToCart({
-        variantId: product.variantId,
-        quantity: 1,
-        countryCode,
-      })
-      router.push(`/${countryCode}/checkout`)
+      if (typeof window !== "undefined" && typeof (window as any).__FLUSH_CART_SYNC__ === "function") {
+        await (window as any).__FLUSH_CART_SYNC__()
+      }
     } catch (err) {
-      console.error("Failed to add to cart for direct checkout:", err)
-      router.push(`/${countryCode}/checkout`)
-    } finally {
-      setIsOrdering(false)
+      console.warn("Direct checkout flush error:", err)
     }
+
+    router.push(`/${countryCode}/checkout`)
+    setIsOrdering(false)
   }
 
   return (
