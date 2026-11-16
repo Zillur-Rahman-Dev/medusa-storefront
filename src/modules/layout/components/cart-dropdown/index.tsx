@@ -6,7 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useParams, useRouter } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { ShoppingCart, X, Truck, Loader2, Minus, Plus } from "lucide-react"
+import { ShoppingCart, X, Truck, Loader2, Minus, Plus, ArrowRight } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
 const KNOWN_HONEY_IMAGES: Record<string, string> = {
@@ -752,7 +752,7 @@ export default function CartDropdown({
         aria-hidden="true"
       />
 
-      {/* Slide-over Drawer Panel (Sliding in from Right to Left) */}
+      {/* Slide-over Drawer Panel (Sliding in from Right to Left, matching Image) */}
       <aside
         className={`fixed inset-y-0 right-0 z-[1000] w-full max-w-[420px] bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full transform transition-transform duration-300 ease-in-out border-l border-zinc-200 dark:border-zinc-800 ${
           isDrawerOpen ? "translate-x-0" : "translate-x-full"
@@ -760,35 +760,28 @@ export default function CartDropdown({
         aria-modal="true"
         role="dialog"
       >
-        {/* Drawer Header */}
-        <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-950/50 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🍯</span>
-            <h3 className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-100">
-              আপনার শপিং কার্ট
-            </h3>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-              {totalItems > 0 ? `${formatSize(String(totalItems))} টি পণ্য` : "খালি"}
-            </span>
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-              aria-label="কার্ট বন্ধ করুন"
-              data-testid="close-cart-drawer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        {/* Drawer Header (Matching Image: SHOPPING CART / Close →) */}
+        <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 shrink-0">
+          <h3 className="font-bold text-sm sm:text-base tracking-wider uppercase text-zinc-900 dark:text-zinc-100">
+            শপিং কার্ট
+          </h3>
+          <button
+            type="button"
+            onClick={closeDrawer}
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer group"
+            aria-label="কার্ট বন্ধ করুন"
+            data-testid="close-cart-drawer"
+          >
+            <span>বন্ধ করুন</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
         </div>
 
         {/* Drawer Body */}
         {hasItems ? (
           <>
             {/* Scrollable Items List */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
               {displayItems.map((item) => {
                 const imageUrl = resolveProductImage({
                   thumbnail: item.thumbnail,
@@ -803,7 +796,7 @@ export default function CartDropdown({
 
                 return (
                   <div
-                    className="p-3 rounded-2xl border border-gray-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
+                    className="p-3 sm:p-3.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-3 transition-colors"
                     key={item.id}
                     data-testid="cart-item"
                   >
@@ -811,7 +804,7 @@ export default function CartDropdown({
                     <LocalizedClientLink
                       href={`/products/${item.product_handle}`}
                       onClick={closeDrawer}
-                      className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/80 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
+                      className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-1 relative group"
                     >
                       {imageUrl ? (
                         <img
@@ -842,9 +835,9 @@ export default function CartDropdown({
                         </LocalizedClientLink>
                       </h4>
 
-                      {/* Stepper + Math row matching Image 1 & 2 */}
+                      {/* Stepper + Math row matching Image */}
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        {/* Pill Stepper (Image 2) */}
+                        {/* Pill Stepper */}
                         <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                           <button
                             type="button"
@@ -867,7 +860,7 @@ export default function CartDropdown({
                           </button>
                         </div>
 
-                        {/* Math formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
+                        {/* Math formula: × ৳১,৬০০.০০ = ৳১৪,৪০০.০০ */}
                         <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
                           <span>×</span>
                           <span>{formatPrice(item.unit_price)}</span>
@@ -877,7 +870,7 @@ export default function CartDropdown({
                       </div>
                     </div>
 
-                    {/* Close button (Right '✕', matching Image 1) */}
+                    {/* Close button (Right '✕', matching Image) */}
                     <button
                       type="button"
                       onClick={() => handleRemove(item)}
@@ -892,39 +885,41 @@ export default function CartDropdown({
               })}
             </div>
 
-            {/* Subtotal & Primary Checkout Button */}
-            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/60 flex flex-col gap-y-3 shrink-0">
-              <div className="flex items-center justify-between text-sm pb-1">
-                <span className="font-bold text-zinc-600 dark:text-zinc-400">
-                  মোট বিল:
+            {/* Subtotal & Orange CHECKOUT Button (Matching Image, all content in Bengali) */}
+            <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-4 shrink-0">
+              <div className="flex items-center justify-between text-base">
+                <span className="font-normal text-zinc-800 dark:text-zinc-300">
+                  মোট:
                 </span>
                 <span
-                  className="text-base sm:text-lg font-black text-emerald-800 dark:text-emerald-400"
+                  className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
                   data-testid="cart-subtotal"
                 >
                   {formatPrice(totalSubtotal)}
                 </span>
               </div>
 
-              {/* Primary Button: 🛒 অর্ডার নিশ্চিত করুন */}
+              {/* Full-width vibrant Orange CHECKOUT button */}
               <button
                 type="button"
                 onClick={handleCheckoutClick}
                 disabled={isCheckingOut}
-                className="w-full h-12 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-600/20 cursor-pointer disabled:opacity-80"
+                className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/25 cursor-pointer disabled:opacity-80 uppercase tracking-wide"
               >
                 {isCheckingOut ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>চেকআউটে যাওয়া হচ্ছে...</span>
+                  </>
                 ) : (
-                  <Truck className="w-4 h-4" />
+                  <span>চেকআউট</span>
                 )}
-                <span>{isCheckingOut ? "অর্ডার পেজে যাওয়া হচ্ছে..." : "🛒 অর্ডার নিশ্চিত করুন"}</span>
               </button>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-            <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-3xl mb-4">
+            <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-zinc-800 flex items-center justify-center text-3xl mb-4">
               🍯
             </div>
             <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
@@ -937,7 +932,7 @@ export default function CartDropdown({
               <LocalizedClientLink
                 href="/store"
                 onClick={closeDrawer}
-                className="inline-flex h-10 items-center justify-center px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shadow-sm"
+                className="inline-flex h-10 items-center justify-center px-5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-colors shadow-sm"
               >
                 মধু ব্রাউজ করুন ➔
               </LocalizedClientLink>
