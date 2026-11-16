@@ -61,6 +61,34 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
         : "",
   })
 
+  const [desiredItemsJson, setDesiredItemsJson] = useState("")
+
+  useEffect(() => {
+    const updateDesired = () => {
+      try {
+        const stored = localStorage.getItem("purehoney_cart_v2")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+            setDesiredItemsJson(
+              JSON.stringify(
+                parsed.items
+                  .filter((i: any) => Boolean(i.variantId) && i.quantity > 0)
+                  .map((i: any) => ({
+                    variantId: i.variantId,
+                    quantity: i.quantity,
+                  }))
+              )
+            )
+          }
+        }
+      } catch {}
+    }
+    updateDesired()
+    window.addEventListener("cart:sync-state", updateDesired)
+    return () => window.removeEventListener("cart:sync-state", updateDesired)
+  }, [])
+
   // Ensure initial shipping method is synced on backend if not set yet
   useEffect(() => {
     if (defaultShippingId && cart.shipping_methods?.length === 0) {
@@ -121,6 +149,13 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
 
   const handleShippingChange = (id: string) => {
     setSelectedShippingId(id)
+    const matched = availableMethods.find((m) => m.id === id)
+    const amount = matched?.amount ?? (id.includes("outside") ? 120 : 60)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("checkout:shipping-changed", { detail: { id, amount } })
+      )
+    }
     startShippingTransition(async () => {
       try {
         await setShippingMethod({
@@ -164,6 +199,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
       <input type="hidden" name="shippingMethodId" value={selectedShippingId} />
       <input type="hidden" name="paymentProviderId" value="pp_system_default" />
       <input type="hidden" name="postal_code" value="1200" />
+      <input type="hidden" name="desiredItems" value={desiredItemsJson} />
 
       {/* 1. ডেলিভারি ঠিকানা */}
       <div className="bg-white rounded-2xl p-6 md:p-8 border border-stone-200/80 shadow-sm">

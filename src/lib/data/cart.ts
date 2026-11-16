@@ -868,6 +868,18 @@ export async function submitOneStepOrder(previousState: any, formData: FormData)
       throw new Error("আপনার কার্ট পাওয়া যায়নি। অনুগ্রহ করে কার্ট-এ পণ্য যোগ করুন।")
     }
 
+    const desiredRaw = formData.get("desiredItems") as string
+    if (desiredRaw) {
+      try {
+        const desiredItems = JSON.parse(desiredRaw)
+        if (Array.isArray(desiredItems) && desiredItems.length > 0) {
+          await batchSyncCart({ cartId, desiredItems })
+        }
+      } catch (e) {
+        console.warn("[submitOneStepOrder] desiredItems sync warning:", e)
+      }
+    }
+
     const rawFullName = ((formData.get("fullName") || formData.get("shipping_address.first_name") || "") as string).trim()
     if (!rawFullName) {
       throw new Error("অনুগ্রহ করে আপনার নাম লিখুন।")
