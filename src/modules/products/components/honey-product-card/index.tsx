@@ -39,10 +39,6 @@ export default function HoneyProductCard({
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
-  // Prefetch checkout page early so navigation is instant
-  useEffect(() => {
-    router.prefetch(`/${countryCode}/checkout`)
-  }, [router, countryCode])
 
   const resolvedThumbnail =
     product.thumbnail ||
@@ -189,7 +185,7 @@ export default function HoneyProductCard({
       console.warn("Direct checkout flush error:", err)
     }
 
-    router.push(`/${countryCode}/checkout`)
+    window.location.href = `/${countryCode}/checkout`
     setIsOrdering(false)
   }
 
@@ -304,8 +300,6 @@ export default function HoneyProductCard({
         <button
           type="button"
           onClick={handleOrderNow}
-          onMouseEnter={() => router.prefetch(`/${countryCode}/checkout`)}
-          onTouchStart={() => router.prefetch(`/${countryCode}/checkout`)}
           disabled={isOrdering}
           className="flex-1 h-10 py-2 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80 cursor-pointer"
         >

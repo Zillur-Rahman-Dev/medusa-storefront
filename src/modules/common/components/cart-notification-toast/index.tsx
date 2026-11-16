@@ -102,7 +102,16 @@ export default function CartNotificationToast() {
             <div className="mt-2.5 flex items-center gap-2">
               <LocalizedClientLink
                 href="/checkout"
-                onClick={() => setVisible(false)}
+                onClick={async (e) => {
+                  e.preventDefault()
+                  setVisible(false)
+                  try {
+                    if (typeof window !== "undefined" && typeof (window as any).__FLUSH_CART_SYNC__ === "function") {
+                      await (window as any).__FLUSH_CART_SYNC__()
+                    }
+                  } catch (err) {}
+                  window.location.href = "/bd/checkout"
+                }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm"
               >
                 <ShoppingCart className="w-3.5 h-3.5" />

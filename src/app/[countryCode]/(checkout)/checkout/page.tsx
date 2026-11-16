@@ -6,6 +6,9 @@ import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: "চেকআউট | PURE HONEY",
   description: "অর্ডার সম্পন্ন করুন",
@@ -21,6 +24,12 @@ export default async function Checkout(props: Props) {
     redirect("/bd/checkout")
   }
   let cart = await retrieveCart()
+
+  // Grace period retry for in-flight backend commits on Render free tier
+  if (!cart || !cart.items || cart.items.length === 0) {
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    cart = await retrieveCart()
+  }
 
   if (!cart) {
     cart = await getOrSetCart("bd")

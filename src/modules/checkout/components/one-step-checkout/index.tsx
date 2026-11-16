@@ -321,7 +321,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
                       🚚 {option.name}
                     </span>
                     <span className="text-xs text-gray-500 mt-0.5">
-                      {option.name.includes("Dhaka") || option.name.includes("ঢাকা")
+                      {(option.name || "").includes("Dhaka") || (option.name || "").includes("ঢাকা")
                         ? "দ্রুততম হোম ডেলিভারি"
                         : "সারা বাংলাদেশে হোম ডেলিভারি"}
                     </span>

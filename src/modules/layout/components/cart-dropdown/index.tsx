@@ -262,11 +262,15 @@ export default function CartDropdown({
         }
       }
 
-      if (deletions.length > 0 || additions.length > 0 || updates.length > 0) {
+      const desiredItems = currentItems
+        .filter((c) => Boolean(c.variantId) && c.quantity > 0)
+        .map((c) => ({ variantId: c.variantId!, quantity: c.quantity }))
+
+      if (deletions.length > 0 || additions.length > 0 || updates.length > 0 || desiredItems.length > 0) {
         const res = await fetch("/api/cart/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deletions, additions, updates }),
+          body: JSON.stringify({ deletions, additions, updates, desiredItems }),
           keepalive: true,
         })
 
@@ -549,11 +553,10 @@ export default function CartDropdown({
     await performServerSync()
     close()
     if (itemsRef.current.length > 0) {
-      router.push(`/${countryCode}/checkout`)
+      window.location.href = `/${countryCode}/checkout`
     } else {
-      router.push(`/${countryCode}/store`)
+      window.location.href = `/${countryCode}/store`
     }
-    setIsNavigatingToCart(false)
   }
 
   const handleCheckoutClick = async (e: React.MouseEvent) => {
@@ -561,7 +564,7 @@ export default function CartDropdown({
     setIsCheckingOut(true)
     await performServerSync()
     close()
-    router.push(`/${countryCode}/checkout`)
+    window.location.href = `/${countryCode}/checkout`
   }
 
   // Listen to Global Cart Events

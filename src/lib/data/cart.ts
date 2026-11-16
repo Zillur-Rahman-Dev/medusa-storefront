@@ -351,6 +351,7 @@ export async function deleteLineItem(lineId: string, variantId?: string) {
 export type BatchSyncPayload = {
   clearAll?: boolean
   cartId?: string
+  desiredItems?: Array<{ variantId: string; quantity: number }>
   deletions?: Array<{ lineId?: string; variantId?: string }>
   updates?: Array<{ lineId: string; quantity: number }>
   additions?: Array<{ variantId: string; quantity: number }>
@@ -406,6 +407,60 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
 
     if (!cart) {
       return { success: false, error: "Cart not found" }
+    }
+
+    // 0. Direct reconciliation mode: synchronize cart line items exactly with desiredItems
+    if (payload.desiredItems) {
+      const desiredMap = new Map<string, number>()
+      for (const it of payload.desiredItems) {
+        if (it.variantId && it.quantity > 0) {
+          desiredMap.set(it.variantId, it.quantity)
+        }
+      }
+
+      const existingItems = cart.items || []
+      const processedVariants = new Set<string>()
+
+      for (const srvItem of existingItems) {
+        const vId = srvItem.variant_id
+        if (!vId || !desiredMap.has(vId) || processedVariants.has(vId)) {
+          try {
+            await sdk.store.cart.deleteLineItem(cart.id, srvItem.id, {}, headers)
+          } catch (e) {}
+        } else {
+          processedVariants.add(vId)
+          const targetQty = desiredMap.get(vId)!
+          if (srvItem.quantity !== targetQty) {
+            try {
+              await sdk.store.cart.updateLineItem(
+                cart.id,
+                srvItem.id,
+                { quantity: targetQty },
+                {},
+                headers
+              )
+              srvItem.quantity = targetQty
+            } catch (e) {
+              console.warn(`[batchSyncCart] updateLineItem ${srvItem.id} failed:`, e)
+            }
+          }
+        }
+      }
+
+      for (const [vId, qty] of desiredMap.entries()) {
+        if (!processedVariants.has(vId)) {
+          try {
+            await sdk.store.cart.createLineItem(
+              cart.id,
+              { variant_id: vId, quantity: qty },
+              {},
+              headers
+            )
+          } catch (e) {
+            console.warn(`[batchSyncCart] createLineItem for ${vId} failed:`, e)
+          }
+        }
+      }
     }
 
     // 1. Process deletions
@@ -483,11 +538,11 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
             await sdk.store.cart.updateLineItem(
               cart.id,
               existing.id,
-              { quantity: existing.quantity + add.quantity },
+              { quantity: add.quantity },
               {},
               headers
             )
-            existing.quantity += add.quantity
+            existing.quantity = add.quantity
           } catch (e) {
             console.warn(`[batchSyncCart] Update lineItem ${existing.id} failed:`, e)
           }

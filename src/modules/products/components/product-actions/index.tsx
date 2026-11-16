@@ -58,10 +58,6 @@ export default function ProductActions({
   const [isOptimisticAdded, setIsOptimisticAdded] = useState(false)
   const countryCode = (useParams().countryCode as string) || "bd"
 
-  // Prefetch checkout page early so navigation is instant
-  useEffect(() => {
-    router.prefetch(`/${countryCode}/checkout`)
-  }, [router, countryCode])
 
   // Pre-select variant: Default to the 1st variant (or variant from URL `?v_id=...`)
   useEffect(() => {
@@ -269,7 +265,7 @@ export default function ProductActions({
       console.warn("Direct checkout flush error:", err)
     }
 
-    router.push(`/${countryCode}/checkout`)
+    window.location.href = `/${countryCode}/checkout`
     setIsOrdering(false)
   }
 
@@ -423,8 +419,6 @@ export default function ProductActions({
           <button
             type="button"
             onClick={handleDirectCheckout}
-            onMouseEnter={() => router.prefetch(`/${countryCode}/checkout`)}
-            onTouchStart={() => router.prefetch(`/${countryCode}/checkout`)}
             disabled={!inStock || !selectedVariant || isOrdering}
             className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
           >
