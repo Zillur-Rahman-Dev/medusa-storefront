@@ -76,6 +76,19 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         setErrorMessage(res.error || "প্রোমো কোড মুছতে সমস্যা হয়েছে।")
         setRemovingCode(null)
       } else {
+        // Instantly notify cart drawer & checkout summary via broadcast event
+        if (res?.cart) {
+          window.dispatchEvent(
+            new CustomEvent("cart:promo-updated", {
+              detail: {
+                promotions: res.cart.promotions || [],
+                discount_total: res.cart.discount_total ?? 0,
+                subtotal: res.cart.subtotal,
+                total: res.cart.total,
+              },
+            })
+          )
+        }
         // Backend removed successfully! Keep loading active until router.refresh() finishes:
         startTransition(() => {
           router.refresh()
@@ -119,6 +132,19 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         )
         setIsApplying(false)
       } else {
+        // Instantly notify cart drawer & checkout summary via broadcast event
+        if (res?.cart) {
+          window.dispatchEvent(
+            new CustomEvent("cart:promo-updated", {
+              detail: {
+                promotions: res.cart.promotions || [],
+                discount_total: res.cart.discount_total ?? 0,
+                subtotal: res.cart.subtotal,
+                total: res.cart.total,
+              },
+            })
+          )
+        }
         // Backend saved successfully! Keep loading state active until Next.js Server Component finishes rendering!
         setCodeValue("")
         setErrorMessage("")

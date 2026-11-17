@@ -649,14 +649,30 @@ export async function applyPromotions(codes: string[]) {
   }
 
   try {
-    await sdk.store.cart.update(cartId, { promo_codes: codes }, {}, headers)
+    const updated = await sdk.store.cart.update(
+      cartId,
+      { promo_codes: codes },
+      { fields: "+promotions.*,+discount_total,+subtotal,+total" },
+      headers
+    )
     const cartCacheTag = await getCacheTag("carts")
     safeRevalidateTag(cartCacheTag)
 
     const fulfillmentCacheTag = await getCacheTag("fulfillment")
     safeRevalidateTag(fulfillmentCacheTag)
 
-    return { success: true }
+    return {
+      success: true,
+      cart: updated?.cart
+        ? {
+            id: updated.cart.id,
+            promotions: updated.cart.promotions || [],
+            discount_total: updated.cart.discount_total ?? 0,
+            subtotal: updated.cart.subtotal ?? 0,
+            total: updated.cart.total ?? 0,
+          }
+        : undefined,
+    }
   } catch (error: any) {
     console.error("applyPromotions error:", error?.response?.data || error?.message || error)
     const rawMessage = (

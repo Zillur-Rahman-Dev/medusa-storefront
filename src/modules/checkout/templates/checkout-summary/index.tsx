@@ -52,6 +52,29 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     return cart?.shipping_methods?.[0]?.amount ?? 60
   })
 
+  // Instant reactive promotion & discount state
+  const [activePromotions, setActivePromotions] = useState<any[]>(() => cart?.promotions || [])
+  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => cart?.discount_total ?? 0)
+
+  useEffect(() => {
+    setActivePromotions(cart?.promotions || [])
+    setActiveDiscountTotal(cart?.discount_total ?? 0)
+  }, [cart?.promotions, cart?.discount_total])
+
+  useEffect(() => {
+    const handlePromoUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail) {
+        setActivePromotions(detail.promotions || [])
+        setActiveDiscountTotal(detail.discount_total ?? 0)
+      }
+    }
+    window.addEventListener("cart:promo-updated", handlePromoUpdated)
+    return () => {
+      window.removeEventListener("cart:promo-updated", handlePromoUpdated)
+    }
+  }, [])
+
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 2. Listen to shipping method selection from Section 2
@@ -245,7 +268,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     return items.reduce((acc, it) => acc + (it.unit_price * it.quantity), 0)
   }, [items])
 
-  const liveDiscount = cart?.discount_total ?? 0
+  const liveDiscount = activeDiscountTotal
   const liveTotal = Math.max(0, liveSubtotal + shippingAmount - liveDiscount)
 
   return (
@@ -306,7 +329,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             const discountInfo = getItemDiscountInfo(
               item.unit_price,
               item.quantity,
-              cart?.promotions,
+              activePromotions,
               liveDiscount,
               liveSubtotal,
               item.raw
@@ -329,14 +352,19 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details & Pill Stepper + Math row (Matching Image 1 & 2) */}
                 <div className="flex-1 min-w-0">
-                  {/* Title row with pr-7 to prevent overlap with top-right delete button */}
-                  <div className="flex items-center gap-1.5 flex-wrap pr-7">
+                  {/* Title row with pr-7 to prevent overlap with top-right delete button - NO WRAP (Inline Single-Row) */}
+                  <div className="flex items-center gap-1.5 min-w-0 pr-7">
                     <h4
-                      className="text-xs sm:text-sm font-normal text-gray-800 truncate"
+                      className="text-xs sm:text-sm font-normal text-gray-800 truncate min-w-0 flex-1"
                       title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
                     >
-                      {item.title} {item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}
+                      {item.title}
                     </h4>
+                    {item.variantTitle && (
+                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 font-normal select-none">
+                        ({formatSize(item.variantTitle)})
+                      </span>
+                    )}
                     {discountInfo.hasDiscount && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
                         <Tag className="w-2.5 h-2.5 text-emerald-600" />

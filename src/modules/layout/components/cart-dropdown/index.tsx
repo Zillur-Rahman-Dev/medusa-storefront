@@ -108,6 +108,29 @@ export default function CartDropdown({
   const [variantOrder, setVariantOrder] = useState<string[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Instant reactive promotion & discount state
+  const [activePromotions, setActivePromotions] = useState<any[]>(() => cartState?.promotions || [])
+  const [cartDiscountTotal, setCartDiscountTotal] = useState<number>(() => cartState?.discount_total ?? 0)
+
+  useEffect(() => {
+    setActivePromotions(cartState?.promotions || [])
+    setCartDiscountTotal(cartState?.discount_total ?? 0)
+  }, [cartState?.promotions, cartState?.discount_total])
+
+  useEffect(() => {
+    const handlePromoUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail) {
+        setActivePromotions(detail.promotions || [])
+        setCartDiscountTotal(detail.discount_total ?? 0)
+      }
+    }
+    window.addEventListener("cart:promo-updated", handlePromoUpdated)
+    return () => {
+      window.removeEventListener("cart:promo-updated", handlePromoUpdated)
+    }
+  }, [])
+
   // Refs for sync loop and concurrency control
   const itemsRef = useRef<UnifiedCartItem[]>([])
   itemsRef.current = items
@@ -809,8 +832,8 @@ export default function CartDropdown({
                       const discountInfo = getItemDiscountInfo(
                         item.unit_price,
                         currentQty,
-                        cartState?.promotions,
-                        cartState?.discount_total ?? 0,
+                        activePromotions,
+                        cartDiscountTotal,
                         totalSubtotal,
                         item.raw
                       )
@@ -843,9 +866,9 @@ export default function CartDropdown({
 
                           {/* Product Details & Stepper */}
                           <div className="flex-1 min-w-0">
-                            {/* Title row with badge and pr-7 to prevent overlap with top-right close button */}
-                            <div className="flex items-center gap-1.5 flex-wrap pr-7">
-                              <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
+                            {/* Title row with pr-7 to prevent overlap with top-right close button - NO WRAP (Inline Single-Row) */}
+                            <div className="flex items-center gap-1.5 min-w-0 pr-7">
+                              <h4 className="text-xs sm:text-sm font-normal truncate min-w-0 flex-1 text-zinc-900 dark:text-zinc-100">
                                 <LocalizedClientLink
                                   href={`/products/${item.product_handle}`}
                                   onClick={closeDrawer}
@@ -853,9 +876,14 @@ export default function CartDropdown({
                                   data-testid="product-link"
                                   title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
                                 >
-                                  {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
+                                  {item.title}
                                 </LocalizedClientLink>
                               </h4>
+                              {variantLabel && (
+                                <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
+                                  ({formatSize(variantLabel)})
+                                </span>
+                              )}
                               {discountInfo.hasDiscount && (
                                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
                                   <Tag className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
