@@ -69,7 +69,7 @@ export const listProducts = async ({
         headers,
         next: {
           ...next,
-          revalidate: 60,
+          revalidate: 30,
         },
         cache: "force-cache",
       }

@@ -143,9 +143,53 @@ export default function CartDropdown({
   const pendingSyncRef = useRef(false)
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Manage drawer state
-  const openDrawer = () => setIsDrawerOpen(true)
+  // Manage drawer state with smart server-first reconciliation
+  const openDrawer = () => {
+    setIsDrawerOpen(true)
+    if (serverItemsRef.current.length > 0) {
+      setItems((prev) => {
+        const refreshed = prev.map((item) => {
+          const srv = serverItemsRef.current.find(
+            (s: any) =>
+              (item.variantId && (s.variant_id === item.variantId || s.variant?.id === item.variantId)) ||
+              (item.lineId && s.id === item.lineId)
+          )
+          if (srv) {
+            const liveTitle = (srv as any).variant?.product?.title || (srv as any).product_title || srv.title
+            const livePrice = srv.unit_price || item.unit_price
+            const liveThumbnail = srv.thumbnail || (srv as any).variant?.product?.thumbnail || item.thumbnail
+            return {
+              ...item,
+              title: liveTitle || item.title,
+              unit_price: livePrice,
+              thumbnail: liveThumbnail,
+              raw: srv,
+            }
+          }
+          return item
+        })
+        saveLocalSnapshot(refreshed, variantOrderRef.current)
+        return refreshed
+      })
+    }
+    scheduleServerSync(50)
+  }
   const closeDrawer = () => setIsDrawerOpen(false)
+
+  // Engine 2: Active Tab Focus Sync - silently checks server when user returns to tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        performServerSync()
+      }
+    }
+    window.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleVisibilityChange)
+    return () => {
+      window.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleVisibilityChange)
+    }
+  }, [])
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -219,19 +263,30 @@ export default function CartDropdown({
     const map = new Map<string, UnifiedCartItem>()
     for (const item of raw) {
       const key = item.variant_id || item.variant?.id || item.id
+      const liveTitle =
+        (item as any).variant?.product?.title || (item as any).product_title || item.title
+      const liveHandle =
+        (item as any).variant?.product?.handle || item.product_handle
+      const liveThumbnail =
+        item.thumbnail || (item as any).variant?.product?.thumbnail
+
       if (map.has(key)) {
         const existing = map.get(key)!
         existing.lineIds = existing.lineIds ? [...existing.lineIds, item.id] : [existing.id, item.id]
         existing.quantity += item.quantity
+        existing.title = liveTitle || existing.title
+        existing.unit_price = item.unit_price || existing.unit_price
+        existing.thumbnail = liveThumbnail || existing.thumbnail
+        existing.raw = item
       } else {
         map.set(key, {
           id: item.id,
           lineId: item.id,
           lineIds: [item.id],
           variantId: item.variant_id || item.variant?.id,
-          title: item.title,
-          product_handle: item.product_handle,
-          thumbnail: item.thumbnail,
+          title: liveTitle,
+          product_handle: liveHandle,
+          thumbnail: liveThumbnail,
           metadata: item.metadata,
           variantTitle: item.variant?.title || item.subtitle || "১ কেজি",
           quantity: item.quantity,
@@ -327,16 +382,35 @@ export default function CartDropdown({
           const data = await res.json()
           if (data?.items && Array.isArray(data.items)) {
             serverItemsRef.current = data.items
-            // Update lineIds on client items
-            setItems((prev) =>
-              prev.map((it) => {
-                const srv = data.items.find((s: any) => s.variant_id === it.variantId)
+            // Update lineIds and live product metadata (title, price, thumbnail) on client items
+            setItems((prev) => {
+              const updated = prev.map((it) => {
+                const srv = data.items.find(
+                  (s: any) =>
+                    (it.variantId && (s.variant_id === it.variantId || s.variant?.id === it.variantId)) ||
+                    (it.lineId && s.id === it.lineId)
+                )
                 if (srv) {
-                  return { ...it, lineId: srv.id, lineIds: [srv.id] }
+                  const liveTitle =
+                    (srv as any).variant?.product?.title || (srv as any).product_title || srv.title
+                  const livePrice = srv.unit_price || it.unit_price
+                  const liveThumbnail =
+                    srv.thumbnail || (srv as any).variant?.product?.thumbnail || it.thumbnail
+                  return {
+                    ...it,
+                    lineId: srv.id,
+                    lineIds: [srv.id],
+                    title: liveTitle || it.title,
+                    unit_price: livePrice,
+                    thumbnail: liveThumbnail,
+                    raw: srv,
+                  }
                 }
                 return it
               })
-            )
+              saveLocalSnapshot(updated, variantOrderRef.current)
+              return updated
+            })
           }
         }
       }
@@ -400,12 +474,40 @@ export default function CartDropdown({
           }
 
           if (parsed.items.length > 0) {
-            setItems(parsed.items)
-            itemsRef.current = parsed.items
-            if (Array.isArray(parsed.order)) {
-              setVariantOrder(parsed.order)
-              variantOrderRef.current = parsed.order
-            }
+            // Reconcile client snapshot with server data so fresh titles/prices immediately override stale localStorage
+            const merged = parsed.items.map((loc: UnifiedCartItem) => {
+              const srv = rawServer.find(
+                (s: any) =>
+                  (loc.variantId && (s.variant_id === loc.variantId || s.variant?.id === loc.variantId)) ||
+                  (loc.lineId && s.id === loc.lineId)
+              )
+              if (srv) {
+                const liveTitle =
+                  (srv as any).variant?.product?.title || (srv as any).product_title || srv.title
+                const livePrice = srv.unit_price || loc.unit_price
+                const liveThumbnail =
+                  srv.thumbnail || (srv as any).variant?.product?.thumbnail || loc.thumbnail
+                return {
+                  ...loc,
+                  lineId: srv.id,
+                  lineIds: [srv.id],
+                  title: liveTitle || loc.title,
+                  unit_price: livePrice,
+                  thumbnail: liveThumbnail,
+                  raw: srv,
+                }
+              }
+              return loc
+            })
+
+            setItems(merged)
+            itemsRef.current = merged
+            const curOrder = Array.isArray(parsed.order)
+              ? parsed.order
+              : merged.map((i: any) => i.variantId || i.product_handle || i.id)
+            setVariantOrder(curOrder)
+            variantOrderRef.current = curOrder
+            saveLocalSnapshot(merged, curOrder)
             setIsInitialized(true)
             setTimeout(() => {
               performServerSync()
@@ -424,6 +526,7 @@ export default function CartDropdown({
     const initialOrder = serverUnified.map((i) => i.variantId || i.product_handle || i.id)
     setVariantOrder(initialOrder)
     variantOrderRef.current = initialOrder
+    saveLocalSnapshot(serverUnified, initialOrder)
     setIsInitialized(true)
   }, [cartState])
 

@@ -29,14 +29,14 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
-  // 1. Initial items mapped from server cart
+  // 1. Initial items mapped from server cart (Server-First metadata priority)
   const initialItems: CheckoutItem[] = useMemo(() => {
     return (cart?.items || []).map((item: any) => ({
       id: item.id,
       lineId: item.id,
       variantId: item.variant_id || item.variant?.id,
-      title: item.product_title || item.title || "খাঁটি প্রাকৃতিক মধু",
-      product_handle: item.product_handle,
+      title: item.variant?.product?.title || item.product_title || item.title || "খাঁটি প্রাকৃতিক মধু",
+      product_handle: item.variant?.product?.handle || item.product_handle,
       thumbnail: item.thumbnail || item.variant?.product?.thumbnail,
       images: item.variant?.product?.images,
       variantTitle: item.variant?.title || item.subtitle || "১ কেজি",
@@ -91,6 +91,21 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [])
 
+  // Focus & Visibility sync: Refresh server checkout data when user returns to tab
+  useEffect(() => {
+    const handleFocus = () => {
+      if (document.visibilityState === "visible") {
+        router.refresh()
+      }
+    }
+    window.addEventListener("visibilitychange", handleFocus)
+    window.addEventListener("focus", handleFocus)
+    return () => {
+      window.removeEventListener("visibilitychange", handleFocus)
+      window.removeEventListener("focus", handleFocus)
+    }
+  }, [router])
+
   // 3. Mount Reconciliation: Synchronize immediately with client's localStorage cart snapshot
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -130,16 +145,16 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                   (loc.product_handle && srv.product_handle === loc.product_handle)
               )
 
-              const unitPrice = loc.unit_price || matchingServer?.unit_price || 750
+              const unitPrice = matchingServer?.unit_price || loc.unit_price || 750
               return {
                 id: matchingServer?.id || loc.id,
                 lineId: matchingServer?.lineId || loc.lineId,
                 variantId: loc.variantId || matchingServer?.variantId,
-                title: loc.title || matchingServer?.title || "খাঁটি প্রাকৃতিক মধু",
-                product_handle: loc.product_handle || matchingServer?.product_handle,
-                thumbnail: loc.thumbnail || matchingServer?.thumbnail,
+                title: matchingServer?.title || loc.title || "খাঁটি প্রাকৃতিক মধু",
+                product_handle: matchingServer?.product_handle || loc.product_handle,
+                thumbnail: matchingServer?.thumbnail || loc.thumbnail,
                 images: matchingServer?.images,
-                variantTitle: loc.variantTitle || matchingServer?.variantTitle || "১ কেজি",
+                variantTitle: matchingServer?.variantTitle || loc.variantTitle || "১ কেজি",
                 quantity: loc.quantity,
                 unit_price: unitPrice,
                 total: unitPrice * loc.quantity,
@@ -166,6 +181,28 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
               .catch((err) => {
                 console.warn("[CheckoutSummary] background mount sync error:", err)
               })
+          } else if (initialItems.length > 0) {
+            // Keep fresh server metadata (Title/Price) and sync back to local snapshot
+            setItems(initialItems)
+            try {
+              localStorage.setItem(
+                "purehoney_cart_v2",
+                JSON.stringify({
+                  items: initialItems.map((i) => ({
+                    id: i.id,
+                    lineId: i.lineId,
+                    variantId: i.variantId,
+                    title: i.title,
+                    product_handle: i.product_handle,
+                    thumbnail: i.thumbnail,
+                    variantTitle: i.variantTitle,
+                    quantity: i.quantity,
+                    unit_price: i.unit_price,
+                  })),
+                  timestamp: Date.now(),
+                })
+              )
+            } catch (e) {}
           }
         }
       }

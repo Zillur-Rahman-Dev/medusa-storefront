@@ -35,18 +35,18 @@ export const getCacheTag = async (tag: string): Promise<string> => {
 
 export const getCacheOptions = async (
   tag: string
-): Promise<{ tags: string[] } | {}> => {
+): Promise<{ tags: string[] }> => {
   if (typeof window !== "undefined") {
-    return {}
+    return { tags: [tag] }
   }
 
   const cacheTag = await getCacheTag(tag)
-
-  if (!cacheTag) {
-    return {}
+  const tags = [tag]
+  if (cacheTag && cacheTag !== tag) {
+    tags.push(cacheTag)
   }
 
-  return { tags: [`${cacheTag}`] }
+  return { tags }
 }
 
 export const setAuthToken = async (token: string) => {
