@@ -61,22 +61,36 @@ export async function POST(req: NextRequest) {
         event.startsWith("inventory")
       ) {
         tagsToRevalidate.add("products")
+        tagsToRevalidate.add("variants")
         tagsToRevalidate.add("categories")
         tagsToRevalidate.add("collections")
       }
-      if (event.startsWith("category")) {
+      if (event.startsWith("category") || event.startsWith("product_category")) {
         tagsToRevalidate.add("categories")
       }
-      if (event.startsWith("collection")) {
+      if (event.startsWith("collection") || event.startsWith("product_collection")) {
         tagsToRevalidate.add("collections")
+      }
+      if (event.startsWith("shipping") || event.startsWith("fulfillment")) {
+        tagsToRevalidate.add("fulfillment")
+        tagsToRevalidate.add("shippingOptions")
+        pathsToRevalidate.add("/[countryCode]/checkout")
+      }
+      if (event.startsWith("region") || event.startsWith("store")) {
+        tagsToRevalidate.add("regions")
+        tagsToRevalidate.add("products")
       }
     }
 
-    // Default to products, categories, collections if no specific tag requested
+    // Default to all public catalog tags if no specific tag requested
     if (tagsToRevalidate.size === 0 && pathsToRevalidate.size === 0) {
       tagsToRevalidate.add("products")
+      tagsToRevalidate.add("variants")
       tagsToRevalidate.add("categories")
       tagsToRevalidate.add("collections")
+      tagsToRevalidate.add("fulfillment")
+      tagsToRevalidate.add("shippingOptions")
+      tagsToRevalidate.add("regions")
     }
 
     const revalidatedTags: string[] = []
