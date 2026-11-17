@@ -98,3 +98,76 @@ export const convertToLocale = ({
       }).format(num)
     : formatPrice(amount, locale === "en" ? "en" : "bn")
 }
+
+export type ItemDiscountInfo = {
+  hasDiscount: boolean
+  discountRate: number
+  badgeText: string
+  discountedUnitPrice: number
+  discountedTotalPrice: number
+}
+
+/**
+ * Enterprise Per-Item Promo Discount Calculator
+ * Computes direct line discounts, coupon/promo percentage, or proportional cart discounts.
+ */
+export function getItemDiscountInfo(
+  unitPrice: number,
+  quantity: number,
+  promotions: any[] = [],
+  discountTotal: number = 0,
+  subtotal: number = 0,
+  rawItem?: any
+): ItemDiscountInfo {
+  // 1. Direct adjustments or line discount
+  const rawAdjustmentsTotal = rawItem?.adjustments?.reduce(
+    (acc: number, adj: any) => acc + (Number(adj.amount) || 0),
+    0
+  )
+  const directDiscount =
+    typeof rawItem?.discount_total === "number" && rawItem.discount_total > 0
+      ? rawItem.discount_total
+      : rawAdjustmentsTotal > 0
+      ? rawAdjustmentsTotal
+      : 0
+
+  // 2. Percentage promo code check
+  const pctPromo = (promotions || []).find(
+    (p: any) =>
+      p?.application_method?.type === "percentage" &&
+      typeof p?.application_method?.value === "number" &&
+      p?.application_method?.value > 0
+  )
+
+  let discountRate = 0
+  let badgeText = ""
+
+  if (directDiscount > 0 && unitPrice * quantity > 0) {
+    discountRate = directDiscount / (unitPrice * quantity)
+    const pct = Math.round(discountRate * 100)
+    badgeText = `${formatSize(String(pct))}% ছাড়`
+  } else if (pctPromo) {
+    const pct = Number(pctPromo.application_method.value)
+    discountRate = pct / 100
+    badgeText = `${formatSize(String(pct))}% ছাড়`
+  } else if (discountTotal > 0 && subtotal > 0) {
+    discountRate = Math.min(1, discountTotal / subtotal)
+    const pct = Math.round(discountRate * 100)
+    badgeText = pct > 0 ? `${formatSize(String(pct))}% ছাড়` : "ছাড় প্রযোজ্য"
+  }
+
+  const hasDiscount = discountRate > 0
+  const discountedUnitPrice = hasDiscount
+    ? Math.max(0, Math.round(unitPrice * (1 - discountRate)))
+    : unitPrice
+  const discountedTotalPrice = discountedUnitPrice * quantity
+
+  return {
+    hasDiscount,
+    discountRate,
+    badgeText,
+    discountedUnitPrice,
+    discountedTotalPrice,
+  }
+}
+

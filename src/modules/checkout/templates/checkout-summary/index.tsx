@@ -6,8 +6,8 @@ import { useParams, useRouter } from "next/navigation"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
-import { formatPrice, formatSize } from "@lib/util/money"
-import { Minus, Plus, Trash2 } from "lucide-react"
+import { formatPrice, formatSize, getItemDiscountInfo } from "@lib/util/money"
+import { Minus, Plus, Trash2, Tag } from "lucide-react"
 
 export type CheckoutItem = {
   id: string
@@ -303,10 +303,19 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
         {/* Interactive Products List (Matching Image 1 & 2: Compact gap and padding) */}
         <div className="flex flex-col gap-2">
           {items.map((item) => {
+            const discountInfo = getItemDiscountInfo(
+              item.unit_price,
+              item.quantity,
+              cart?.promotions,
+              liveDiscount,
+              liveSubtotal,
+              item.raw
+            )
+
             return (
               <div
                 key={item.id || item.variantId}
-                className="px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/80 bg-white shadow-2xs flex items-center gap-2.5 transition-colors"
+                className="relative px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/80 bg-white shadow-2xs flex items-center gap-2.5 transition-colors"
               >
                 {/* Thumbnail */}
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
@@ -320,15 +329,24 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details & Pill Stepper + Math row (Matching Image 1 & 2) */}
                 <div className="flex-1 min-w-0">
-                  <h4
-                    className="text-xs sm:text-sm font-normal text-gray-800 truncate"
-                    title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
-                  >
-                    {item.title} {item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}
-                  </h4>
+                  {/* Title row with pr-7 to prevent overlap with top-right delete button */}
+                  <div className="flex items-center gap-1.5 flex-wrap pr-7">
+                    <h4
+                      className="text-xs sm:text-sm font-normal text-gray-800 truncate"
+                      title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
+                    >
+                      {item.title} {item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}
+                    </h4>
+                    {discountInfo.hasDiscount && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
+                        <Tag className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>{discountInfo.badgeText}</span>
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Stepper + Math Formula Row */}
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {/* Stepper + Math Formula Row (Full line) */}
+                  <div className="flex items-center gap-2 mt-1 sm:mt-1.5 w-full flex-wrap">
                     {/* Pill Stepper (Matching Image 2) */}
                     <div className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 overflow-hidden shadow-2xs">
                       <button
@@ -354,25 +372,40 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                       </button>
                     </div>
 
-                    {/* Formula: × ৳১,৭০০.০০ = ৳২৮,৯০০.০০ (Matching Image 1) */}
-                    <span className="text-xs sm:text-sm font-normal text-gray-700 flex items-center gap-1.5 select-none">
-                      <span>×</span>
-                      <span>{formatPrice(item.unit_price)}</span>
-                      <span>=</span>
-                      <span className="text-gray-900 font-normal">{formatPrice(item.total)}</span>
-                    </span>
+                    {/* Formula: [ - qty + ] × price = total with Option 1 discount */}
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
+                      <span className="text-gray-500">×</span>
+                      {discountInfo.hasDiscount ? (
+                        <span className="flex items-center gap-1">
+                          <span className="line-through text-gray-400 text-[11px] sm:text-xs">
+                            {formatPrice(item.unit_price)}
+                          </span>
+                          <span className="text-emerald-600 font-medium">
+                            {formatPrice(discountInfo.discountedUnitPrice)}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-700">
+                          {formatPrice(item.unit_price)}
+                        </span>
+                      )}
+                      <span className="text-gray-500">=</span>
+                      <span className={discountInfo.hasDiscount ? "text-emerald-700 font-semibold" : "text-gray-900 font-normal"}>
+                        {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedTotalPrice : (item.total || item.unit_price * item.quantity))}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Red Delete Button (Replacing Close Icon on Checkout Page as requested) */}
+                {/* Red Delete Button (Absolute Top Right Corner) */}
                 <button
                   type="button"
                   onClick={() => handleRemove(item)}
-                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0 ml-auto"
+                  className="absolute top-2.5 right-2.5 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   title="আইটেমটি মুছুন"
                   aria-label="আইটেমটি মুছুন"
                 >
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500" />
                 </button>
               </div>
             )

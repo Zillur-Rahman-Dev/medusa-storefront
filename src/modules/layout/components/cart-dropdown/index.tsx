@@ -1,13 +1,13 @@
 "use client"
 
-import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
+import { convertToLocale, formatPrice, formatSize, getItemDiscountInfo } from "@lib/util/money"
 import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useParams, useRouter } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ShoppingCart, X, Truck, Loader2, Minus, Plus, ArrowRight } from "lucide-react"
+import { ShoppingCart, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
 const KNOWN_HONEY_IMAGES: Record<string, string> = {
@@ -82,6 +82,7 @@ type UnifiedCartItem = {
   quantity: number
   unit_price: number
   created_at?: string
+  raw?: any
 }
 
 export default function CartDropdown({
@@ -213,6 +214,7 @@ export default function CartDropdown({
           quantity: item.quantity,
           unit_price: item.unit_price,
           created_at: item.created_at,
+          raw: item,
         })
       }
     }
@@ -804,9 +806,18 @@ export default function CartDropdown({
                       const itemTotalPrice = item.unit_price * currentQty
                       const variantLabel = item.variantTitle || "১ কেজি"
 
+                      const discountInfo = getItemDiscountInfo(
+                        item.unit_price,
+                        currentQty,
+                        cartState?.promotions,
+                        cartState?.discount_total ?? 0,
+                        totalSubtotal,
+                        item.raw
+                      )
+
                       return (
                         <div
-                          className="px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-2.5 transition-colors"
+                          className="relative px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-2.5 transition-colors"
                           key={item.id}
                           data-testid="cart-item"
                         >
@@ -832,21 +843,29 @@ export default function CartDropdown({
 
                           {/* Product Details & Stepper */}
                           <div className="flex-1 min-w-0">
-                            {/* Title & variant: font-normal, not bold */}
-                            <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
-                              <LocalizedClientLink
-                                href={`/products/${item.product_handle}`}
-                                onClick={closeDrawer}
-                                className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
-                                data-testid="product-link"
-                                title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
-                              >
-                                {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
-                              </LocalizedClientLink>
-                            </h4>
+                            {/* Title row with badge and pr-7 to prevent overlap with top-right close button */}
+                            <div className="flex items-center gap-1.5 flex-wrap pr-7">
+                              <h4 className="text-xs sm:text-sm font-normal truncate text-zinc-900 dark:text-zinc-100">
+                                <LocalizedClientLink
+                                  href={`/products/${item.product_handle}`}
+                                  onClick={closeDrawer}
+                                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors font-normal"
+                                  data-testid="product-link"
+                                  title={`${item.title} ${variantLabel ? `(${formatSize(variantLabel)})` : ""}`}
+                                >
+                                  {item.title} {variantLabel ? `(${formatSize(variantLabel)})` : ""}
+                                </LocalizedClientLink>
+                              </h4>
+                              {discountInfo.hasDiscount && (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
+                                  <Tag className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                  <span>{discountInfo.badgeText}</span>
+                                </span>
+                              )}
+                            </div>
 
-                            {/* Stepper + Math row matching Image 2 */}
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {/* Stepper + Math row matching Image 2 (Full line width) */}
+                            <div className="flex items-center gap-2 mt-1 sm:mt-1.5 w-full flex-wrap">
                               {/* Pill Stepper */}
                               <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                                 <button
@@ -870,25 +889,41 @@ export default function CartDropdown({
                                 </button>
                               </div>
 
-                              {/* Math formula: × ৳১,৬০০.০০ = ৳১৪,৪০০.০০ */}
-                              <span className="text-xs sm:text-sm font-normal text-gray-700 dark:text-zinc-300 flex items-center gap-1.5 select-none">
-                                <span>×</span>
-                                <span>{formatPrice(item.unit_price)}</span>
-                                <span>=</span>
-                                <span className="text-gray-900 dark:text-zinc-100 font-normal">{formatPrice(itemTotalPrice)}</span>
-                              </span>
+                              {/* Math formula */}
+                              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
+                                <span className="text-gray-500 dark:text-zinc-400">×</span>
+                                {discountInfo.hasDiscount ? (
+                                  <span className="flex items-center gap-1">
+                                    <span className="line-through text-gray-400 dark:text-zinc-500 text-[11px] sm:text-xs">
+                                      {formatPrice(item.unit_price)}
+                                    </span>
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                      {formatPrice(discountInfo.discountedUnitPrice)}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-700 dark:text-zinc-300">
+                                    {formatPrice(item.unit_price)}
+                                  </span>
+                                )}
+                                <span className="text-gray-500 dark:text-zinc-400">=</span>
+                                <span className={discountInfo.hasDiscount ? "text-emerald-700 dark:text-emerald-300 font-semibold" : "text-gray-900 dark:text-zinc-100 font-normal"}>
+                                  {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedTotalPrice : itemTotalPrice)}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Close button (Right '✕', matching Image 2) */}
+                          {/* Close button (Right '✕', absolute top right corner matching Image 2) */}
                           <button
                             type="button"
                             onClick={() => handleRemove(item)}
-                            className="p-1.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0 ml-auto"
+                            className="absolute top-2.5 right-2.5 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
                             aria-label="মুছে ফেলুন"
+                            title="মুছে ফেলুন"
                             data-testid="cart-item-remove-button"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       )
@@ -896,18 +931,37 @@ export default function CartDropdown({
                   </div>
 
                   {/* Subtotal & Orange CHECKOUT Button (Matching Image 2, all content in Bengali) */}
-                  <div className="p-4 sm:p-5 border-t border-gray-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-4 shrink-0">
-                    <div className="flex items-center justify-between text-base">
-                      <span className="font-normal text-zinc-800 dark:text-zinc-300">
-                        মোট:
-                      </span>
-                      <span
-                        className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
-                        data-testid="cart-subtotal"
-                      >
-                        {formatPrice(totalSubtotal)}
-                      </span>
-                    </div>
+                  <div className="p-4 sm:p-5 border-t border-gray-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-3 shrink-0">
+                    {(cartState?.discount_total ?? 0) > 0 ? (
+                      <div className="flex flex-col gap-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-normal text-zinc-600 dark:text-zinc-400">সাবটোটাল:</span>
+                          <span className="text-zinc-500 dark:text-zinc-400 line-through">{formatPrice(totalSubtotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-emerald-700 dark:text-emerald-400 font-normal">ডিসকাউন্ট:</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">- {formatPrice(cartState?.discount_total ?? 0)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-base pt-1 border-t border-gray-100 dark:border-zinc-800">
+                          <span className="font-normal text-zinc-800 dark:text-zinc-300">মোট:</span>
+                          <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100" data-testid="cart-subtotal">
+                            {formatPrice(Math.max(0, totalSubtotal - (cartState?.discount_total ?? 0)))}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-base">
+                        <span className="font-normal text-zinc-800 dark:text-zinc-300">
+                          মোট:
+                        </span>
+                        <span
+                          className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
+                          data-testid="cart-subtotal"
+                        >
+                          {formatPrice(totalSubtotal)}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Full-width vibrant Orange CHECKOUT button */}
                     <button
