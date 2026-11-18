@@ -120,81 +120,85 @@ export function getItemDiscountInfo(
   rawItem?: any
 ): ItemDiscountInfo {
   const activePromos = promotions || []
+  const originalItemTotal = unitPrice * quantity
 
-  // Check if ALL active promotions are order-level or shipping-level
-  // (e.g. "Amount off order", "Percentage off order", "Free shipping")
-  // If so, individual product cards MUST NOT display promo tags or slashed prices!
-  const hasOnlyOrderPromos =
-    activePromos.length > 0 &&
-    activePromos.every(
-      (p: any) =>
-        p?.application_method?.target_type === "order" ||
-        p?.application_method?.target_type === "shipping"
-    )
+  // 1. Calculate actual direct discount on this line item
+  const rawAdjustmentsTotal = rawItem?.adjustments?.reduce(
+    (acc: number, adj: any) => acc + (Number(adj.amount) || 0),
+    0
+  )
+  const itemTotal =
+    typeof rawItem?.total === "number" && rawItem.total > 0
+      ? rawItem.total
+      : null
 
-  // Find product-specific promotions (target_type === "items")
-  const productPromos = activePromos.filter(
-    (p: any) => p?.application_method?.target_type === "items"
+  let directDiscount = 0
+  if (typeof rawItem?.discount_total === "number" && rawItem.discount_total > 0) {
+    directDiscount = rawItem.discount_total
+  } else if (rawAdjustmentsTotal > 0) {
+    directDiscount = rawAdjustmentsTotal
+  } else if (itemTotal !== null && itemTotal < originalItemTotal) {
+    directDiscount = originalItemTotal - itemTotal
+  } else if (discountTotal > 0 && subtotal > 0 && originalItemTotal > 0) {
+    // Proportional cart-level discount
+    directDiscount = Math.round((originalItemTotal / subtotal) * discountTotal)
+  }
+
+  // 2. Identify promo details (percentage or fixed)
+  const pctPromo = activePromos.find(
+    (p: any) =>
+      p?.application_method?.type === "percentage" &&
+      typeof p?.application_method?.value === "number" &&
+      p?.application_method?.value > 0
+  )
+
+  const fixedPromo = activePromos.find(
+    (p: any) =>
+      p?.application_method?.type === "fixed" &&
+      typeof p?.application_method?.value === "number" &&
+      p?.application_method?.value > 0
   )
 
   let discountRate = 0
   let badgeText = ""
 
-  // Only calculate per-item discount if there are product-level promotions or specific adjustments
-  if (!hasOnlyOrderPromos && activePromos.length > 0) {
-    // 1. Direct adjustments on this item from Medusa
-    const rawAdjustmentsTotal = rawItem?.adjustments?.reduce(
-      (acc: number, adj: any) => acc + (Number(adj.amount) || 0),
-      0
-    )
-    const directDiscount =
-      typeof rawItem?.discount_total === "number" && rawItem.discount_total > 0
-        ? rawItem.discount_total
-        : rawAdjustmentsTotal > 0
-        ? rawAdjustmentsTotal
-        : 0
-
-    // 2. Percentage promo on product
-    const pctPromo = productPromos.find(
-      (p: any) =>
-        p?.application_method?.type === "percentage" &&
-        typeof p?.application_method?.value === "number" &&
-        p?.application_method?.value > 0
-    )
-
-    // 3. Fixed amount promo on product
-    const fixedPromo = productPromos.find(
-      (p: any) =>
-        p?.application_method?.type === "fixed" &&
-        typeof p?.application_method?.value === "number" &&
-        p?.application_method?.value > 0
-    )
-
+  if (directDiscount > 0 && originalItemTotal > 0) {
+    discountRate = Math.min(1, directDiscount / originalItemTotal)
+    const pct = Math.round(discountRate * 100)
     if (pctPromo) {
-      const pct = Number(pctPromo.application_method.value)
-      discountRate = pct / 100
+      const pVal = Number(pctPromo.application_method.value)
+      badgeText = `${formatSize(String(pVal))}% ছাড়`
+    } else if (pct > 0) {
       badgeText = `${formatSize(String(pct))}% ছাড়`
-    } else if (fixedPromo) {
-      const amount = Number(fixedPromo.application_method.value)
-      if (unitPrice > 0) {
-        discountRate = Math.min(1, amount / unitPrice)
-        badgeText = `${formatPrice(amount)} ছাড়`
-      }
-    } else if (directDiscount > 0 && unitPrice * quantity > 0 && productPromos.length > 0) {
-      discountRate = directDiscount / (unitPrice * quantity)
-      const pct = Math.round(discountRate * 100)
-      badgeText = pct > 0 ? `${formatSize(String(pct))}% ছাড়` : `ছাড়`
+    } else {
+      badgeText = `${formatPrice(directDiscount)} ছাড়`
     }
+  } else if (pctPromo) {
+    const pct = Number(pctPromo.application_method.value)
+    discountRate = pct / 100
+    badgeText = `${formatSize(String(pct))}% ছাড়`
+  } else if (fixedPromo && unitPrice > 0) {
+    const amount = Number(fixedPromo.application_method.value)
+    discountRate = Math.min(1, amount / unitPrice)
+    badgeText = `${formatPrice(amount)} ছাড়`
   }
 
-  const hasDiscount = discountRate > 0
-  const discountedUnitPrice = hasDiscount
-    ? Math.max(0, Math.round(unitPrice * (1 - discountRate)))
-    : unitPrice
-  const discountedTotalPrice = discountedUnitPrice * quantity
+  const hasDiscount = discountRate > 0 && (directDiscount > 0 || pctPromo || fixedPromo)
+
+  const discountedTotalPrice =
+    itemTotal !== null && itemTotal < originalItemTotal
+      ? itemTotal
+      : hasDiscount
+      ? Math.max(0, Math.round(originalItemTotal * (1 - discountRate)))
+      : originalItemTotal
+
+  const discountedUnitPrice =
+    hasDiscount && quantity > 0
+      ? Math.max(0, Math.round(discountedTotalPrice / quantity))
+      : unitPrice
 
   return {
-    hasDiscount,
+    hasDiscount: Boolean(hasDiscount && discountedUnitPrice < unitPrice),
     discountRate,
     badgeText,
     discountedUnitPrice,

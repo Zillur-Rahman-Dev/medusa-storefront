@@ -338,8 +338,15 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
           {liveDiscount > 0 && (
             <div className="flex items-center justify-between">
-              <span className="text-emerald-700 font-normal">ডিসকাউন্ট</span>
-              <span className="text-emerald-600 font-normal" data-testid="cart-discount">
+              <span className="text-emerald-700 font-normal flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                <span>
+                  {activePromotions && activePromotions.length > 0 && activePromotions[0]?.code
+                    ? `প্রোমো কোড (${activePromotions[0].code})`
+                    : "ডিসকাউন্ট"}
+                </span>
+              </span>
+              <span className="text-emerald-600 font-medium" data-testid="cart-discount">
                 - {formatPrice(liveDiscount)}
               </span>
             </div>

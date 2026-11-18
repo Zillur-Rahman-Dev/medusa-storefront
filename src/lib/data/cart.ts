@@ -16,6 +16,7 @@ import {
 import { getRegion } from "./regions"
 import { BANGLADESH_REGION_ID } from "../constants"
 import { getLocale } from "@lib/data/locale-actions"
+import { listCartShippingMethods } from "./fulfillment"
 
 const safeRevalidateTag = (tag?: string) => {
   if (tag && typeof tag === "string" && tag.trim().length > 0) {
@@ -34,7 +35,7 @@ export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields =
     fields ||
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, +items.original_total, *promotions, +shipping_methods.name"
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, +items.original_total, *promotions, +shipping_methods.name, *items.variant.product.title, *items.variant.product.handle, *items.variant.product.thumbnail, *items.adjustments"
 
   if (!id) {
     return null
@@ -867,7 +868,7 @@ export async function placeOrder(cartId?: string) {
 
   if (cartRes?.type === "order") {
     const countryCode =
-      cartRes.order.shipping_address?.country_code?.toLowerCase()
+      cartRes.order.shipping_address?.country_code?.toLowerCase() || "bd"
 
     const orderCacheTag = await getCacheTag("orders")
     safeRevalidateTag(orderCacheTag)
@@ -876,7 +877,7 @@ export async function placeOrder(cartId?: string) {
     redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)
   }
 
-  return cartRes.cart
+  throw new Error("অর্ডারটি সম্পন্ন করা সম্ভব হয়নি। অনুগ্রহ করে ডেলিভারি ঠিকানা ও তথ্য যাচাই করে আবার চেষ্টা করুন।")
 }
 
 export async function submitOneStepOrder(previousState: any, formData: FormData) {
@@ -953,34 +954,65 @@ export async function submitOneStepOrder(previousState: any, formData: FormData)
       email: email,
     })
 
-    // 2. Set Shipping Method if provided
-    const shippingMethodId = (formData.get("shippingMethodId") || formData.get("shipping_method_id") || "") as string
-    if (shippingMethodId) {
-      await setShippingMethod({ cartId, shippingMethodId })
+    // 2. Set Shipping Method
+    const rawShippingId = (formData.get("shippingMethodId") || formData.get("shipping_method_id") || "") as string
+    let resolvedShippingId = rawShippingId
+
+    try {
+      const availableOptions = await listCartShippingMethods(cartId)
+      if (availableOptions && availableOptions.length > 0) {
+        const exists = availableOptions.some((o) => o.id === resolvedShippingId)
+        if (!exists) {
+          const isOutside = rawShippingId?.toLowerCase().includes("outside")
+          const matched = isOutside
+            ? availableOptions.find((m) => m.name?.includes("বাইরে") || (m.amount ?? 0) >= 100) || availableOptions[1] || availableOptions[0]
+            : availableOptions.find((m) => m.name?.includes("ভেতরে") || (m.amount ?? 0) < 100) || availableOptions[0]
+          resolvedShippingId = matched?.id || availableOptions[0].id
+        }
+      }
+    } catch (e) {
+      console.warn("[submitOneStepOrder] shipping lookup warning:", e)
     }
 
-    // 3. Initiate Payment Session (Cash on Delivery)
-    const paymentProviderId = ((formData.get("paymentProviderId") || "") as string) || "pp_system_default"
-    const cart = await retrieveCart()
-    if (cart) {
-      const activeSession = cart.payment_collection?.payment_sessions?.find(
-        (s: any) => s.status === "pending"
-      )
-      if (!activeSession || activeSession.provider_id !== paymentProviderId) {
-        await initiatePaymentSession(cart, {
-          provider_id: paymentProviderId,
-        })
+    if (resolvedShippingId && !resolvedShippingId.startsWith("so_dhaka")) {
+      try {
+        await setShippingMethod({ cartId, shippingMethodId: resolvedShippingId })
+      } catch (e: any) {
+        console.warn("[submitOneStepOrder] setShippingMethod error:", e?.message || e)
       }
     }
+
+    // 3. Initiate or Refresh Payment Session (Cash on Delivery)
+    const paymentProviderId = ((formData.get("paymentProviderId") || "") as string) || "pp_system_default"
+    const freshCart = await retrieveCart()
+    if (freshCart) {
+      const activeSession = freshCart.payment_collection?.payment_sessions?.find(
+        (s: any) => s.status === "pending"
+      )
+      const sessionAmount = activeSession?.amount ?? 0
+      const cartTotal = freshCart.total ?? 0
+
+      // Always ensure payment session amount accurately covers the cart total!
+      if (!activeSession || activeSession.provider_id !== paymentProviderId || sessionAmount !== cartTotal) {
+        try {
+          await initiatePaymentSession(freshCart, {
+            provider_id: paymentProviderId,
+          })
+        } catch (e: any) {
+          console.warn("[submitOneStepOrder] initiatePaymentSession warning:", e?.message || e)
+        }
+      }
+    }
+
+    // 4. Complete Order (inside try/catch to prevent unhandled 500 errors)
+    return await placeOrder(cartId)
   } catch (err: any) {
     if (err?.digest?.startsWith?.("NEXT_REDIRECT")) {
       throw err
     }
+    console.error("[submitOneStepOrder] order placement error:", err)
     return err?.message || "অর্ডার সম্পন্ন করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
   }
-
-  // 4. Complete Order (redirects to confirmation page)
-  return await placeOrder(cartId)
 }
 
 /**

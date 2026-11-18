@@ -1070,7 +1070,14 @@ export default function CartDropdown({
                           <span className="text-zinc-500 dark:text-zinc-400 line-through">{formatPrice(totalSubtotal)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-emerald-700 dark:text-emerald-400 font-normal">ডিসকাউন্ট:</span>
+                          <span className="text-emerald-700 dark:text-emerald-400 font-normal flex items-center gap-1">
+                            <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>
+                              {activePromotions && activePromotions.length > 0 && activePromotions[0]?.code
+                                ? `প্রোমো কোড (${activePromotions[0].code}):`
+                                : "ডিসকাউন্ট:"}
+                            </span>
+                          </span>
                           <span className="text-emerald-600 dark:text-emerald-400 font-medium">- {formatPrice(cartState?.discount_total ?? 0)}</span>
                         </div>
                         <div className="flex items-center justify-between text-base pt-1 border-t border-gray-100 dark:border-zinc-800">
