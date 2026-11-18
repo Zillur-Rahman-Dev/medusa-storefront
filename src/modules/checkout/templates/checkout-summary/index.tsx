@@ -88,9 +88,29 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   useEffect(() => {
     if (cart?.promotions && cart.promotions.length > 0) {
       setActivePromotions(cart.promotions)
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
+            setActivePromotions(parsed.promotions)
+          }
+        }
+      } catch {}
     }
     if (typeof cart?.discount_total === "number" && cart.discount_total > 0) {
       setActiveDiscountTotal(cart.discount_total)
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
+            setActiveDiscountTotal(parsed.discount_total)
+          }
+        }
+      } catch {}
     }
   }, [cart?.promotions, cart?.discount_total])
 
@@ -351,67 +371,90 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   const liveDiscount = activeDiscountTotal
   const liveTotal = Math.max(0, liveSubtotal + shippingAmount - liveDiscount)
 
+  // Individual promo code breakdown calculation
+  const promoBreakdown = useMemo(() => {
+    if (!activePromotions || activePromotions.length === 0 || liveDiscount <= 0) {
+      if (liveDiscount > 0) {
+        return [{ id: "discount", code: "discount", label: "ডিসকাউন্ট", amount: liveDiscount }]
+      }
+      return []
+    }
+
+    const itemsList = items || []
+    let allocatedSum = 0
+
+    const list = activePromotions.map((promo: any, index: number) => {
+      const code = promo.code || `PROMO${index + 1}`
+
+      // Check Medusa line item adjustments
+      let fromAdjustments = 0
+      itemsList.forEach((it) => {
+        const adjs = it.raw?.adjustments || it.adjustments || []
+        adjs.forEach((a: any) => {
+          if (
+            (promo.id && a.promotion_id === promo.id) ||
+            (a.code && a.code.toLowerCase() === code.toLowerCase())
+          ) {
+            fromAdjustments += Number(a.amount || 0)
+          }
+        })
+      })
+
+      if (fromAdjustments > 0) {
+        allocatedSum += fromAdjustments
+        return {
+          id: promo.id || code,
+          code,
+          label: `প্রোমো কোড (${code})`,
+          amount: fromAdjustments,
+        }
+      }
+
+      // Check application_method
+      let calculated = 0
+      if (promo.application_method) {
+        const m = promo.application_method
+        const val = Number(m.value || 0)
+        if (m.type === "percentage") {
+          calculated = Math.round((liveSubtotal * val) / 100)
+        } else {
+          calculated = val
+        }
+      } else {
+        calculated = Math.round(liveDiscount / activePromotions.length)
+      }
+
+      allocatedSum += calculated
+      return {
+        id: promo.id || code,
+        code,
+        label: `প্রোমো কোড (${code})`,
+        amount: calculated,
+      }
+    })
+
+    // Balance amounts so sum strictly equals liveDiscount
+    const currentSum = list.reduce((s, p) => s + p.amount, 0)
+    if (currentSum > 0 && currentSum !== liveDiscount && list.length > 0) {
+      const diff = liveDiscount - currentSum
+      list[list.length - 1].amount = Math.max(0, list[list.length - 1].amount + diff)
+    }
+
+    return list
+  }, [activePromotions, liveDiscount, liveSubtotal, items])
+
   return (
-    <div className="sticky top-0 flex flex-col-reverse small:flex-col gap-y-8 py-8 small:py-0">
-      <div className="w-full bg-white flex flex-col">
-        <Divider className="my-6 small:hidden" />
+    <div className="sticky top-6 flex flex-col w-full">
+      <div className="w-full bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-stone-200/80 shadow-2xs flex flex-col">
         <Heading
           level="h2"
-          className="flex flex-row text-3xl-regular items-baseline font-bold text-gray-900"
+          className="flex flex-row text-lg sm:text-xl font-bold text-gray-900 pb-3 mb-2 border-b border-stone-200/80"
         >
           আপনার কার্ট (অর্ডার বিবরণ)
         </Heading>
-        <Divider className="my-6" />
 
-        {/* Live Totals Section */}
-        <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-normal">পণ্যের মোট মূল্য</span>
-            <span data-testid="cart-subtotal" className="text-gray-900 font-normal">
-              {formatPrice(liveSubtotal)}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-normal">ডেলিভারি চার্জ</span>
-            <span data-testid="cart-shipping" className="text-gray-900 font-normal">
-              {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
-            </span>
-          </div>
-
-          {liveDiscount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-emerald-700 font-normal flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-emerald-600" />
-                <span>
-                  {activePromotions && activePromotions.length > 0 && activePromotions.some((p: any) => Boolean(p.code))
-                    ? `প্রোমো কোড (${activePromotions.map((p: any) => p.code).filter(Boolean).join(", ")})`
-                    : "ডিসকাউন্ট"}
-                </span>
-              </span>
-              <span className="text-emerald-600 font-medium" data-testid="cart-discount">
-                - {formatPrice(liveDiscount)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="h-px w-full border-b border-gray-200 my-4" />
-
-        <div className="flex items-center justify-between text-ui-fg-base mb-2 txt-medium">
-          <span className="text-lg text-gray-900 font-normal">সর্বমোট বিল</span>
-          <span
-            className="txt-xlarge-plus text-amber-700 font-bold"
-            data-testid="cart-total"
-          >
-            {formatPrice(liveTotal)}
-          </span>
-        </div>
-
-        <div className="h-px w-full border-b border-gray-200 my-4" />
-
-        {/* Interactive Products List (Matching Image 1 & 2: Compact gap and padding) */}
-        <div className="flex flex-col gap-2">
+        {/* 1. Products List (Matching Image 1: Clean line separators, no card wrapper) */}
+        <div className="flex flex-col divide-y divide-gray-150">
           {items.map((item) => {
             const discountInfo = getItemDiscountInfo(
               item.unit_price,
@@ -425,7 +468,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             return (
               <div
                 key={item.id || item.variantId}
-                className="relative px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/80 bg-white shadow-2xs flex items-center gap-2.5 transition-colors"
+                className="relative py-3 sm:py-3.5 flex items-center gap-2.5 transition-colors"
               >
                 {/* Thumbnail */}
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
@@ -437,7 +480,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                   />
                 </div>
 
-                {/* Details & Pill Stepper + Math row (Matching Image 1 & 2) */}
+                {/* Details & Pill Stepper + Math row */}
                 <div className="flex-1 min-w-0">
                   {/* Title row with pr-7 to prevent overlap with top-right delete button - NO WRAP (Inline Single-Row) */}
                   <div className="flex items-center gap-1.5 min-w-0 pr-7">
@@ -462,7 +505,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                   {/* Stepper + Math Formula Row (Full line) */}
                   <div className="flex items-center gap-2 mt-1 sm:mt-1.5 w-full flex-wrap">
-                    {/* Pill Stepper (Matching Image 2) */}
+                    {/* Pill Stepper */}
                     <div className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 overflow-hidden shadow-2xs">
                       <button
                         type="button"
@@ -487,7 +530,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                       </button>
                     </div>
 
-                    {/* Formula: [ - qty + ] × price = total with Option 1 discount */}
+                    {/* Formula: [ - qty + ] × price = total */}
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
                       <span className="text-gray-500">×</span>
                       {discountInfo.hasDiscount ? (
@@ -512,11 +555,11 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                   </div>
                 </div>
 
-                {/* Red Delete Button (Absolute Top Right Corner) */}
+                {/* Red Delete Button */}
                 <button
                   type="button"
                   onClick={() => handleRemove(item)}
-                  className="absolute top-2.5 right-2.5 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                  className="absolute top-2.5 right-1 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   title="আইটেমটি মুছুন"
                   aria-label="আইটেমটি মুছুন"
                 >
@@ -527,8 +570,54 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
           })}
         </div>
 
-        {/* Discount Code Section */}
-        <div className="my-6">
+        <div className="h-px w-full border-b border-gray-200 my-4" />
+
+        {/* 2. Live Totals Section */}
+        <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-700 font-normal">পণ্যের মোট মূল্য</span>
+            <span data-testid="cart-subtotal" className="text-gray-900 font-normal">
+              {formatPrice(liveSubtotal)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-gray-700 font-normal">ডেলিভারি চার্জ</span>
+            <span data-testid="cart-shipping" className="text-gray-900 font-normal">
+              {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
+            </span>
+          </div>
+
+          {/* Separate rows for each applied promo code */}
+          {promoBreakdown.map((promo) => (
+            <div key={promo.code} className="flex items-center justify-between">
+              <span className="text-emerald-700 font-normal flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{promo.label}</span>
+              </span>
+              <span className="text-emerald-600 font-medium" data-testid={`cart-discount-${promo.code}`}>
+                - {formatPrice(promo.amount)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="h-px w-full border-b border-gray-200 my-3" />
+
+        <div className="flex items-center justify-between text-ui-fg-base mb-1 txt-medium">
+          <span className="text-base sm:text-lg text-gray-900 font-medium">সর্বমোট বিল</span>
+          <span
+            className="text-xl sm:text-2xl text-amber-700 font-bold"
+            data-testid="cart-total"
+          >
+            {formatPrice(liveTotal)}
+          </span>
+        </div>
+
+        <div className="h-px w-full border-b border-gray-200 my-3" />
+
+        {/* 3. Discount Code Section */}
+        <div className="mt-2 mb-1">
           <DiscountCode cart={cart} />
         </div>
       </div>

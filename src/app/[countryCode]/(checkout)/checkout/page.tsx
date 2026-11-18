@@ -42,11 +42,11 @@ export default async function Checkout(props: Props) {
   const customer = await retrieveCustomer()
 
   return (
-    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-12 lg:gap-x-20 py-8 lg:py-12">
+    <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] content-container gap-6 lg:gap-10 py-6 lg:py-8 items-start">
+      <CheckoutSummary cart={cart} />
       <PaymentWrapper cart={cart}>
         <CheckoutForm cart={cart} customer={customer} />
       </PaymentWrapper>
-      <CheckoutSummary cart={cart} />
     </div>
   )
 }

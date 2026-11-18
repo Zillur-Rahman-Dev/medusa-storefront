@@ -44,7 +44,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const isTransitioningRef = useRef(false)
   const prevPromotionsCountRef = useRef(promotionsList.length)
 
-  // Sync with Server Component updates
+  // Sync with Server Component updates or restore from local cache
   useEffect(() => {
     if (cart?.promotions && cart.promotions.length > 0) {
       setPromotionsList(cart.promotions)
@@ -57,6 +57,16 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             timestamp: Date.now(),
           })
         )
+      } catch {}
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
+            setPromotionsList(parsed.promotions)
+          }
+        }
       } catch {}
     }
   }, [cart?.promotions, cart?.discount_total])
@@ -110,6 +120,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const isRemoveLoading = (code: string) => removingCode === code
 
   const removePromotionCode = async (code: string) => {
+    if (removingCode || isApplyLoading || isPending) return
     setRemovingCode(code)
     setErrorMessage("")
 
@@ -136,33 +147,35 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         setErrorMessage(res.error || "প্রোমো কোড মুছতে সমস্যা হয়েছে।")
         setRemovingCode(null)
       } else {
-        if (res?.cart) {
-          const updatedPromos = res.cart.promotions || []
-          setPromotionsList(updatedPromos)
-          try {
-            localStorage.setItem(
-              "purehoney_promotions",
-              JSON.stringify({
-                promotions: updatedPromos,
-                discount_total: res.cart.discount_total ?? 0,
-                timestamp: Date.now(),
-              })
-            )
-          } catch {}
-          window.dispatchEvent(
-            new CustomEvent("cart:promo-updated", {
-              detail: {
-                promotions: updatedPromos,
-                discount_total: res.cart.discount_total ?? 0,
-                subtotal: res.cart.subtotal,
-                total: res.cart.total,
-              },
+        const updatedPromos = res?.cart?.promotions ?? validPromotions
+        const updatedDiscountTotal = res?.cart?.discount_total ?? 0
+        setPromotionsList(updatedPromos)
+        try {
+          localStorage.setItem(
+            "purehoney_promotions",
+            JSON.stringify({
+              promotions: updatedPromos,
+              discount_total: updatedDiscountTotal,
+              timestamp: Date.now(),
             })
           )
-        }
+        } catch {}
+        window.dispatchEvent(
+          new CustomEvent("cart:promo-updated", {
+            detail: {
+              promotions: updatedPromos,
+              discount_total: updatedDiscountTotal,
+              subtotal: res?.cart?.subtotal,
+              total: res?.cart?.total,
+            },
+          })
+        )
         startTransition(() => {
           router.refresh()
         })
+        setTimeout(() => {
+          setRemovingCode(null)
+        }, 800)
       }
     } catch (e: any) {
       setErrorMessage("প্রোমো কোড মুছতে সমস্যা হয়েছে।")
@@ -356,10 +369,10 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                         ) : (
                           <button
                             type="button"
-                            className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-100/60 dark:hover:bg-red-950/60 transition-colors disabled:opacity-50 cursor-pointer text-xs font-semibold"
-                            disabled={Boolean(removingCode) || isApplyLoading}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-100/60 dark:hover:bg-red-950/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold"
+                            disabled={Boolean(removingCode) || isApplyLoading || isPending}
                             onClick={() => {
-                              if (!promotion.code || removingCode) return
+                              if (!promotion.code || Boolean(removingCode) || isApplyLoading || isPending) return
                               removePromotionCode(promotion.code)
                             }}
                             data-testid="remove-discount-button"

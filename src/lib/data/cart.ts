@@ -569,7 +569,7 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
     let isCartEmpty = false
     const finalCart = await retrieveCart(
       cart.id,
-      "id,*items.id,*items.variant_id,*items.quantity,*items.unit_price,*items.title,*items.thumbnail,*items.variant.product.title,*items.variant.product.handle,*items.variant.product.thumbnail"
+      "id,*items.id,*items.variant_id,*items.quantity,*items.unit_price,*items.title,*items.thumbnail,*items.variant.product.title,*items.variant.product.handle,*items.variant.product.thumbnail,+discount_total,*promotions,+promotions.*,*promotions.application_method"
     )
     if (
       finalCart &&
@@ -656,7 +656,7 @@ export async function applyPromotions(codes: string[]) {
     const updated = await sdk.store.cart.update(
       cartId,
       { promo_codes: codes },
-      { fields: "+promotions.*,+discount_total,+subtotal,+total" },
+      { fields: "+promotions.*,*promotions.application_method,+discount_total,+subtotal,+total" },
       headers
     )
     const cartCacheTag = await getCacheTag("carts")

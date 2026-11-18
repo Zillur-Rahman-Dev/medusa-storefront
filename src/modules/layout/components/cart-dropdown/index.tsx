@@ -143,9 +143,29 @@ export default function CartDropdown({
   useEffect(() => {
     if (cartState?.promotions && cartState.promotions.length > 0) {
       setActivePromotions(cartState.promotions)
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
+            setActivePromotions(parsed.promotions)
+          }
+        }
+      } catch {}
     }
     if (typeof cartState?.discount_total === "number" && cartState.discount_total > 0) {
       setCartDiscountTotal(cartState.discount_total)
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
+            setCartDiscountTotal(parsed.discount_total)
+          }
+        }
+      } catch {}
     }
   }, [cartState?.promotions, cartState?.discount_total])
 
@@ -679,6 +699,78 @@ export default function CartDropdown({
   )
   const hasItems = totalItems > 0
 
+  const effectiveDiscount =
+    cartDiscountTotal > 0 ? cartDiscountTotal : (cartState?.discount_total ?? 0)
+
+  // Drawer individual promo code breakdown
+  const drawerPromoBreakdown = useMemo(() => {
+    if (!activePromotions || activePromotions.length === 0 || effectiveDiscount <= 0) {
+      if (effectiveDiscount > 0) {
+        return [{ id: "discount", code: "discount", label: "ডিসকাউন্ট", amount: effectiveDiscount }]
+      }
+      return []
+    }
+
+    const itemsList = displayItems || []
+    let allocatedSum = 0
+
+    const list = activePromotions.map((promo: any, index: number) => {
+      const code = promo.code || `PROMO${index + 1}`
+
+      let fromAdjustments = 0
+      itemsList.forEach((it) => {
+        const adjs = it.raw?.adjustments || it.metadata?.adjustments || []
+        adjs.forEach((a: any) => {
+          if (
+            (promo.id && a.promotion_id === promo.id) ||
+            (a.code && a.code.toLowerCase() === code.toLowerCase())
+          ) {
+            fromAdjustments += Number(a.amount || 0)
+          }
+        })
+      })
+
+      if (fromAdjustments > 0) {
+        allocatedSum += fromAdjustments
+        return {
+          id: promo.id || code,
+          code,
+          label: `প্রোমো কোড (${code})`,
+          amount: fromAdjustments,
+        }
+      }
+
+      let calculated = 0
+      if (promo.application_method) {
+        const m = promo.application_method
+        const val = Number(m.value || 0)
+        if (m.type === "percentage") {
+          calculated = Math.round((totalSubtotal * val) / 100)
+        } else {
+          calculated = val
+        }
+      } else {
+        calculated = Math.round(effectiveDiscount / activePromotions.length)
+      }
+
+      allocatedSum += calculated
+      return {
+        id: promo.id || code,
+        code,
+        label: `প্রোমো কোড (${code})`,
+        amount: calculated,
+      }
+    })
+
+    const currentSum = list.reduce((s, p) => s + p.amount, 0)
+    if (currentSum > 0 && currentSum !== effectiveDiscount && list.length > 0) {
+      const diff = effectiveDiscount - currentSum
+      list[list.length - 1].amount = Math.max(0, list[list.length - 1].amount + diff)
+    }
+
+    return list
+  }, [activePromotions, effectiveDiscount, totalSubtotal, displayItems])
+
   // Stepper increment [+]
   const handleIncrement = (item: UnifiedCartItem) => {
     const nextItems = itemsRef.current.map((it) =>
@@ -960,8 +1052,8 @@ export default function CartDropdown({
               {/* Drawer Body (Full height compact scrollable list) */}
               {hasItems ? (
                 <>
-                  {/* Scrollable Items List - Reduced vertical gap between items */}
-                  <div className="flex-1 overflow-y-auto min-h-0 px-3.5 py-3 flex flex-col gap-2">
+                  {/* Scrollable Items List - Line separated items matching Image 1 */}
+                  <div className="flex-1 overflow-y-auto min-h-0 px-4 py-1 flex flex-col divide-y divide-gray-150 dark:divide-zinc-800">
                     {displayItems.map((item) => {
                       const imageUrl = resolveProductImage({
                         thumbnail: item.thumbnail,
@@ -985,7 +1077,7 @@ export default function CartDropdown({
 
                       return (
                         <div
-                          className="relative px-3 py-2 sm:py-2.5 rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center gap-2.5 transition-colors"
+                          className="relative py-3 sm:py-3.5 flex items-center gap-2.5 transition-colors"
                           key={item.id}
                           data-testid="cart-item"
                         >
@@ -1091,7 +1183,7 @@ export default function CartDropdown({
                           <button
                             type="button"
                             onClick={() => handleRemove(item)}
-                            className="absolute top-2.5 right-2.5 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            className="absolute top-2.5 right-1 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
                             aria-label="মুছে ফেলুন"
                             title="মুছে ফেলুন"
                             data-testid="cart-item-remove-button"
@@ -1105,27 +1197,25 @@ export default function CartDropdown({
 
                   {/* Subtotal & Orange CHECKOUT Button (Matching Image 2, all content in Bengali) */}
                   <div className="p-4 sm:p-5 border-t border-gray-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-3 shrink-0">
-                    {(cartState?.discount_total ?? 0) > 0 ? (
+                    {effectiveDiscount > 0 ? (
                       <div className="flex flex-col gap-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-normal text-zinc-600 dark:text-zinc-400">সাবটোটাল:</span>
                           <span className="text-zinc-500 dark:text-zinc-400 line-through">{formatPrice(totalSubtotal)}</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-emerald-700 dark:text-emerald-400 font-normal flex items-center gap-1">
-                            <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>
-                              {activePromotions && activePromotions.length > 0 && activePromotions.some((p: any) => Boolean(p.code))
-                                ? `প্রোমো কোড (${activePromotions.map((p: any) => p.code).filter(Boolean).join(", ")}):`
-                                : "ডিসকাউন্ট:"}
+                        {drawerPromoBreakdown.map((promo) => (
+                          <div key={promo.code} className="flex items-center justify-between text-sm">
+                            <span className="text-emerald-700 dark:text-emerald-400 font-normal flex items-center gap-1">
+                              <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span>{promo.label}:</span>
                             </span>
-                          </span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">- {formatPrice(cartState?.discount_total ?? 0)}</span>
-                        </div>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">- {formatPrice(promo.amount)}</span>
+                          </div>
+                        ))}
                         <div className="flex items-center justify-between text-base pt-1 border-t border-gray-100 dark:border-zinc-800">
                           <span className="font-normal text-zinc-800 dark:text-zinc-300">মোট:</span>
                           <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100" data-testid="cart-subtotal">
-                            {formatPrice(Math.max(0, totalSubtotal - (cartState?.discount_total ?? 0)))}
+                            {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
                           </span>
                         </div>
                       </div>

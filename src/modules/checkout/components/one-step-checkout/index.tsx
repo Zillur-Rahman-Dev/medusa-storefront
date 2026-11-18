@@ -194,7 +194,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
   )
 
   return (
-    <form action={formAction} className="w-full flex flex-col gap-y-10">
+    <form action={formAction} className="w-full flex flex-col gap-y-4 sm:gap-y-5">
       {/* Hidden Fields for Backend Integrity */}
       <input type="hidden" name="shippingMethodId" value={selectedShippingId} />
       <input type="hidden" name="paymentProviderId" value="pp_system_default" />
@@ -202,16 +202,16 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
       <input type="hidden" name="desiredItems" value={desiredItemsJson} />
 
       {/* 1. ডেলিভারি ঠিকানা */}
-      <div className="bg-white rounded-2xl p-6 md:p-8 border border-stone-200/80 shadow-sm">
-        <div className="flex items-center gap-3 pb-5 mb-6 border-b border-stone-200">
-          <span className="w-9 h-9 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-lg shadow-sm">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs">
+        <div className="flex items-center gap-2.5 sm:gap-3 pb-3 mb-4 border-b border-stone-200/80">
+          <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-sm sm:text-base shadow-xs shrink-0">
             ১
           </span>
           <div>
-            <Heading level="h2" className="text-xl md:text-2xl font-bold text-gray-900">
+            <Heading level="h2" className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
               আপনার তথ্য ও ডেলিভারি ঠিকানা
             </Heading>
-            <p className="text-xs md:text-sm text-gray-500">
+            <p className="text-xs text-gray-500 mt-0.5">
               পণ্য ডেলিভারির জন্য আপনার সঠিক নাম, সচল মোবাইল নম্বর ও পূর্ণ ঠিকানা দিন
             </p>
           </div>
@@ -310,17 +310,17 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
       </div>
 
       {/* 2. ডেলিভারি এলাকা ও চার্জ */}
-      <div className="bg-white rounded-2xl p-6 md:p-8 border border-stone-200/80 shadow-sm">
-        <div className="flex items-center justify-between pb-5 mb-6 border-b border-stone-200">
-          <div className="flex items-center gap-3">
-            <span className="w-9 h-9 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-lg shadow-sm">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs">
+        <div className="flex items-center justify-between pb-3 mb-4 border-b border-stone-200/80">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-sm sm:text-base shadow-xs shrink-0">
               ২
             </span>
             <div>
-              <Heading level="h2" className="text-xl md:text-2xl font-bold text-gray-900">
+              <Heading level="h2" className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
                 ডেলিভারি এলাকা নির্বাচন করুন
               </Heading>
-              <p className="text-xs md:text-sm text-gray-500">
+              <p className="text-xs text-gray-500 mt-0.5">
                 আপনার বর্তমান অবস্থান অনুযায়ী ডেলিভারি এলাকা বেছে নিন
               </p>
             </div>
@@ -341,7 +341,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
                 key={option.id}
                 onClick={() => handleShippingChange(option.id)}
                 className={clx(
-                  "flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
+                  "flex items-center justify-between p-3 sm:p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200",
                   {
                     "border-amber-500 bg-amber-50/50 shadow-sm ring-1 ring-amber-500":
                       isSelected,
@@ -350,20 +350,20 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
                   }
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 sm:gap-3">
                   <MedusaRadio checked={isSelected} />
                   <div className="flex flex-col">
-                    <span className="font-semibold text-gray-900 text-sm md:text-base">
+                    <span className="font-semibold text-gray-900 text-xs sm:text-sm">
                       🚚 {option.name}
                     </span>
-                    <span className="text-xs text-gray-500 mt-0.5">
+                    <span className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
                       {(option.name || "").includes("Dhaka") || (option.name || "").includes("ঢাকা")
                         ? "দ্রুততম হোম ডেলিভারি"
                         : "সারা বাংলাদেশে হোম ডেলিভারি"}
                     </span>
                   </div>
                 </div>
-                <span className="font-bold text-gray-900 text-base md:text-lg">
+                <span className="font-bold text-gray-900 text-sm sm:text-base">
                   {convertToLocale({
                     amount: option.amount ?? 0,
                     currency_code: cart.currency_code,
@@ -376,55 +376,55 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
       </div>
 
       {/* 3. পেমেন্ট পদ্ধতি */}
-      <div className="bg-white rounded-2xl p-6 md:p-8 border border-stone-200/80 shadow-sm">
-        <div className="flex items-center gap-3 pb-5 mb-6 border-b border-stone-200">
-          <span className="w-9 h-9 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-lg shadow-sm">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs">
+        <div className="flex items-center gap-2.5 sm:gap-3 pb-3 mb-4 border-b border-stone-200/80">
+          <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-sm sm:text-base shadow-xs shrink-0">
             ৩
           </span>
           <div>
-            <Heading level="h2" className="text-xl md:text-2xl font-bold text-gray-900">
+            <Heading level="h2" className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
               পেমেন্ট মাধ্যম
             </Heading>
-            <p className="text-xs md:text-sm text-gray-500">
+            <p className="text-xs text-gray-500 mt-0.5">
               কোনো অগ্রিম পেমেন্টের প্রয়োজন নেই
             </p>
           </div>
         </div>
 
-        <div className="p-5 rounded-xl border-2 border-amber-500 bg-amber-50/40 ring-1 ring-amber-500 flex flex-col gap-2">
+        <div className="p-3.5 sm:p-4 rounded-xl border-2 border-amber-500 bg-amber-50/40 ring-1 ring-amber-500 flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <MedusaRadio checked={true} />
-              <span className="font-bold text-gray-900 text-base md:text-lg">
+              <span className="font-bold text-gray-900 text-sm sm:text-base">
                 💵 ক্যাশ অন ডেলিভারি (Cash on Delivery)
               </span>
             </div>
-            <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-md">
+            <span className="text-[11px] sm:text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
               পণ্য হাতে পেয়ে টাকা দিন
             </span>
           </div>
-          <p className="text-xs md:text-sm text-gray-600 pl-7">
+          <p className="text-xs text-gray-600 pl-6 sm:pl-7">
             হোম ডেলিভারিতে পার্সেল বুঝে পেয়ে ডেলিভারি ম্যানকে নগদ টাকায় মূল্য পরিশোধ করবেন।
           </p>
         </div>
       </div>
 
       {/* 4. অর্ডার নিশ্চিতকরণ ও বাটন */}
-      <div className="bg-white rounded-2xl p-6 md:p-8 border border-stone-200/80 shadow-sm flex flex-col gap-5">
-        <div className="flex items-start gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/80">
-          <span className="text-2xl">🍯</span>
+      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs flex flex-col gap-4">
+        <div className="flex items-start gap-2.5 sm:gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-3 sm:p-3.5 rounded-xl border border-amber-200/80">
+          <span className="text-xl sm:text-2xl">🍯</span>
           <div className="flex flex-col">
-            <span className="font-bold text-amber-900 text-sm md:text-base">
+            <span className="font-bold text-amber-900 text-xs sm:text-sm">
               ১০০% খাঁটি ও প্রাকৃতিক মধুর নিশ্চয়তা!
             </span>
-            <p className="text-xs md:text-sm text-amber-800/90 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-amber-800/90 mt-0.5">
               অর্ডারটি কনফার্ম করতে নিচের বাটনে ক্লিক করুন। আমাদের টিম দ্রুত আপনার অর্ডারটি প্রসেস করবে।
             </p>
           </div>
         </div>
 
         {errorMessage && (
-          <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-sm font-medium flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 text-red-800 p-3 sm:p-4 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2">
             <span>⚠️</span>
             <span>{errorMessage}</span>
           </div>
@@ -436,7 +436,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
           disabled={isPending}
           data-testid="submit-order-button"
           className={clx(
-            "w-full py-4 md:py-5 px-6 rounded-xl font-bold text-lg md:text-xl text-white shadow-md transition-all duration-300 flex items-center justify-center gap-2.5 select-none",
+            "w-full py-3.5 sm:py-4 px-6 rounded-xl font-bold text-base sm:text-lg text-white shadow-md transition-all duration-300 flex items-center justify-center gap-2.5 select-none",
             {
               "bg-amber-600 hover:bg-amber-700 active:scale-[0.99] cursor-pointer hover:shadow-lg":
                 !isPending,
