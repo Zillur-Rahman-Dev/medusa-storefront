@@ -52,13 +52,46 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     return cart?.shipping_methods?.[0]?.amount ?? 60
   })
 
-  // Instant reactive promotion & discount state
-  const [activePromotions, setActivePromotions] = useState<any[]>(() => cart?.promotions || [])
-  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => cart?.discount_total ?? 0)
+  // Instant reactive promotion & discount state with persistent memory
+  const [activePromotions, setActivePromotions] = useState<any[]>(() => {
+    if (cart?.promotions && cart.promotions.length > 0) return cart.promotions
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
+            return parsed.promotions
+          }
+        }
+      } catch {}
+    }
+    return []
+  })
+
+  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => {
+    if (typeof cart?.discount_total === "number" && cart.discount_total > 0) return cart.discount_total
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
+            return parsed.discount_total
+          }
+        }
+      } catch {}
+    }
+    return cart?.discount_total ?? 0
+  })
 
   useEffect(() => {
-    setActivePromotions(cart?.promotions || [])
-    setActiveDiscountTotal(cart?.discount_total ?? 0)
+    if (cart?.promotions && cart.promotions.length > 0) {
+      setActivePromotions(cart.promotions)
+    }
+    if (typeof cart?.discount_total === "number" && cart.discount_total > 0) {
+      setActiveDiscountTotal(cart.discount_total)
+    }
   }, [cart?.promotions, cart?.discount_total])
 
   useEffect(() => {
@@ -67,6 +100,16 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
       if (detail) {
         setActivePromotions(detail.promotions || [])
         setActiveDiscountTotal(detail.discount_total ?? 0)
+        try {
+          localStorage.setItem(
+            "purehoney_promotions",
+            JSON.stringify({
+              promotions: detail.promotions || [],
+              discount_total: detail.discount_total ?? 0,
+              timestamp: Date.now(),
+            })
+          )
+        } catch {}
       }
     }
     window.addEventListener("cart:promo-updated", handlePromoUpdated)
@@ -341,8 +384,8 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
               <span className="text-emerald-700 font-normal flex items-center gap-1">
                 <Tag className="w-3.5 h-3.5 text-emerald-600" />
                 <span>
-                  {activePromotions && activePromotions.length > 0 && activePromotions[0]?.code
-                    ? `প্রোমো কোড (${activePromotions[0].code})`
+                  {activePromotions && activePromotions.length > 0 && activePromotions.some((p: any) => Boolean(p.code))
+                    ? `প্রোমো কোড (${activePromotions.map((p: any) => p.code).filter(Boolean).join(", ")})`
                     : "ডিসকাউন্ট"}
                 </span>
               </span>

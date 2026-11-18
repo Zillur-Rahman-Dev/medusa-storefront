@@ -25,31 +25,81 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isApplying, setIsApplying] = useState(false)
   const [removingCode, setRemovingCode] = useState<string | null>(null)
 
-  const { promotions = [] } = cart
-  const isTransitioningRef = useRef(false)
-  const prevPromotionsCountRef = useRef(promotions.length)
+  const [promotionsList, setPromotionsList] = useState<HttpTypes.StorePromotion[]>(() => {
+    if (cart?.promotions && cart.promotions.length > 0) return cart.promotions
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("purehoney_promotions")
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
+            return parsed.promotions
+          }
+        }
+      } catch {}
+    }
+    return []
+  })
 
-  // 1. When Server Component updates cart.promotions:
+  const isTransitioningRef = useRef(false)
+  const prevPromotionsCountRef = useRef(promotionsList.length)
+
+  // Sync with Server Component updates
   useEffect(() => {
-    // If a promotion was successfully added on the server:
-    if (promotions.length > prevPromotionsCountRef.current) {
+    if (cart?.promotions && cart.promotions.length > 0) {
+      setPromotionsList(cart.promotions)
+      try {
+        localStorage.setItem(
+          "purehoney_promotions",
+          JSON.stringify({
+            promotions: cart.promotions,
+            discount_total: cart.discount_total ?? 0,
+            timestamp: Date.now(),
+          })
+        )
+      } catch {}
+    }
+  }, [cart?.promotions, cart?.discount_total])
+
+  // Listen to broadcast events from other components
+  useEffect(() => {
+    const handlePromoUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail && Array.isArray(detail.promotions)) {
+        setPromotionsList(detail.promotions)
+        try {
+          localStorage.setItem(
+            "purehoney_promotions",
+            JSON.stringify({
+              promotions: detail.promotions,
+              discount_total: detail.discount_total ?? 0,
+              timestamp: Date.now(),
+            })
+          )
+        } catch {}
+      }
+    }
+    window.addEventListener("cart:promo-updated", handlePromoUpdated)
+    return () => window.removeEventListener("cart:promo-updated", handlePromoUpdated)
+  }, [])
+
+  // 1. When Server Component updates promotionsList:
+  useEffect(() => {
+    if (promotionsList.length > prevPromotionsCountRef.current) {
       setIsOpen(false)
       setIsApplying(false)
     }
-    // If a promotion was removed on the server:
-    if (promotions.length < prevPromotionsCountRef.current) {
+    if (promotionsList.length < prevPromotionsCountRef.current) {
       setRemovingCode(null)
     }
-    prevPromotionsCountRef.current = promotions.length
-  }, [promotions.length])
+    prevPromotionsCountRef.current = promotionsList.length
+  }, [promotionsList.length])
 
   // 2. Track startTransition(() => router.refresh()) completion without wiping states early:
   useEffect(() => {
     if (isPending) {
-      // Transition is active (Next.js is fetching server updates over network)
       isTransitioningRef.current = true
     } else if (isTransitioningRef.current) {
-      // Transition was running and has now completed!
       isTransitioningRef.current = false
       setIsApplying(false)
       setRemovingCode(null)
@@ -60,13 +110,23 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const isRemoveLoading = (code: string) => removingCode === code
 
   const removePromotionCode = async (code: string) => {
-    // Instant 0ms visual feedback on the very 1st click!
     setRemovingCode(code)
     setErrorMessage("")
 
-    const validPromotions = promotions.filter(
+    const validPromotions = promotionsList.filter(
       (promotion) => promotion.code !== code
     )
+
+    setPromotionsList(validPromotions)
+    try {
+      localStorage.setItem(
+        "purehoney_promotions",
+        JSON.stringify({
+          promotions: validPromotions,
+          timestamp: Date.now(),
+        })
+      )
+    } catch {}
 
     try {
       const res = await applyPromotions(
@@ -76,12 +136,23 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         setErrorMessage(res.error || "প্রোমো কোড মুছতে সমস্যা হয়েছে।")
         setRemovingCode(null)
       } else {
-        // Instantly notify cart drawer & checkout summary via broadcast event
         if (res?.cart) {
+          const updatedPromos = res.cart.promotions || []
+          setPromotionsList(updatedPromos)
+          try {
+            localStorage.setItem(
+              "purehoney_promotions",
+              JSON.stringify({
+                promotions: updatedPromos,
+                discount_total: res.cart.discount_total ?? 0,
+                timestamp: Date.now(),
+              })
+            )
+          } catch {}
           window.dispatchEvent(
             new CustomEvent("cart:promo-updated", {
               detail: {
-                promotions: res.cart.promotions || [],
+                promotions: updatedPromos,
                 discount_total: res.cart.discount_total ?? 0,
                 subtotal: res.cart.subtotal,
                 total: res.cart.total,
@@ -89,7 +160,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             })
           )
         }
-        // Backend removed successfully! Keep loading active until router.refresh() finishes:
         startTransition(() => {
           router.refresh()
         })
@@ -110,13 +180,12 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       return
     }
 
-    // Check if code is already applied
-    if (promotions.some((p) => p.code?.toLowerCase() === cleanCode.toLowerCase())) {
+    if (promotionsList.some((p) => p.code?.toLowerCase() === cleanCode.toLowerCase())) {
       setErrorMessage("এই প্রোমো কোডটি ইতিমধ্যে প্রয়োগ করা হয়েছে।")
       return
     }
 
-    const currentCodes = promotions
+    const currentCodes = promotionsList
       .filter((p) => p.code !== undefined)
       .map((p) => p.code!)
     const updatedCodes = [...currentCodes, cleanCode]
@@ -132,12 +201,23 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         )
         setIsApplying(false)
       } else {
-        // Instantly notify cart drawer & checkout summary via broadcast event
         if (res?.cart) {
+          const updatedPromos = res.cart.promotions || []
+          setPromotionsList(updatedPromos)
+          try {
+            localStorage.setItem(
+              "purehoney_promotions",
+              JSON.stringify({
+                promotions: updatedPromos,
+                discount_total: res.cart.discount_total ?? 0,
+                timestamp: Date.now(),
+              })
+            )
+          } catch {}
           window.dispatchEvent(
             new CustomEvent("cart:promo-updated", {
               detail: {
-                promotions: res.cart.promotions || [],
+                promotions: updatedPromos,
                 discount_total: res.cart.discount_total ?? 0,
                 subtotal: res.cart.subtotal,
                 total: res.cart.total,
@@ -145,7 +225,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             })
           )
         }
-        // Backend saved successfully! Keep loading state active until Next.js Server Component finishes rendering!
         setCodeValue("")
         setErrorMessage("")
         startTransition(() => {
@@ -224,14 +303,14 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
           )}
         </form>
 
-        {promotions.length > 0 && (
+        {promotionsList.length > 0 && (
           <div className="w-full flex items-center">
             <div className="flex flex-col w-full">
               <Heading className="txt-medium mb-2 font-semibold text-gray-800 dark:text-zinc-200">
                 প্রোমো কোড যুক্ত হয়েছে:
               </Heading>
 
-              {promotions.map((promotion) => {
+              {promotionsList.map((promotion) => {
                 const isThisRemoving = isRemoveLoading(promotion.code || "")
 
                 return (
