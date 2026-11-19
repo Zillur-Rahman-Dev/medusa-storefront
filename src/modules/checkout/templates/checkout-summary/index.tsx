@@ -468,10 +468,16 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             return (
               <div
                 key={item.id || item.variantId}
-                className="relative py-3 sm:py-3.5 flex items-center gap-2.5 transition-colors"
+                className="relative py-3 sm:py-3.5 flex items-center gap-2.5 sm:gap-3 transition-colors"
               >
-                {/* Thumbnail */}
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
+                {/* Thumbnail - Stretches vertically when promotion has 3 lines */}
+                <div
+                  className={`rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center transition-all ${
+                    discountInfo.hasDiscount
+                      ? "w-14 sm:w-16 h-[74px] sm:h-[78px]"
+                      : "w-12 h-12 sm:w-14 sm:h-14"
+                  }`}
+                >
                   <Thumbnail
                     thumbnail={item.thumbnail}
                     images={item.images}
@@ -480,10 +486,10 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                   />
                 </div>
 
-                {/* Details & Pill Stepper + Math row */}
-                <div className="flex-1 min-w-0">
-                  {/* Title row with pr-7 to prevent overlap with top-right delete button - NO WRAP (Inline Single-Row) */}
-                  <div className="flex items-center gap-1.5 min-w-0 pr-7">
+                {/* Details */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  {/* Row 1: Title & Variant with pr-9 so (১ কেজি) has clean space from delete button */}
+                  <div className="flex items-center gap-1.5 min-w-0 pr-9 sm:pr-10">
                     <h4
                       className="text-xs sm:text-sm font-normal text-gray-800 truncate min-w-0 flex-1"
                       title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
@@ -491,20 +497,27 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                       {item.title}
                     </h4>
                     {item.variantTitle && (
-                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 font-normal select-none">
+                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 font-normal select-none mr-1">
                         ({formatSize(item.variantTitle)})
-                      </span>
-                    )}
-                    {discountInfo.hasDiscount && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
-                        <Tag className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>{discountInfo.badgeText}</span>
                       </span>
                     )}
                   </div>
 
-                  {/* Stepper + Math Formula Row (Full line) */}
-                  <div className="flex items-center gap-2 mt-1 sm:mt-1.5 w-full flex-wrap">
+                  {/* Row 2: Promo Discount Row (ONLY when promotion is applied!) */}
+                  {discountInfo.hasDiscount && (
+                    <div className="flex items-center gap-1.5 my-0.5 sm:my-1">
+                      <span className="line-through text-gray-400 text-[11px] sm:text-xs select-none">
+                        {formatPrice(item.unit_price)}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
+                        <Tag className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>{discountInfo.badgeText}</span>
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Row 3: Stepper × Unit Price = Total */}
+                  <div className={`flex items-center gap-2 w-full flex-wrap ${discountInfo.hasDiscount ? "mt-0.5" : "mt-1.5"}`}>
                     {/* Pill Stepper */}
                     <div className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 overflow-hidden shadow-2xs">
                       <button
@@ -530,36 +543,25 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                       </button>
                     </div>
 
-                    {/* Formula: [ - qty + ] × price = total */}
+                    {/* Formula: [ - qty + ] × unit_price = total */}
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
                       <span className="text-gray-500">×</span>
-                      {discountInfo.hasDiscount ? (
-                        <span className="flex items-center gap-1">
-                          <span className="line-through text-gray-400 text-[11px] sm:text-xs">
-                            {formatPrice(item.unit_price)}
-                          </span>
-                          <span className="text-emerald-600 font-medium">
-                            {formatPrice(discountInfo.discountedUnitPrice)}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-gray-700">
-                          {formatPrice(item.unit_price)}
-                        </span>
-                      )}
+                      <span className={discountInfo.hasDiscount ? "text-emerald-700 font-medium" : "text-gray-700"}>
+                        {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedUnitPrice : item.unit_price)}
+                      </span>
                       <span className="text-gray-500">=</span>
-                      <span className={discountInfo.hasDiscount ? "text-emerald-700 font-semibold" : "text-gray-900 font-normal"}>
+                      <span className={discountInfo.hasDiscount ? "text-emerald-700 font-bold" : "text-gray-900 font-normal"}>
                         {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedTotalPrice : (item.total || item.unit_price * item.quantity))}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Red Delete Button */}
+                {/* Red Delete Button (Absolute Top Right Corner with safe spacing) */}
                 <button
                   type="button"
                   onClick={() => handleRemove(item)}
-                  className="absolute top-2.5 right-1 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                  className="absolute top-2.5 right-0.5 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   title="আইটেমটি মুছুন"
                   aria-label="আইটেমটি মুছুন"
                 >

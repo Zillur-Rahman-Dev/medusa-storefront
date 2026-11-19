@@ -35,7 +35,7 @@ export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields =
     fields ||
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, +items.original_total, +discount_total, *promotions, +promotions.*, *promotions.application_method, +shipping_methods.name, *items.variant.product.title, *items.variant.product.handle, *items.variant.product.thumbnail, *items.adjustments"
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, +items.original_total, +discount_total, *promotions, +promotions.*, *promotions.application_method, +shipping_methods.name, *items.variant.product.title, *items.variant.product.handle, *items.variant.product.thumbnail, *items.adjustments, *payment_collection, *payment_collection.payment_sessions, *shipping_methods"
 
   if (!id) {
     return null
@@ -652,13 +652,58 @@ export async function applyPromotions(codes: string[]) {
     ...(await getAuthHeaders()),
   }
 
-  try {
-    const updated = await sdk.store.cart.update(
+  const cleanCodes = codes.map((c) => c.trim()).filter(Boolean)
+
+  const tryUpdate = async (testCodes: string[]) => {
+    return sdk.store.cart.update(
       cartId,
-      { promo_codes: codes },
-      { fields: "+promotions.*,*promotions.application_method,+discount_total,+subtotal,+total" },
+      { promo_codes: testCodes },
+      { fields: "+promotions.*,*promotions.application_method,+discount_total,+subtotal,+total,*items.adjustments" },
       headers
     )
+  }
+
+  let updated: any = null
+  let lastError: any = null
+
+  // 1. Try with provided codes
+  try {
+    updated = await tryUpdate(cleanCodes)
+  } catch (err: any) {
+    lastError = err
+    // 2. If invalid code error, try lowercase normalization (fixing mobile keyboard auto-capitalization like Sale10 -> sale10)
+    const lowerCodes = cleanCodes.map((c) => c.toLowerCase())
+    const isDifferent = lowerCodes.some((c, i) => c !== cleanCodes[i])
+    if (isDifferent) {
+      try {
+        updated = await tryUpdate(lowerCodes)
+        lastError = null
+      } catch (err2: any) {
+        lastError = err2
+      }
+    }
+  }
+
+  // 3. If failed due to cold start network/timeout on Render, retry once after 400ms
+  if (!updated && lastError) {
+    const isNetworkErr =
+      lastError?.code === "ECONNRESET" ||
+      lastError?.code === "ETIMEDOUT" ||
+      lastError?.message?.includes?.("fetch failed") ||
+      lastError?.message?.includes?.("network")
+
+    if (isNetworkErr) {
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      try {
+        updated = await tryUpdate(cleanCodes)
+        lastError = null
+      } catch (retryErr: any) {
+        lastError = retryErr
+      }
+    }
+  }
+
+  if (updated) {
     const cartCacheTag = await getCacheTag("carts")
     safeRevalidateTag(cartCacheTag)
 
@@ -677,27 +722,27 @@ export async function applyPromotions(codes: string[]) {
           }
         : undefined,
     }
-  } catch (error: any) {
-    console.error("applyPromotions error:", error?.response?.data || error?.message || error)
-    const rawMessage = (
-      error?.response?.data?.message ||
-      error?.response?.data ||
-      error?.message ||
-      ""
-    ).toString().toLowerCase()
-
-    let banglaMessage = "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
-
-    if (rawMessage.includes("expired")) {
-      banglaMessage = "প্রোমো কোডটির মেয়াদ শেষ হয়ে গেছে।"
-    } else if (rawMessage.includes("usage limit") || rawMessage.includes("maximum")) {
-      banglaMessage = "প্রোমো কোডটি ব্যবহারের সর্বোচ্চ সীমা শেষ হয়ে গেছে।"
-    } else if (rawMessage.includes("minimum") || rawMessage.includes("subtotal")) {
-      banglaMessage = "এই কোডটি ব্যবহার করার জন্য নুন্যতম অর্ডারের শর্ত পূরণ হয়নি।"
-    }
-
-    return { success: false, error: banglaMessage }
   }
+
+  console.error("applyPromotions error:", lastError?.response?.data || lastError?.message || lastError)
+  const rawMessage = (
+    lastError?.response?.data?.message ||
+    lastError?.response?.data ||
+    lastError?.message ||
+    ""
+  ).toString().toLowerCase()
+
+  let banglaMessage = "প্রোমো কোডটি সঠিক নয় বা এর মেয়াদ শেষ হয়ে গেছে। দয়া করে সঠিক কোড দিন।"
+
+  if (rawMessage.includes("expired")) {
+    banglaMessage = "প্রোমো কোডটির মেয়াদ শেষ হয়ে গেছে।"
+  } else if (rawMessage.includes("usage limit") || rawMessage.includes("maximum")) {
+    banglaMessage = "প্রোমো কোডটি ব্যবহারের সর্বোচ্চ সীমা শেষ হয়ে গেছে।"
+  } else if (rawMessage.includes("minimum") || rawMessage.includes("subtotal")) {
+    banglaMessage = "এই কোডটি ব্যবহার করার জন্য নুন্যতম অর্ডারের শর্ত পূরণ হয়নি।"
+  }
+
+  return { success: false, error: banglaMessage }
 }
 
 export async function applyGiftCard(code: string) {
@@ -857,14 +902,16 @@ export async function placeOrder(cartId?: string) {
     ...(await getAuthHeaders()),
   }
 
-  const cartRes = await sdk.store.cart
-    .complete(id, {}, headers)
-    .then(async (cartRes) => {
-      const cartCacheTag = await getCacheTag("carts")
-      safeRevalidateTag(cartCacheTag)
-      return cartRes
-    })
-    .catch(medusaError)
+  let cartRes: any = null
+  try {
+    cartRes = await sdk.store.cart.complete(id, {}, headers)
+    const cartCacheTag = await getCacheTag("carts")
+    safeRevalidateTag(cartCacheTag)
+  } catch (err: any) {
+    console.error("[placeOrder] complete error:", err?.response?.data || err?.message || err)
+    const message = err?.response?.data?.message || err?.message || "অর্ডারটি সম্পন্ন করা সম্ভব হয়নি। অনুগ্রহ করে ডেলিভারি ঠিকানা ও তথ্য যাচাই করে আবার চেষ্টা করুন।"
+    throw new Error(message)
+  }
 
   if (cartRes?.type === "order") {
     const countryCode =
@@ -873,7 +920,7 @@ export async function placeOrder(cartId?: string) {
     const orderCacheTag = await getCacheTag("orders")
     safeRevalidateTag(orderCacheTag)
 
-    removeCartId()
+    await removeCartId()
     redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)
   }
 
@@ -984,7 +1031,19 @@ export async function submitOneStepOrder(previousState: any, formData: FormData)
 
     // 3. Initiate or Refresh Payment Session (Cash on Delivery)
     const paymentProviderId = ((formData.get("paymentProviderId") || "") as string) || "pp_system_default"
-    const freshCart = await retrieveCart()
+    let freshCart = await retrieveCart(cartId)
+
+    // Ensure shipping method is attached, fallback to first option if needed
+    if (freshCart && (!freshCart.shipping_methods || freshCart.shipping_methods.length === 0)) {
+      try {
+        const availableOptions = await listCartShippingMethods(cartId)
+        if (availableOptions && availableOptions[0]?.id) {
+          await setShippingMethod({ cartId, shippingMethodId: availableOptions[0].id })
+          freshCart = await retrieveCart(cartId)
+        }
+      } catch (e) {}
+    }
+
     if (freshCart) {
       const activeSession = freshCart.payment_collection?.payment_sessions?.find(
         (s: any) => s.status === "pending"
@@ -992,7 +1051,7 @@ export async function submitOneStepOrder(previousState: any, formData: FormData)
       const sessionAmount = activeSession?.amount ?? 0
       const cartTotal = freshCart.total ?? 0
 
-      // Always ensure payment session amount accurately covers the cart total!
+      // Always ensure payment session accurately covers the cart total!
       if (!activeSession || activeSession.provider_id !== paymentProviderId || sessionAmount !== cartTotal) {
         try {
           await initiatePaymentSession(freshCart, {

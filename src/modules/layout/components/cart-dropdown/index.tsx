@@ -1081,11 +1081,15 @@ export default function CartDropdown({
                           key={item.id}
                           data-testid="cart-item"
                         >
-                          {/* Product Image - Compact & proportional */}
+                          {/* Product Image - Stretches vertically when promotion has 3 lines */}
                           <LocalizedClientLink
                             href={`/products/${item.product_handle}`}
                             onClick={closeDrawer}
-                            className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-0.5 relative group"
+                            className={`rounded-xl border border-gray-200/90 dark:border-zinc-700/80 overflow-hidden bg-white dark:bg-zinc-800 shrink-0 p-0.5 flex items-center justify-center transition-all group ${
+                              discountInfo.hasDiscount
+                                ? "w-14 sm:w-16 h-[74px] sm:h-[78px]"
+                                : "w-12 h-12 sm:w-14 sm:h-14"
+                            }`}
                           >
                             {imageUrl ? (
                               <img
@@ -1102,9 +1106,9 @@ export default function CartDropdown({
                           </LocalizedClientLink>
 
                           {/* Product Details & Stepper */}
-                          <div className="flex-1 min-w-0">
-                            {/* Title row with pr-7 to prevent overlap with top-right close button - NO WRAP (Inline Single-Row) */}
-                            <div className="flex items-center gap-1.5 min-w-0 pr-7">
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            {/* Row 1: Title & Variant with pr-9 sm:pr-10 so (১ কেজি) has clean space from delete button */}
+                            <div className="flex items-center gap-1.5 min-w-0 pr-9 sm:pr-10">
                               <h4 className="text-xs sm:text-sm font-normal truncate min-w-0 flex-1 text-zinc-900 dark:text-zinc-100">
                                 <LocalizedClientLink
                                   href={`/products/${item.product_handle}`}
@@ -1117,20 +1121,27 @@ export default function CartDropdown({
                                 </LocalizedClientLink>
                               </h4>
                               {variantLabel && (
-                                <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
+                                <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none mr-1">
                                   ({formatSize(variantLabel)})
-                                </span>
-                              )}
-                              {discountInfo.hasDiscount && (
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
-                                  <Tag className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                                  <span>{discountInfo.badgeText}</span>
                                 </span>
                               )}
                             </div>
 
-                            {/* Stepper + Math row matching Image 2 (Full line width) */}
-                            <div className="flex items-center gap-2 mt-1 sm:mt-1.5 w-full flex-wrap">
+                            {/* Row 2: Promo Discount Row (ONLY when promotion is applied!) */}
+                            {discountInfo.hasDiscount && (
+                              <div className="flex items-center gap-1.5 my-0.5 sm:my-1">
+                                <span className="line-through text-gray-400 dark:text-zinc-500 text-[11px] sm:text-xs select-none">
+                                  {formatPrice(item.unit_price)}
+                                </span>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
+                                  <Tag className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                  <span>{discountInfo.badgeText}</span>
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Row 3: Stepper × Unit Price = Total */}
+                            <div className={`flex items-center gap-2 w-full flex-wrap ${discountInfo.hasDiscount ? "mt-0.5" : "mt-1 sm:mt-1.5"}`}>
                               {/* Pill Stepper */}
                               <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                                 <button
@@ -1154,36 +1165,25 @@ export default function CartDropdown({
                                 </button>
                               </div>
 
-                              {/* Math formula */}
+                              {/* Formula: [ - qty + ] × unit_price = total */}
                               <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
                                 <span className="text-gray-500 dark:text-zinc-400">×</span>
-                                {discountInfo.hasDiscount ? (
-                                  <span className="flex items-center gap-1">
-                                    <span className="line-through text-gray-400 dark:text-zinc-500 text-[11px] sm:text-xs">
-                                      {formatPrice(item.unit_price)}
-                                    </span>
-                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                      {formatPrice(discountInfo.discountedUnitPrice)}
-                                    </span>
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-700 dark:text-zinc-300">
-                                    {formatPrice(item.unit_price)}
-                                  </span>
-                                )}
+                                <span className={discountInfo.hasDiscount ? "text-emerald-700 dark:text-emerald-400 font-medium" : "text-gray-700 dark:text-zinc-300"}>
+                                  {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedUnitPrice : item.unit_price)}
+                                </span>
                                 <span className="text-gray-500 dark:text-zinc-400">=</span>
-                                <span className={discountInfo.hasDiscount ? "text-emerald-700 dark:text-emerald-300 font-semibold" : "text-gray-900 dark:text-zinc-100 font-normal"}>
+                                <span className={discountInfo.hasDiscount ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-gray-900 dark:text-zinc-100 font-normal"}>
                                   {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedTotalPrice : itemTotalPrice)}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Close button (Right '✕', absolute top right corner matching Image 2) */}
+                          {/* Close button (Right '✕', absolute top right corner with clean spacing) */}
                           <button
                             type="button"
                             onClick={() => handleRemove(item)}
-                            className="absolute top-2.5 right-1 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            className="absolute top-2.5 right-0.5 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
                             aria-label="মুছে ফেলুন"
                             title="মুছে ফেলুন"
                             data-testid="cart-item-remove-button"
@@ -1246,7 +1246,7 @@ export default function CartDropdown({
                           <span>চেকআউটে যাওয়া হচ্ছে...</span>
                         </>
                       ) : (
-                        <span>চেকআউট</span>
+                        <span>অর্ডার করুন</span>
                       )}
                     </button>
                   </div>

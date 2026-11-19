@@ -284,6 +284,9 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                   disabled={isApplyLoading}
                   placeholder="কুপন বা প্রোমো কোড লিখুন"
                   autoFocus={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   data-testid="discount-input"
                 />
                 <button
