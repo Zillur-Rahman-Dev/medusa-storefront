@@ -108,63 +108,16 @@ export default function CartDropdown({
   const [variantOrder, setVariantOrder] = useState<string[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // Instant reactive promotion & discount state with persistent memory
-  const [activePromotions, setActivePromotions] = useState<any[]>(() => {
-    if (cartState?.promotions && cartState.promotions.length > 0) return cartState.promotions
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
-            return parsed.promotions
-          }
-        }
-      } catch {}
-    }
-    return []
-  })
-  const [cartDiscountTotal, setCartDiscountTotal] = useState<number>(() => {
-    if (typeof cartState?.discount_total === "number" && cartState.discount_total > 0) return cartState.discount_total
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
-            return parsed.discount_total
-          }
-        }
-      } catch {}
-    }
-    return cartState?.discount_total ?? 0
-  })
+  // Direct server-managed promotions & discount state
+  const [activePromotions, setActivePromotions] = useState<any[]>(() => cartState?.promotions || [])
+  const [cartDiscountTotal, setCartDiscountTotal] = useState<number>(() => cartState?.discount_total ?? 0)
 
   useEffect(() => {
-    if (cartState?.promotions && cartState.promotions.length > 0) {
-      setActivePromotions(cartState.promotions)
-    } else if (typeof window !== "undefined") {
+    setActivePromotions(cartState?.promotions || [])
+    setCartDiscountTotal(cartState?.discount_total ?? 0)
+    if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
-            setActivePromotions(parsed.promotions)
-          }
-        }
-      } catch {}
-    }
-    if (typeof cartState?.discount_total === "number" && cartState.discount_total > 0) {
-      setCartDiscountTotal(cartState.discount_total)
-    } else if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
-            setCartDiscountTotal(parsed.discount_total)
-          }
-        }
+        localStorage.removeItem("purehoney_promotions")
       } catch {}
     }
   }, [cartState?.promotions, cartState?.discount_total])
@@ -175,16 +128,6 @@ export default function CartDropdown({
       if (detail) {
         setActivePromotions(detail.promotions || [])
         setCartDiscountTotal(detail.discount_total ?? 0)
-        try {
-          localStorage.setItem(
-            "purehoney_promotions",
-            JSON.stringify({
-              promotions: detail.promotions || [],
-              discount_total: detail.discount_total ?? 0,
-              timestamp: Date.now(),
-            })
-          )
-        } catch {}
       }
     }
     window.addEventListener("cart:promo-updated", handlePromoUpdated)
@@ -1142,26 +1085,26 @@ export default function CartDropdown({
 
                             {/* Row 3: Stepper × Unit Price = Total */}
                             <div className={`flex items-center gap-2 w-full flex-wrap ${discountInfo.hasDiscount ? "mt-0.5" : "mt-1 sm:mt-1.5"}`}>
-                              {/* Pill Stepper */}
-                              <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-800 overflow-hidden shadow-2xs">
+                              {/* Compact Proportional Stepper */}
+                              <div className="inline-flex items-center rounded-md border border-gray-200/90 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                                 <button
                                   type="button"
                                   onClick={() => handleDecrement(item)}
-                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                                  className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer select-none"
                                   aria-label="পরিমাণ কমান"
                                 >
-                                  <Minus className="w-3 h-3 text-orange-500" />
+                                  <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
                                 </button>
-                                <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200 dark:border-zinc-700 text-xs sm:text-sm font-normal text-gray-800 dark:text-zinc-200 select-none">
+                                <span className="px-1.5 sm:px-2 h-5 sm:h-5.5 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200/90 dark:border-zinc-700 text-[11px] sm:text-xs font-medium text-gray-800 dark:text-zinc-200 min-w-[18px] sm:min-w-[20px] select-none">
                                   {formatSize(String(currentQty))}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => handleIncrement(item)}
-                                  className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
+                                  className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer select-none"
                                   aria-label="পরিমাণ বাড়ান"
                                 >
-                                  <Plus className="w-3 h-3 text-orange-500" />
+                                  <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
                                 </button>
                               </div>
 

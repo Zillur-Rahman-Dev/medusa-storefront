@@ -52,64 +52,16 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     return cart?.shipping_methods?.[0]?.amount ?? 60
   })
 
-  // Instant reactive promotion & discount state with persistent memory
-  const [activePromotions, setActivePromotions] = useState<any[]>(() => {
-    if (cart?.promotions && cart.promotions.length > 0) return cart.promotions
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
-            return parsed.promotions
-          }
-        }
-      } catch {}
-    }
-    return []
-  })
-
-  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => {
-    if (typeof cart?.discount_total === "number" && cart.discount_total > 0) return cart.discount_total
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
-            return parsed.discount_total
-          }
-        }
-      } catch {}
-    }
-    return cart?.discount_total ?? 0
-  })
+  // Direct server-managed promotions & discount state (single source of truth)
+  const [activePromotions, setActivePromotions] = useState<any[]>(() => cart?.promotions || [])
+  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => cart?.discount_total ?? 0)
 
   useEffect(() => {
-    if (cart?.promotions && cart.promotions.length > 0) {
-      setActivePromotions(cart.promotions)
-    } else if (typeof window !== "undefined") {
+    setActivePromotions(cart?.promotions || [])
+    setActiveDiscountTotal(cart?.discount_total ?? 0)
+    if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
-            setActivePromotions(parsed.promotions)
-          }
-        }
-      } catch {}
-    }
-    if (typeof cart?.discount_total === "number" && cart.discount_total > 0) {
-      setActiveDiscountTotal(cart.discount_total)
-    } else if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (typeof parsed.discount_total === "number" && parsed.discount_total > 0) {
-            setActiveDiscountTotal(parsed.discount_total)
-          }
-        }
+        localStorage.removeItem("purehoney_promotions")
       } catch {}
     }
   }, [cart?.promotions, cart?.discount_total])
@@ -120,16 +72,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
       if (detail) {
         setActivePromotions(detail.promotions || [])
         setActiveDiscountTotal(detail.discount_total ?? 0)
-        try {
-          localStorage.setItem(
-            "purehoney_promotions",
-            JSON.stringify({
-              promotions: detail.promotions || [],
-              discount_total: detail.discount_total ?? 0,
-              timestamp: Date.now(),
-            })
-          )
-        } catch {}
       }
     }
     window.addEventListener("cart:promo-updated", handlePromoUpdated)
@@ -316,12 +258,28 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             .filter((i) => Boolean(i.variantId) && i.quantity > 0)
             .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
         }),
-      }).catch((e) => console.warn("[CheckoutSummary] debounce sync error:", e))
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.success) {
+            if (Array.isArray(data.promotions)) {
+              setActivePromotions(data.promotions)
+            }
+            if (typeof data.discount_total === "number") {
+              setActiveDiscountTotal(data.discount_total)
+            }
+          }
+        })
+        .catch((e) => console.warn("[CheckoutSummary] debounce sync error:", e))
     }, 200)
   }
 
   // 5. Interactive controls
   const handleIncrement = (item: CheckoutItem) => {
+    const maxStock = item.raw?.variant?.inventory_quantity ?? item.raw?.inventory_quantity
+    if (typeof maxStock === "number" && maxStock > 0 && item.quantity >= maxStock) {
+      return
+    }
     const nextItems = items.map((it) =>
       it.id === item.id || (item.variantId && it.variantId === item.variantId)
         ? { ...it, quantity: it.quantity + 1, total: (it.quantity + 1) * it.unit_price }
@@ -518,30 +476,37 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                   {/* Row 3: Stepper × Unit Price = Total */}
                   <div className={`flex items-center gap-2 w-full flex-wrap ${discountInfo.hasDiscount ? "mt-0.5" : "mt-1.5"}`}>
-                    {/* Pill Stepper */}
-                    <div className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 overflow-hidden shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => handleDecrement(item)}
-                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
-                        title="১টি কমান"
-                        aria-label="১টি কমান"
-                      >
-                        <Minus className="w-3 h-3 text-orange-500" />
-                      </button>
-                      <span className="px-2.5 h-6 sm:h-7 flex items-center justify-center bg-white border-x border-gray-200 text-xs sm:text-sm font-normal text-gray-800 select-none">
-                        {formatSize(String(item.quantity))}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleIncrement(item)}
-                        className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-colors cursor-pointer text-sm font-normal select-none"
-                        title="১টি বাড়ান"
-                        aria-label="১টি বাড়ান"
-                      >
-                        <Plus className="w-3 h-3 text-orange-500" />
-                      </button>
-                    </div>
+                    {/* Compact Proportional Stepper */}
+                    {(() => {
+                      const maxStock = item.raw?.variant?.inventory_quantity ?? item.raw?.inventory_quantity
+                      const isMaxReached = typeof maxStock === "number" && maxStock > 0 && item.quantity >= maxStock
+                      return (
+                        <div className="inline-flex items-center rounded-md border border-gray-200/90 bg-gray-50 overflow-hidden shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleDecrement(item)}
+                            className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 hover:bg-gray-100 active:scale-95 transition-colors cursor-pointer select-none"
+                            title="১টি কমান"
+                            aria-label="১টি কমান"
+                          >
+                            <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
+                          </button>
+                          <span className="px-1.5 sm:px-2 h-5 sm:h-5.5 flex items-center justify-center bg-white border-x border-gray-200/90 text-[11px] sm:text-xs font-medium text-gray-800 min-w-[18px] sm:min-w-[20px] select-none">
+                            {formatSize(String(item.quantity))}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleIncrement(item)}
+                            disabled={isMaxReached}
+                            className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 hover:bg-gray-100 active:scale-95 transition-colors cursor-pointer select-none disabled:opacity-35 disabled:cursor-not-allowed"
+                            title={isMaxReached ? "সর্বোচ্চ স্টক যোগ করা হয়েছে" : "১টি বাড়ান"}
+                            aria-label="১টি বাড়ান"
+                          >
+                            <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
+                          </button>
+                        </div>
+                      )
+                    })()}
 
                     {/* Formula: [ - qty + ] × unit_price = total */}
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">

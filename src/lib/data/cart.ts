@@ -596,6 +596,10 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
       cartId: cart.id,
       items: finalCart?.items || cart.items || [],
       cartDeleted: isCartEmpty,
+      discount_total: finalCart?.discount_total ?? 0,
+      subtotal: finalCart?.subtotal ?? 0,
+      total: finalCart?.total ?? 0,
+      promotions: finalCart?.promotions || [],
     }
   } catch (err: any) {
     console.error("batchSyncCart error:", err)

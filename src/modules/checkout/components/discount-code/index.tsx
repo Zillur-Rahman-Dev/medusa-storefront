@@ -26,50 +26,21 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [removingCode, setRemovingCode] = useState<string | null>(null)
 
   const [promotionsList, setPromotionsList] = useState<HttpTypes.StorePromotion[]>(() => {
-    if (cart?.promotions && cart.promotions.length > 0) return cart.promotions
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
-            return parsed.promotions
-          }
-        }
-      } catch {}
-    }
-    return []
+    return cart?.promotions || []
   })
 
   const isTransitioningRef = useRef(false)
   const prevPromotionsCountRef = useRef(promotionsList.length)
 
-  // Sync with Server Component updates or restore from local cache
+  // Sync directly with Server Component cart promotions
   useEffect(() => {
-    if (cart?.promotions && cart.promotions.length > 0) {
-      setPromotionsList(cart.promotions)
+    setPromotionsList(cart?.promotions || [])
+    if (typeof window !== "undefined") {
       try {
-        localStorage.setItem(
-          "purehoney_promotions",
-          JSON.stringify({
-            promotions: cart.promotions,
-            discount_total: cart.discount_total ?? 0,
-            timestamp: Date.now(),
-          })
-        )
-      } catch {}
-    } else if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("purehoney_promotions")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed.promotions) && parsed.promotions.length > 0) {
-            setPromotionsList(parsed.promotions)
-          }
-        }
+        localStorage.removeItem("purehoney_promotions")
       } catch {}
     }
-  }, [cart?.promotions, cart?.discount_total])
+  }, [cart?.promotions])
 
   // Listen to broadcast events from other components
   useEffect(() => {
@@ -77,16 +48,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       const detail = (e as CustomEvent).detail
       if (detail && Array.isArray(detail.promotions)) {
         setPromotionsList(detail.promotions)
-        try {
-          localStorage.setItem(
-            "purehoney_promotions",
-            JSON.stringify({
-              promotions: detail.promotions,
-              discount_total: detail.discount_total ?? 0,
-              timestamp: Date.now(),
-            })
-          )
-        } catch {}
       }
     }
     window.addEventListener("cart:promo-updated", handlePromoUpdated)
@@ -129,15 +90,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     )
 
     setPromotionsList(validPromotions)
-    try {
-      localStorage.setItem(
-        "purehoney_promotions",
-        JSON.stringify({
-          promotions: validPromotions,
-          timestamp: Date.now(),
-        })
-      )
-    } catch {}
 
     try {
       const res = await applyPromotions(
@@ -150,16 +102,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         const updatedPromos = res?.cart?.promotions ?? validPromotions
         const updatedDiscountTotal = res?.cart?.discount_total ?? 0
         setPromotionsList(updatedPromos)
-        try {
-          localStorage.setItem(
-            "purehoney_promotions",
-            JSON.stringify({
-              promotions: updatedPromos,
-              discount_total: updatedDiscountTotal,
-              timestamp: Date.now(),
-            })
-          )
-        } catch {}
         window.dispatchEvent(
           new CustomEvent("cart:promo-updated", {
             detail: {
@@ -217,16 +159,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         if (res?.cart) {
           const updatedPromos = res.cart.promotions || []
           setPromotionsList(updatedPromos)
-          try {
-            localStorage.setItem(
-              "purehoney_promotions",
-              JSON.stringify({
-                promotions: updatedPromos,
-                discount_total: res.cart.discount_total ?? 0,
-                timestamp: Date.now(),
-              })
-            )
-          } catch {}
           window.dispatchEvent(
             new CustomEvent("cart:promo-updated", {
               detail: {
