@@ -1,6 +1,6 @@
 "use client"
 
-import { convertToLocale, formatPrice, formatSize, getItemDiscountInfo } from "@lib/util/money"
+import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
 import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -772,7 +772,24 @@ export default function CartDropdown({
       )
     }
 
-    scheduleServerSync()
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
+      syncTimeoutRef.current = null
+    }
+
+    // Immediate deletion to server with keepalive to guarantee backend update even if tab is closed
+    fetch("/api/cart/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        deletions: [{ lineId: item.lineId || item.id, variantId: item.variantId }],
+        desiredItems: nextItems
+          .filter((i) => Boolean(i.variantId) && i.quantity > 0)
+          .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
+        clearAll: nextItems.length === 0,
+      }),
+      keepalive: true,
+    }).catch((e) => console.warn("[cart-dropdown] immediate deletion warning:", e))
   }
 
   // Navigation handlers
@@ -1009,30 +1026,17 @@ export default function CartDropdown({
                       const itemTotalPrice = item.unit_price * currentQty
                       const variantLabel = item.variantTitle || "১ কেজি"
 
-                      const discountInfo = getItemDiscountInfo(
-                        item.unit_price,
-                        currentQty,
-                        activePromotions,
-                        cartDiscountTotal,
-                        totalSubtotal,
-                        item.raw
-                      )
-
                       return (
                         <div
                           className="relative py-3 sm:py-3.5 flex items-center gap-2.5 transition-colors"
                           key={item.id}
                           data-testid="cart-item"
                         >
-                          {/* Product Image - Stretches vertically when promotion has 3 lines */}
+                          {/* Product Image - Clean square */}
                           <LocalizedClientLink
                             href={`/products/${item.product_handle}`}
                             onClick={closeDrawer}
-                            className={`rounded-xl border border-gray-200/90 dark:border-zinc-700/80 overflow-hidden bg-white dark:bg-zinc-800 shrink-0 p-0.5 flex items-center justify-center transition-all group ${
-                              discountInfo.hasDiscount
-                                ? "w-14 sm:w-16 h-[74px] sm:h-[78px]"
-                                : "w-12 h-12 sm:w-14 sm:h-14"
-                            }`}
+                            className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl overflow-hidden bg-white dark:bg-zinc-800 border border-gray-200/90 dark:border-zinc-700/80 flex items-center justify-center p-0.5 relative group"
                           >
                             {imageUrl ? (
                               <img
@@ -1070,21 +1074,8 @@ export default function CartDropdown({
                               )}
                             </div>
 
-                            {/* Row 2: Promo Discount Row (ONLY when promotion is applied!) */}
-                            {discountInfo.hasDiscount && (
-                              <div className="flex items-center gap-1.5 my-0.5 sm:my-1">
-                                <span className="line-through text-gray-400 dark:text-zinc-500 text-[11px] sm:text-xs select-none">
-                                  {formatPrice(item.unit_price)}
-                                </span>
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
-                                  <Tag className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                                  <span>{discountInfo.badgeText}</span>
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Row 3: Stepper × Unit Price = Total */}
-                            <div className={`flex items-center gap-2 w-full flex-wrap ${discountInfo.hasDiscount ? "mt-0.5" : "mt-1 sm:mt-1.5"}`}>
+                            {/* Row 2: Stepper × Unit Price = Total */}
+                            <div className="flex items-center gap-2 mt-1 sm:mt-1.5 w-full flex-wrap">
                               {/* Compact Proportional Stepper */}
                               <div className="inline-flex items-center rounded-md border border-gray-200/90 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 overflow-hidden shadow-2xs">
                                 <button
@@ -1111,12 +1102,12 @@ export default function CartDropdown({
                               {/* Formula: [ - qty + ] × unit_price = total */}
                               <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
                                 <span className="text-gray-500 dark:text-zinc-400">×</span>
-                                <span className={discountInfo.hasDiscount ? "text-emerald-700 dark:text-emerald-400 font-medium" : "text-gray-700 dark:text-zinc-300"}>
-                                  {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedUnitPrice : item.unit_price)}
+                                <span className="text-gray-700 dark:text-zinc-300">
+                                  {formatPrice(item.unit_price)}
                                 </span>
                                 <span className="text-gray-500 dark:text-zinc-400">=</span>
-                                <span className={discountInfo.hasDiscount ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-gray-900 dark:text-zinc-100 font-normal"}>
-                                  {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedTotalPrice : itemTotalPrice)}
+                                <span className="text-gray-900 dark:text-zinc-100 font-medium">
+                                  {formatPrice(itemTotalPrice)}
                                 </span>
                               </div>
                             </div>

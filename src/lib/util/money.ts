@@ -137,11 +137,6 @@ export function getItemDiscountInfo(
     directDiscount = rawItem.discount_total
   } else if (rawAdjustmentsTotal > 0) {
     directDiscount = rawAdjustmentsTotal
-  } else if (itemTotal !== null && itemTotal < originalItemTotal) {
-    directDiscount = originalItemTotal - itemTotal
-  } else if (discountTotal > 0 && subtotal > 0 && originalItemTotal > 0) {
-    // Proportional cart-level discount
-    directDiscount = Math.round((originalItemTotal / subtotal) * discountTotal)
   }
 
   // 2. Identify promo details (percentage or fixed)

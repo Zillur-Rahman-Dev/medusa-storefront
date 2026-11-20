@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
-import { formatPrice, formatSize, getItemDiscountInfo } from "@lib/util/money"
+import { formatPrice, formatSize } from "@lib/util/money"
 import { Minus, Plus, Trash2, Tag } from "lucide-react"
 
 export type CheckoutItem = {
@@ -81,6 +81,33 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   }, [])
 
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const itemsRef = useRef<CheckoutItem[]>(items)
+  itemsRef.current = items
+
+  // Guaranteed keepalive sync on page unload / tab close
+  useEffect(() => {
+    const handleUnload = () => {
+      const cur = itemsRef.current
+      if (cur && cur.length > 0) {
+        fetch("/api/cart/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            desiredItems: cur
+              .filter((i) => Boolean(i.variantId) && i.quantity > 0)
+              .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
+          }),
+          keepalive: true,
+        })
+      }
+    }
+    window.addEventListener("pagehide", handleUnload)
+    window.addEventListener("beforeunload", handleUnload)
+    return () => {
+      window.removeEventListener("pagehide", handleUnload)
+      window.removeEventListener("beforeunload", handleUnload)
+    }
+  }, [])
 
   // 2. Listen to shipping method selection from Section 2
   useEffect(() => {
@@ -111,112 +138,45 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [router])
 
-  // 3. Mount Reconciliation: Synchronize immediately with client's localStorage cart snapshot
+  // 3. Server-First Cart Synchronization: Server items are the absolute source of truth
   useEffect(() => {
-    if (typeof window === "undefined") return
-
-    try {
-      const stored = localStorage.getItem("purehoney_cart_v2")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const isRecent = Date.now() - (parsed.timestamp || 0) < 15 * 60 * 1000
-
-        if (isRecent && Array.isArray(parsed.items) && parsed.items.length > 0) {
-          const serverMap = new Map<string, number>()
-          initialItems.forEach((it) => {
-            const k = it.variantId || it.id
-            if (k) serverMap.set(k, it.quantity)
-          })
-
-          let isDifferent = false
-          if (parsed.items.length !== initialItems.length) {
-            isDifferent = true
-          } else {
-            for (const loc of parsed.items) {
-              const k = loc.variantId || loc.id
-              if (!serverMap.has(k) || serverMap.get(k) !== loc.quantity) {
-                isDifferent = true
-                break
-              }
-            }
-          }
-
-          if (isDifferent) {
-            const reconciled: CheckoutItem[] = parsed.items.map((loc: any) => {
-              const matchingServer = initialItems.find(
-                (srv) =>
-                  (loc.variantId && srv.variantId === loc.variantId) ||
-                  (loc.id && srv.id === loc.id) ||
-                  (loc.product_handle && srv.product_handle === loc.product_handle)
-              )
-
-              const unitPrice = matchingServer?.unit_price || loc.unit_price || 750
-              return {
-                id: matchingServer?.id || loc.id,
-                lineId: matchingServer?.lineId || loc.lineId,
-                variantId: loc.variantId || matchingServer?.variantId,
-                title: matchingServer?.title || loc.title || "খাঁটি প্রাকৃতিক মধু",
-                product_handle: matchingServer?.product_handle || loc.product_handle,
-                thumbnail: matchingServer?.thumbnail || loc.thumbnail,
-                images: matchingServer?.images,
-                variantTitle: matchingServer?.variantTitle || loc.variantTitle || "১ কেজি",
-                quantity: loc.quantity,
-                unit_price: unitPrice,
-                total: unitPrice * loc.quantity,
-                raw: matchingServer?.raw,
-              }
+    setItems(initialItems)
+    if (typeof window !== "undefined") {
+      try {
+        if (initialItems.length === 0) {
+          localStorage.removeItem("purehoney_cart_v2")
+          sessionStorage.removeItem("medusa_cart_map")
+        } else {
+          localStorage.setItem(
+            "purehoney_cart_v2",
+            JSON.stringify({
+              items: initialItems.map((i) => ({
+                id: i.id,
+                lineId: i.lineId,
+                variantId: i.variantId,
+                title: i.title,
+                product_handle: i.product_handle,
+                thumbnail: i.thumbnail,
+                variantTitle: i.variantTitle,
+                quantity: i.quantity,
+                unit_price: i.unit_price,
+              })),
+              timestamp: Date.now(),
             })
-
-            // Instantly update UI state without needing manual reload
-            setItems(reconciled)
-
-            // Reconcile Medusa backend to match
-            fetch("/api/cart/batch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                desiredItems: reconciled
-                  .filter((i) => Boolean(i.variantId) && i.quantity > 0)
-                  .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
-              }),
-            })
-              .then(() => {
-                router.refresh()
-              })
-              .catch((err) => {
-                console.warn("[CheckoutSummary] background mount sync error:", err)
-              })
-          } else if (initialItems.length > 0) {
-            // Keep fresh server metadata (Title/Price) and sync back to local snapshot
-            setItems(initialItems)
-            try {
-              localStorage.setItem(
-                "purehoney_cart_v2",
-                JSON.stringify({
-                  items: initialItems.map((i) => ({
-                    id: i.id,
-                    lineId: i.lineId,
-                    variantId: i.variantId,
-                    title: i.title,
-                    product_handle: i.product_handle,
-                    thumbnail: i.thumbnail,
-                    variantTitle: i.variantTitle,
-                    quantity: i.quantity,
-                    unit_price: i.unit_price,
-                  })),
-                  timestamp: Date.now(),
-                })
-              )
-            } catch (e) {}
-          }
+          )
         }
-      }
-    } catch (e) {
-      console.warn("[CheckoutSummary] local snapshot read error:", e)
+        const cartMap: Record<string, any> = {}
+        initialItems.forEach((i) => {
+          if (i.variantId) cartMap[i.variantId] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
+          if (i.id) cartMap[i.id] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
+        })
+        sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
+        window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
+      } catch (e) {}
     }
-  }, [initialItems, router])
+  }, [initialItems])
 
-  // 4. Update items and debounce background server sync
+  // 4. Update items and debounce background server sync with keepalive
   const updateItemsAndSync = (nextItems: CheckoutItem[]) => {
     setItems(nextItems)
 
@@ -258,6 +218,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             .filter((i) => Boolean(i.variantId) && i.quantity > 0)
             .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
         }),
+        keepalive: true,
       })
         .then((res) => res.json())
         .then((data) => {
@@ -271,7 +232,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
           }
         })
         .catch((e) => console.warn("[CheckoutSummary] debounce sync error:", e))
-    }, 200)
+    }, 150)
   }
 
   // 5. Interactive controls
@@ -301,24 +262,79 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }
 
-  const handleRemove = (item: CheckoutItem) => {
+  // Instant & guaranteed removal: updates UI immediately and fires keepalive request to backend
+  const handleRemove = async (item: CheckoutItem) => {
     const nextItems = items.filter(
       (it) => !(it.id === item.id || (item.variantId && it.variantId === item.variantId))
     )
-    if (nextItems.length === 0) {
-      try {
+    setItems(nextItems)
+
+    try {
+      if (nextItems.length === 0) {
         localStorage.removeItem("purehoney_cart_v2")
         sessionStorage.removeItem("medusa_cart_map")
-      } catch (e) {}
-      fetch("/api/cart/batch", {
+      } else {
+        localStorage.setItem(
+          "purehoney_cart_v2",
+          JSON.stringify({
+            items: nextItems,
+            timestamp: Date.now(),
+          })
+        )
+      }
+      const cartMap: Record<string, any> = {}
+      nextItems.forEach((i) => {
+        if (i.variantId) cartMap[i.variantId] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
+        if (i.id) cartMap[i.id] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
+      })
+      sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
+      window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
+      window.dispatchEvent(
+        new CustomEvent("cart:item-deleted", {
+          detail: { id: item.id, variantId: item.variantId, handle: item.product_handle },
+        })
+      )
+    } catch (e) {}
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
+      syncTimeoutRef.current = null
+    }
+
+    try {
+      const payload: any = {
+        deletions: [{ lineId: item.lineId || item.id, variantId: item.variantId }],
+        desiredItems: nextItems
+          .filter((i) => Boolean(i.variantId) && i.quantity > 0)
+          .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
+      }
+      if (nextItems.length === 0) {
+        payload.clearAll = true
+      }
+      const res = await fetch("/api/cart/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clearAll: true }),
+        body: JSON.stringify(payload),
+        keepalive: true,
       })
-      window.location.href = `/${countryCode}/store`
-      return
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.success) {
+          if (Array.isArray(data.promotions)) {
+            setActivePromotions(data.promotions)
+          }
+          if (typeof data.discount_total === "number") {
+            setActiveDiscountTotal(data.discount_total)
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[handleRemove] deletion backend warning:", e)
     }
-    updateItemsAndSync(nextItems)
+
+    if (nextItems.length === 0) {
+      window.location.href = `/${countryCode}/store`
+    }
   }
 
   // 6. Live Totals calculation
@@ -414,28 +430,13 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
         {/* 1. Products List (Matching Image 1: Clean line separators, no card wrapper) */}
         <div className="flex flex-col divide-y divide-gray-150">
           {items.map((item) => {
-            const discountInfo = getItemDiscountInfo(
-              item.unit_price,
-              item.quantity,
-              activePromotions,
-              liveDiscount,
-              liveSubtotal,
-              item.raw
-            )
-
             return (
               <div
                 key={item.id || item.variantId}
                 className="relative py-3 sm:py-3.5 flex items-center gap-2.5 sm:gap-3 transition-colors"
               >
-                {/* Thumbnail - Stretches vertically when promotion has 3 lines */}
-                <div
-                  className={`rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center transition-all ${
-                    discountInfo.hasDiscount
-                      ? "w-14 sm:w-16 h-[74px] sm:h-[78px]"
-                      : "w-12 h-12 sm:w-14 sm:h-14"
-                  }`}
-                >
+                {/* Thumbnail - Clean square */}
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
                   <Thumbnail
                     thumbnail={item.thumbnail}
                     images={item.images}
@@ -446,7 +447,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  {/* Row 1: Title & Variant with pr-9 so (১ কেজি) has clean space from delete button */}
+                  {/* Row 1: Title & Variant with pr-9 sm:pr-10 so (১ কেজি) has clean space from delete button */}
                   <div className="flex items-center gap-1.5 min-w-0 pr-9 sm:pr-10">
                     <h4
                       className="text-xs sm:text-sm font-normal text-gray-800 truncate min-w-0 flex-1"
@@ -461,21 +462,8 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                     )}
                   </div>
 
-                  {/* Row 2: Promo Discount Row (ONLY when promotion is applied!) */}
-                  {discountInfo.hasDiscount && (
-                    <div className="flex items-center gap-1.5 my-0.5 sm:my-1">
-                      <span className="line-through text-gray-400 text-[11px] sm:text-xs select-none">
-                        {formatPrice(item.unit_price)}
-                      </span>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] sm:text-[11px] font-medium leading-none shrink-0 select-none">
-                        <Tag className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>{discountInfo.badgeText}</span>
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Row 3: Stepper × Unit Price = Total */}
-                  <div className={`flex items-center gap-2 w-full flex-wrap ${discountInfo.hasDiscount ? "mt-0.5" : "mt-1.5"}`}>
+                  {/* Row 2: Stepper × Unit Price = Total */}
+                  <div className="flex items-center gap-2 w-full flex-wrap mt-1 sm:mt-1.5">
                     {/* Compact Proportional Stepper */}
                     {(() => {
                       const maxStock = item.raw?.variant?.inventory_quantity ?? item.raw?.inventory_quantity
@@ -511,12 +499,12 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                     {/* Formula: [ - qty + ] × unit_price = total */}
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
                       <span className="text-gray-500">×</span>
-                      <span className={discountInfo.hasDiscount ? "text-emerald-700 font-medium" : "text-gray-700"}>
-                        {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedUnitPrice : item.unit_price)}
+                      <span className="text-gray-700">
+                        {formatPrice(item.unit_price)}
                       </span>
                       <span className="text-gray-500">=</span>
-                      <span className={discountInfo.hasDiscount ? "text-emerald-700 font-bold" : "text-gray-900 font-normal"}>
-                        {formatPrice(discountInfo.hasDiscount ? discountInfo.discountedTotalPrice : (item.total || item.unit_price * item.quantity))}
+                      <span className="text-gray-900 font-medium">
+                        {formatPrice(item.unit_price * item.quantity)}
                       </span>
                     </div>
                   </div>
