@@ -9,7 +9,7 @@ export const bn: TranslationSchema = {
     searchPlaceholder: "খাঁটি মধু খুঁজুন...",
     cart: "শপিং ব্যাগ",
     account: "অ্যাকাউন্ট",
-    menu: "মেনু",
+    menu: "আরও",
   },
   cart: {
     title: "শপিং কার্ট",

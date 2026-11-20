@@ -418,7 +418,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   }, [activePromotions, liveDiscount, liveSubtotal, items])
 
   return (
-    <div className="sticky top-6 flex flex-col w-full">
+    <div className="relative lg:sticky lg:top-6 flex flex-col w-full">
       <div className="w-full bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-stone-200/80 shadow-2xs flex flex-col">
         <Heading
           level="h2"

@@ -41,17 +41,17 @@ export default function MoreMenu() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Trigger Button: Hamburger icon + "মেনু" text in Amber */}
+      {/* Trigger Button: Hamburger icon + "আরও" text in Amber */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex flex-col items-center justify-center p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-colors group cursor-pointer focus:outline-none"
-        aria-label="মেনু অপশন"
+        aria-label="আরও অপশন"
         aria-expanded={isOpen}
       >
         <Menu className="w-5 h-5 text-amber-500 group-hover:text-amber-600 transition-colors stroke-[2.5]" />
         <span className="text-[11px] font-bold text-amber-500 group-hover:text-amber-600 transition-colors leading-tight">
-          মেনু
+          আরও
         </span>
       </button>
 
