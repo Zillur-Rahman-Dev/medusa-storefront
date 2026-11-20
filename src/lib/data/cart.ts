@@ -928,7 +928,12 @@ export async function placeOrder(cartId?: string) {
     redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)
   }
 
-  throw new Error("অর্ডারটি সম্পন্ন করা সম্ভব হয়নি। অনুগ্রহ করে ডেলিভারি ঠিকানা ও তথ্য যাচাই করে আবার চেষ্টা করুন।")
+  const detailedError =
+    cartRes?.error?.message ||
+    cartRes?.message ||
+    "অর্ডারটি সম্পন্ন করা সম্ভব হয়নি। অনুগ্রহ করে ডেলিভারি ঠিকানা ও তথ্য যাচাই করে আবার চেষ্টা করুন।"
+  console.error("[placeOrder] complete failed:", cartRes?.error || cartRes)
+  throw new Error(detailedError)
 }
 
 export async function submitOneStepOrder(previousState: any, formData: FormData) {
@@ -939,16 +944,9 @@ export async function submitOneStepOrder(previousState: any, formData: FormData)
       throw new Error("আপনার কার্ট পাওয়া যায়নি। অনুগ্রহ করে কার্ট-এ পণ্য যোগ করুন।")
     }
 
-    const desiredRaw = formData.get("desiredItems") as string
-    if (desiredRaw) {
-      try {
-        const desiredItems = JSON.parse(desiredRaw)
-        if (Array.isArray(desiredItems) && desiredItems.length > 0) {
-          await batchSyncCart({ cartId, desiredItems })
-        }
-      } catch (e) {
-        console.warn("[submitOneStepOrder] desiredItems sync warning:", e)
-      }
+    const currentCart = await retrieveCart(cartId)
+    if (!currentCart || !currentCart.items || currentCart.items.length === 0) {
+      throw new Error("আপনার কার্টে কোনো পণ্য নেই। অনুগ্রহ করে পণ্য যোগ করে আবার চেষ্টা করুন।")
     }
 
     const rawFullName = ((formData.get("fullName") || formData.get("shipping_address.first_name") || "") as string).trim()
