@@ -359,9 +359,8 @@ export default function CartDropdown({
       for (const srv of serverItems) {
         const stillInClient = currentItems.some(
           (c) =>
-            (c.variantId && srv.variant_id === c.variantId) ||
-            (c.lineId && srv.id === c.lineId) ||
-            (c.product_handle && srv.product_handle === c.product_handle)
+            (c.variantId && srv.variant_id && srv.variant_id === c.variantId) ||
+            (c.lineId && srv.id === c.lineId)
         )
         if (!stillInClient) {
           deletions.push({ lineId: srv.id, variantId: srv.variant_id || undefined })
@@ -375,9 +374,8 @@ export default function CartDropdown({
       for (const cItem of currentItems) {
         const matchingSrv = serverItems.find(
           (s) =>
-            (cItem.variantId && s.variant_id === cItem.variantId) ||
-            (cItem.lineId && s.id === cItem.lineId) ||
-            (cItem.product_handle && s.product_handle === cItem.product_handle)
+            (cItem.variantId && s.variant_id && s.variant_id === cItem.variantId) ||
+            (cItem.lineId && s.id === cItem.lineId)
         )
 
         if (!matchingSrv) {
@@ -527,7 +525,7 @@ export default function CartDropdown({
             itemsRef.current = merged
             const curOrder = Array.isArray(parsed.order)
               ? parsed.order
-              : merged.map((i: any) => i.variantId || i.product_handle || i.id)
+              : merged.map((i: any) => i.variantId || i.id)
             setVariantOrder(curOrder)
             variantOrderRef.current = curOrder
             saveLocalSnapshot(merged, curOrder)
@@ -546,7 +544,7 @@ export default function CartDropdown({
     const serverUnified = convertServerItemsToUnified(rawServer)
     setItems(serverUnified)
     itemsRef.current = serverUnified
-    const initialOrder = serverUnified.map((i) => i.variantId || i.product_handle || i.id)
+    const initialOrder = serverUnified.map((i) => i.variantId || i.id)
     setVariantOrder(initialOrder)
     variantOrderRef.current = initialOrder
     saveLocalSnapshot(serverUnified, initialOrder)
@@ -573,9 +571,8 @@ export default function CartDropdown({
       for (const srv of serverItems) {
         const stillInClient = currentItems.some(
           (c) =>
-            (c.variantId && srv.variant_id === c.variantId) ||
-            (c.lineId && srv.id === c.lineId) ||
-            (c.product_handle && srv.product_handle === c.product_handle)
+            (c.variantId && srv.variant_id && srv.variant_id === c.variantId) ||
+            (c.lineId && srv.id === c.lineId)
         )
         if (!stillInClient) {
           deletions.push({ lineId: srv.id, variantId: srv.variant_id || undefined })
@@ -588,9 +585,8 @@ export default function CartDropdown({
       for (const cItem of currentItems) {
         const matchingSrv = serverItems.find(
           (s) =>
-            (cItem.variantId && s.variant_id === cItem.variantId) ||
-            (cItem.lineId && s.id === cItem.lineId) ||
-            (cItem.product_handle && s.product_handle === cItem.product_handle)
+            (cItem.variantId && s.variant_id && s.variant_id === cItem.variantId) ||
+            (cItem.lineId && s.id === cItem.lineId)
         )
 
         if (!matchingSrv) {
@@ -639,8 +635,8 @@ export default function CartDropdown({
   // Sorted items strictly following variantOrder (newest added on TOP!)
   const displayItems = useMemo(() => {
     return [...items].sort((a, b) => {
-      const keyA = a.variantId || a.product_handle || a.id
-      const keyB = b.variantId || b.product_handle || b.id
+      const keyA = a.variantId || a.id
+      const keyB = b.variantId || b.id
       const idxA = variantOrder.indexOf(keyA)
       const idxB = variantOrder.indexOf(keyB)
       if (idxA !== -1 && idxB !== -1) return idxA - idxB
@@ -764,12 +760,15 @@ export default function CartDropdown({
 
   // Remove item [✕]
   const handleRemove = (item: UnifiedCartItem) => {
-    const targetKey = item.variantId || item.product_handle || item.id
+    const targetKey = item.variantId || item.id
     const nextItems = itemsRef.current.filter((it) => {
-      if (item.variantId && it.variantId === item.variantId) return false
-      if (item.product_handle && it.product_handle === item.product_handle) return false
-      if (it.id === item.id) return false
-      return true
+      if (item.variantId && it.variantId) {
+        return it.variantId !== item.variantId
+      }
+      if (item.lineId && it.lineId) {
+        return it.lineId !== item.lineId
+      }
+      return it.id !== item.id
     })
 
     const nextOrder = variantOrderRef.current.filter((k) => k !== targetKey)
@@ -779,16 +778,15 @@ export default function CartDropdown({
     variantOrderRef.current = nextOrder
     saveLocalSnapshot(nextItems, nextOrder)
 
-    if (item.variantId || item.product_handle) {
-      window.dispatchEvent(
-        new CustomEvent("cart:item-deleted", {
-          detail: {
-            variantId: item.variantId,
-            handle: item.product_handle,
-          },
-        })
-      )
-    }
+    window.dispatchEvent(
+      new CustomEvent("cart:item-deleted", {
+        detail: {
+          id: item.id,
+          lineId: item.lineId,
+          variantId: item.variantId,
+        },
+      })
+    )
 
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current)
@@ -825,12 +823,12 @@ export default function CartDropdown({
       const detail = (e as CustomEvent).detail || {}
       const targetVariantId = detail.variantId
       const targetHandle = detail.handle
-      const itemKey = targetVariantId || targetHandle || detail.id
+      const itemKey = targetVariantId || detail.id || targetHandle
       const currentItems = itemsRef.current
 
       const existingIndex = currentItems.findIndex((i) =>
         targetVariantId
-          ? i.variantId === targetVariantId
+          ? Boolean(i.variantId && i.variantId === targetVariantId)
           : targetHandle
           ? i.product_handle === targetHandle
           : false
@@ -903,9 +901,9 @@ export default function CartDropdown({
       const targetId = detail.id
 
       const existing = itemsRef.current.find((i) => {
+        if (targetVariantId && i.variantId) return i.variantId === targetVariantId
         if (targetId) return i.id === targetId || i.lineId === targetId
-        if (targetVariantId) return i.variantId === targetVariantId
-        if (targetHandle) return i.product_handle === targetHandle
+        if (!targetVariantId && !targetId && targetHandle) return i.product_handle === targetHandle
         return false
       })
 
@@ -925,9 +923,9 @@ export default function CartDropdown({
       const targetId = detail.id
 
       const existing = itemsRef.current.find((i) => {
+        if (targetVariantId && i.variantId) return i.variantId === targetVariantId
         if (targetId) return i.id === targetId || i.lineId === targetId
-        if (targetVariantId) return i.variantId === targetVariantId
-        if (targetHandle) return i.product_handle === targetHandle
+        if (!targetVariantId && !targetId && targetHandle) return i.product_handle === targetHandle
         return false
       })
 

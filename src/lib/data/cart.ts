@@ -462,104 +462,104 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
           }
         }
       }
-    }
+    } else {
+      // 1. Process deletions
+      if (payload.deletions && payload.deletions.length > 0) {
+        const deletedLineIds = new Set<string>()
+        const deletePromises: Promise<any>[] = []
 
-    // 1. Process deletions
-    if (payload.deletions && payload.deletions.length > 0) {
-      const deletedLineIds = new Set<string>()
-      const deletePromises: Promise<any>[] = []
+        for (const del of payload.deletions) {
+          const matching =
+            cart.items?.filter(
+              (i) =>
+                (del.lineId && i.id === del.lineId) ||
+                (del.variantId && i.variant_id === del.variantId) ||
+                (del.lineId?.startsWith("opt_") &&
+                  del.variantId &&
+                  i.variant_id === del.variantId)
+            ) || []
 
-      for (const del of payload.deletions) {
-        const matching =
-          cart.items?.filter(
-            (i) =>
-              (del.lineId && i.id === del.lineId) ||
-              (del.variantId && i.variant_id === del.variantId) ||
-              (del.lineId?.startsWith("opt_") &&
-                del.variantId &&
-                i.variant_id === del.variantId)
-          ) || []
+          for (const item of matching) {
+            if (!deletedLineIds.has(item.id)) {
+              deletedLineIds.add(item.id)
+              deletePromises.push(
+                sdk.store.cart.deleteLineItem(cart.id, item.id, {}, headers).catch((e) => {
+                  console.warn(`[batchSyncCart] Delete item ${item.id} failed:`, e)
+                })
+              )
+            }
+          }
+        }
 
-        for (const item of matching) {
-          if (!deletedLineIds.has(item.id)) {
-            deletedLineIds.add(item.id)
-            deletePromises.push(
-              sdk.store.cart.deleteLineItem(cart.id, item.id, {}, headers).catch((e) => {
-                console.warn(`[batchSyncCart] Delete item ${item.id} failed:`, e)
-              })
-            )
+        if (deletePromises.length > 0) {
+          await Promise.allSettled(deletePromises)
+        }
+
+        if (cart.items) {
+          cart.items = cart.items.filter((i) => !deletedLineIds.has(i.id))
+        }
+      }
+
+      // 2. Process quantity updates
+      if (payload.updates && payload.updates.length > 0) {
+        for (const upd of payload.updates) {
+          if (upd.quantity <= 0) {
+            try {
+              await sdk.store.cart.deleteLineItem(cart.id, upd.lineId, {}, headers)
+              if (cart.items) {
+                cart.items = cart.items.filter((i) => i.id !== upd.lineId)
+              }
+            } catch (e) {}
+          } else {
+            try {
+              await sdk.store.cart.updateLineItem(
+                cart.id,
+                upd.lineId,
+                { quantity: upd.quantity },
+                {},
+                headers
+              )
+              const item = cart.items?.find((i) => i.id === upd.lineId)
+              if (item) item.quantity = upd.quantity
+            } catch (e) {
+              console.warn(`[batchSyncCart] Update lineItem ${upd.lineId} failed:`, e)
+            }
           }
         }
       }
 
-      if (deletePromises.length > 0) {
-        await Promise.allSettled(deletePromises)
-      }
-
-      if (cart.items) {
-        cart.items = cart.items.filter((i) => !deletedLineIds.has(i.id))
-      }
-    }
-
-    // 2. Process quantity updates
-    if (payload.updates && payload.updates.length > 0) {
-      for (const upd of payload.updates) {
-        if (upd.quantity <= 0) {
-          try {
-            await sdk.store.cart.deleteLineItem(cart.id, upd.lineId, {}, headers)
-            if (cart.items) {
-              cart.items = cart.items.filter((i) => i.id !== upd.lineId)
+      // 3. Process additions
+      if (payload.additions && payload.additions.length > 0) {
+        for (const add of payload.additions) {
+          if (!add.variantId || add.quantity <= 0) continue
+          const existing = cart.items?.find((i) => i.variant_id === add.variantId)
+          if (existing) {
+            try {
+              await sdk.store.cart.updateLineItem(
+                cart.id,
+                existing.id,
+                { quantity: add.quantity },
+                {},
+                headers
+              )
+              existing.quantity = add.quantity
+            } catch (e) {
+              console.warn(`[batchSyncCart] Update lineItem ${existing.id} failed:`, e)
             }
-          } catch (e) {}
-        } else {
-          try {
-            await sdk.store.cart.updateLineItem(
-              cart.id,
-              upd.lineId,
-              { quantity: upd.quantity },
-              {},
-              headers
-            )
-            const item = cart.items?.find((i) => i.id === upd.lineId)
-            if (item) item.quantity = upd.quantity
-          } catch (e) {
-            console.warn(`[batchSyncCart] Update lineItem ${upd.lineId} failed:`, e)
-          }
-        }
-      }
-    }
-
-    // 3. Process additions
-    if (payload.additions && payload.additions.length > 0) {
-      for (const add of payload.additions) {
-        if (!add.variantId || add.quantity <= 0) continue
-        const existing = cart.items?.find((i) => i.variant_id === add.variantId)
-        if (existing) {
-          try {
-            await sdk.store.cart.updateLineItem(
-              cart.id,
-              existing.id,
-              { quantity: add.quantity },
-              {},
-              headers
-            )
-            existing.quantity = add.quantity
-          } catch (e) {
-            console.warn(`[batchSyncCart] Update lineItem ${existing.id} failed:`, e)
-          }
-        } else {
-          try {
-            const res = await sdk.store.cart.createLineItem(
-              cart.id,
-              { variant_id: add.variantId, quantity: add.quantity },
-              {},
-              headers
-            )
-            if (res?.cart?.items) {
-              cart.items = res.cart.items
+          } else {
+            try {
+              const res = await sdk.store.cart.createLineItem(
+                cart.id,
+                { variant_id: add.variantId, quantity: add.quantity },
+                {},
+                headers
+              )
+              if (res?.cart?.items) {
+                cart.items = res.cart.items
+              }
+            } catch (e) {
+              console.warn(`[batchSyncCart] Create lineItem for ${add.variantId} failed:`, e)
             }
-          } catch (e) {
-            console.warn(`[batchSyncCart] Create lineItem for ${add.variantId} failed:`, e)
           }
         }
       }
