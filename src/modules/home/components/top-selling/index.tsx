@@ -75,7 +75,7 @@ export default function TopSelling({ products }: TopSellingProps) {
         </div>
 
         {/* Exactly 4 Products in a Row matching user screenshot */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4.5">
           {displayProducts.slice(0, 4).map((prod) => (
             <HoneyProductCard key={prod.id} product={prod} />
           ))}

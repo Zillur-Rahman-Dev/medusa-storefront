@@ -71,7 +71,7 @@ export default function FeaturedCategories({ categories = [] }: FeaturedCategori
           {displayList.map((cat, idx) => (
             <LocalizedClientLink
               key={idx}
-              href={`/store?category=${cat.handle}`}
+              href={`/categories/${cat.handle}`}
               className="group flex flex-col items-center gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-500 dark:hover:border-amber-400 hover:shadow-md transition-all duration-200 shrink-0 min-w-[90px] sm:min-w-[115px] text-center"
             >
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center text-2xl sm:text-3xl shadow-sm border border-zinc-100 dark:border-zinc-700 group-hover:scale-110 group-hover:shadow transition-transform">

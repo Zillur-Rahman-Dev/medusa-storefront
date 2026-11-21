@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ShoppingCart, Truck, Check, Loader2 } from "lucide-react"
-import { addToCart } from "@lib/data/cart"
+import { ShoppingCart } from "lucide-react"
 import { formatPrice, formatSize } from "@lib/util/money"
 import { useCartItem } from "@lib/hooks/use-cart-item"
 
@@ -34,7 +33,6 @@ export default function HoneyProductCard({
   product,
 }: HoneyProductCardProps) {
   const { quantity, setQuantity } = useCartItem(product.variantId, product.handle)
-  const [isOrdering, setIsOrdering] = useState(false)
   const router = useRouter()
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
@@ -56,7 +54,7 @@ export default function HoneyProductCard({
     e.preventDefault()
     e.stopPropagation()
 
-    if (!product.variantId || isOrdering) return
+    if (!product.variantId) return
 
     setQuantity(1)
 
@@ -84,7 +82,7 @@ export default function HoneyProductCard({
     e.preventDefault()
     e.stopPropagation()
 
-    if (!product.variantId || isOrdering) return
+    if (!product.variantId) return
 
     const nextQty = quantity + 1
     setQuantity(nextQty)
@@ -113,7 +111,7 @@ export default function HoneyProductCard({
     e.preventDefault()
     e.stopPropagation()
 
-    if (!product.variantId || isOrdering) return
+    if (!product.variantId) return
 
     if (quantity > 1) {
       const nextQty = quantity - 1
@@ -130,7 +128,7 @@ export default function HoneyProductCard({
         )
       }
     } else {
-      // Quantity hits 0: reverts back to [ কার্ট-এ যোগ ]
+      // Quantity hits 0: reverts back to [ কার্টে যোগ করুন ]
       setQuantity(0)
 
       if (typeof window !== "undefined") {
@@ -146,55 +144,12 @@ export default function HoneyProductCard({
     }
   }
 
-  // 4. Direct Medusa Checkout (adds item to cart if needed, awaits full cart sync, and navigates to /checkout)
-  const handleOrderNow = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    if (!product.variantId || isOrdering) return
-    setIsOrdering(true)
-
-    // If item not yet in cart: Optimistically update local quantity & context in 0ms
-    if (quantity === 0) {
-      setQuantity(1)
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("cart:item-added", {
-            detail: {
-              id: `opt_${Date.now()}`,
-              title: product.title,
-              variant: product.weight || "১ কেজি",
-              price: product.price,
-              thumbnail: resolvedThumbnail,
-              handle: product.handle,
-              variantId: product.variantId,
-              quantity: 1,
-              openDropdown: false,
-            },
-          })
-        )
-      }
-    }
-
-    // Flush and await full cart sync so ALL items in cart are 100% saved in Medusa before navigating
-    try {
-      if (typeof window !== "undefined" && typeof (window as any).__FLUSH_CART_SYNC__ === "function") {
-        await (window as any).__FLUSH_CART_SYNC__()
-      }
-    } catch (err) {
-      console.warn("Direct checkout flush error:", err)
-    }
-
-    window.location.href = `/${countryCode}/checkout`
-    setIsOrdering(false)
-  }
-
   return (
-    <div className="relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 hover:border-amber-500/80 dark:hover:border-amber-500/80 shadow-sm hover:shadow-xl transition-all duration-300 group">
+    <div className="relative flex flex-col justify-between p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 hover:border-amber-500/80 dark:hover:border-amber-500/80 shadow-xs hover:shadow-xl transition-all duration-300 group">
       {/* Top Badge matching screenshot */}
       {product.badge && (
-        <div className="absolute top-3.5 right-3.5 z-10">
-          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500 text-white shadow-sm">
+        <div className="absolute top-2.5 right-2.5 z-10">
+          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500 text-white shadow-xs">
             {product.badge}
           </span>
         </div>
@@ -204,7 +159,7 @@ export default function HoneyProductCard({
         {/* Product Real Image from Medusa Dashboard */}
         <LocalizedClientLink
           href={`/products/${product.handle}`}
-          className="relative block aspect-square w-full rounded-2xl overflow-hidden bg-gradient-to-b from-amber-50/40 to-transparent dark:from-zinc-800/30 dark:to-transparent p-2 sm:p-3 flex items-center justify-center transition-all duration-300"
+          className="relative block aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-b from-amber-50/40 to-transparent dark:from-zinc-800/30 dark:to-transparent p-2 sm:p-2.5 flex items-center justify-center transition-all duration-300"
         >
           {product.thumbnail ? (
             <Image
@@ -216,13 +171,13 @@ export default function HoneyProductCard({
               className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
             />
           ) : product.icon ? (
-            <span className="text-6xl drop-shadow-sm select-none transition-transform duration-300 group-hover:scale-110">
+            <span className="text-5xl sm:text-6xl drop-shadow-xs select-none transition-transform duration-300 group-hover:scale-110">
               {product.icon}
             </span>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50/80 via-amber-100/40 to-orange-50/60 dark:from-zinc-800/60 dark:to-zinc-900/60 rounded-xl select-none">
-              <span className="text-5xl sm:text-6xl drop-shadow-sm transition-transform duration-300 group-hover:scale-110">🍯</span>
-              <span className="text-[11px] font-black tracking-wider uppercase text-amber-800/80 dark:text-amber-400 mt-2">
+              <span className="text-4xl sm:text-5xl drop-shadow-xs transition-transform duration-300 group-hover:scale-110">🍯</span>
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-amber-800/80 dark:text-amber-400 mt-1.5">
                 ১০০% খাঁটি মধু
               </span>
             </div>
@@ -230,43 +185,41 @@ export default function HoneyProductCard({
         </LocalizedClientLink>
 
         {/* Product Title */}
-        <LocalizedClientLink href={`/products/${product.handle}`} className="block mt-3">
-          <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
+        <LocalizedClientLink href={`/products/${product.handle}`} className="block mt-2.5">
+          <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
             {product.title}
           </h3>
         </LocalizedClientLink>
 
         {/* Compact Single Row: Price on LEFT, Weight / Kg on RIGHT */}
-        <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="mt-2 flex items-center justify-between gap-1.5">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">
+            <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400">
               {formatPrice(product.price)}
             </span>
             {product.regularPrice && product.regularPrice > product.price && (
-              <span className="text-xs text-zinc-400 line-through">
+              <span className="text-[11px] text-zinc-400 line-through">
                 {formatPrice(product.regularPrice)}
               </span>
             )}
           </div>
 
           {product.weight && (
-            <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
               {formatSize(product.weight)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Dual Buttons matching exact user screenshot (Image 1) */}
-      <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
-        {/* Button 1: Dynamic Stepper (Image 1 top) or Add to Cart (Image 1 bottom) */}
+      {/* Ghorer Bazar Style Single Button: [ 🛒 কার্টে যোগ করুন ] or [ - qty + ] Stepper */}
+      <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center">
         {quantity > 0 ? (
-          <div className="flex-1 h-10 flex items-center rounded-xl overflow-hidden border border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
+          <div className="w-full h-9 sm:h-10 flex items-center rounded-lg sm:rounded-xl overflow-hidden border border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
             <button
               type="button"
               onClick={handleDecrement}
-              disabled={isOrdering}
-              className="w-9 sm:w-10 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+              className="w-10 sm:w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
               aria-label="পরিমাণ কমান"
             >
               -
@@ -277,8 +230,7 @@ export default function HoneyProductCard({
             <button
               type="button"
               onClick={handleIncrement}
-              disabled={isOrdering}
-              className="w-9 sm:w-10 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+              className="w-10 sm:w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
               aria-label="পরিমাণ বাড়ান"
             >
               +
@@ -288,28 +240,12 @@ export default function HoneyProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={isOrdering}
-            className="flex-1 h-10 py-2 px-2.5 rounded-xl text-xs font-bold border border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
+            className="w-full h-9 sm:h-10 py-1.5 px-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold border border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
           >
-            <ShoppingCart className="w-3.5 h-3.5 text-amber-600" />
-            <span>কার্ট-এ যোগ</span>
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-inherit" />
+            <span>কার্টে যোগ করুন</span>
           </button>
         )}
-
-        {/* Button 2: অর্ডার করুন (Direct to Medusa Checkout - Instant) */}
-        <button
-          type="button"
-          onClick={handleOrderNow}
-          disabled={isOrdering}
-          className="flex-1 h-10 py-2 px-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.98] shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-80 cursor-pointer"
-        >
-          {isOrdering ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Truck className="w-3.5 h-3.5" />
-          )}
-          <span>{isOrdering ? "অর্ডার হচ্ছে..." : "অর্ডার করুন"}</span>
-        </button>
       </div>
     </div>
   )

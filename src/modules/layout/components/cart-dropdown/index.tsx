@@ -4,7 +4,7 @@ import { convertToLocale, formatPrice, formatSize } from "@lib/util/money"
 import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, usePathname } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { ShoppingCart, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag } from "lucide-react"
@@ -92,7 +92,9 @@ export default function CartDropdown({
 }) {
   const router = useRouter()
   const params = useParams()
+  const pathname = usePathname()
   const countryCode = (params?.countryCode as string) || "bd"
+  const isCheckoutPage = pathname?.includes("/checkout")
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBadgePulsing, setIsBadgePulsing] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
@@ -229,6 +231,22 @@ export default function CartDropdown({
       window.removeEventListener("cart:open-drawer", handleOpen)
       window.removeEventListener("cart:close-drawer", handleClose)
     }
+  }, [])
+
+  // Listen for explicit cart wipe (e.g. after order confirmed)
+  useEffect(() => {
+    const handleClear = () => {
+      setItems([])
+      itemsRef.current = []
+      setVariantOrder([])
+      variantOrderRef.current = []
+      try {
+        localStorage.removeItem("purehoney_cart_v2")
+        sessionStorage.removeItem("medusa_cart_map")
+      } catch (e) {}
+    }
+    window.addEventListener("cart:clear", handleClear)
+    return () => window.removeEventListener("cart:clear", handleClear)
   }, [])
 
   useEffect(() => {
@@ -975,6 +993,29 @@ export default function CartDropdown({
       {mounted &&
         createPortal(
           <>
+            {/* Ghorer Bazar Style Sticky Floating Cart Widget on Right Edge */}
+            {totalItems > 0 && !isDrawerOpen && !isCheckoutPage && (
+              <button
+                type="button"
+                onClick={openDrawer}
+                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] bg-amber-600 hover:bg-amber-700 active:scale-95 text-white py-2.5 px-3 rounded-l-2xl shadow-2xl flex flex-col items-center justify-center gap-1 border-y border-l border-amber-400/60 cursor-pointer transition-all duration-200 select-none group"
+                aria-label="শপিং কার্ট খুলুন"
+              >
+                <div className="relative">
+                  <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1.5 -right-2 bg-white text-amber-600 text-[10px] font-black rounded-full min-w-4 h-4 px-1 flex items-center justify-center shadow-xs">
+                    {formatSize(String(totalItems))}
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold leading-tight mt-0.5">
+                  {formatSize(String(totalItems))} টি পণ্য
+                </span>
+                <span className="text-[11px] font-black bg-amber-700/90 text-amber-100 px-2 py-0.5 rounded-full leading-none shadow-inner">
+                  ৳{formatPrice(totalSubtotal - effectiveDiscount)}
+                </span>
+              </button>
+            )}
+
             {/* Drawer Overlay Backdrop */}
             <div
               className={`fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[9999] transition-opacity duration-300 ease-in-out ${

@@ -88,7 +88,7 @@ export default function ProductPreview({
   }, [matchedVariant, product, selectedWeight])
 
   return (
-    <div className="group flex flex-col justify-between h-full bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-amber-500/80 dark:hover:border-amber-500/60 transition-all duration-300">
+    <div className="group flex flex-col justify-between h-full bg-white dark:bg-zinc-900 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-xs hover:shadow-xl hover:border-amber-500/80 dark:hover:border-amber-500/60 transition-all duration-300">
       <LocalizedClientLink
         href={
           targetVariantId
@@ -102,36 +102,36 @@ export default function ProductPreview({
           <Thumbnail
             thumbnail={product.thumbnail}
             images={product.images}
-            size="full"
+            size="square"
             isFeatured={isFeatured}
           />
         </div>
 
-        <div className="mt-3.5 space-y-2">
+        <div className="mt-2.5 space-y-1.5">
           {/* Product Title */}
           <h3
-            className="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
+            className="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
             data-testid="product-title"
           >
             {product.title}
           </h3>
 
           {/* Compact Single Row: Price on LEFT, Weight badge on RIGHT (always resolved dynamically) */}
-          <div className="pt-0.5 flex items-center justify-between gap-2">
+          <div className="pt-0.5 flex items-center justify-between gap-1.5">
             {activePrice && (
-              <div className="text-zinc-900 dark:text-zinc-100 font-black text-base sm:text-lg">
+              <div className="text-zinc-900 dark:text-zinc-100 font-black text-sm sm:text-base">
                 <PreviewPrice price={activePrice} />
               </div>
             )}
-            <span className="px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
               {formatSize(displayWeight)}
             </span>
           </div>
         </div>
       </LocalizedClientLink>
 
-      {/* Action Button: 'কার্ট-এ যোগ' button for Store / Collections / Categories with instant Optimistic UI */}
-      <div className="mt-4 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
+      {/* Action Button: 'কার্টে যোগ করুন' button for Store / Collections / Categories with instant Optimistic UI */}
+      <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center">
         <PreviewAddToCart
           key={targetVariantId}
           variantId={targetVariantId}
