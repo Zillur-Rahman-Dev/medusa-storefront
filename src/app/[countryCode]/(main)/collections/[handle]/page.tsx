@@ -2,7 +2,9 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { getCollectionByHandle, listCollections } from "@lib/data/collections"
-import { listRegions } from "@lib/data/regions"
+import { listRegions, getRegion } from "@lib/data/regions"
+import { listProducts } from "@lib/data/products"
+import { listCategories } from "@lib/data/categories"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -59,7 +61,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const metadata = {
-    title: `${collection.title} | Medusa Store`,
+    title: `${collection.title} | Pure Honey`,
     description: `${collection.title} collection`,
   } as Metadata
 
@@ -67,24 +69,37 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function CollectionPage(props: Props) {
-  const searchParams = await props.searchParams
   const params = await props.params
-  const { sortBy, page } = searchParams
+  const countryCode = params.countryCode || "bd"
 
-  const collection = await getCollectionByHandle(params.handle).then(
-    (collection: StoreCollection) => collection
-  )
+  const [collection, region, productsRes, categories] = await Promise.all([
+    getCollectionByHandle(params.handle),
+    getRegion(countryCode),
+    listProducts({
+      pageParam: 0,
+      queryParams: { limit: 100 },
+      countryCode,
+    }),
+    listCategories(),
+  ])
 
-  if (!collection) {
+  if (!collection || !region) {
     notFound()
   }
+
+  const allProducts = productsRes?.response?.products || []
+  const collectionProducts = allProducts.filter(
+    (p) => p.collection_id === collection.id || p.collection?.handle === params.handle
+  )
+  const displayProducts = collectionProducts.length > 0 ? collectionProducts : allProducts
 
   return (
     <CollectionTemplate
       collection={collection}
-      page={page}
-      sortBy={sortBy}
-      countryCode={params.countryCode}
+      products={displayProducts}
+      categories={categories || []}
+      region={region}
+      countryCode={countryCode}
     />
   )
 }

@@ -74,9 +74,9 @@ export default function TopSelling({ products }: TopSellingProps) {
           <div className="w-14 h-1 bg-amber-500 rounded-full mx-auto mt-2" />
         </div>
 
-        {/* Exactly 4 Products in a Row matching user screenshot */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4.5">
-          {displayProducts.slice(0, 4).map((prod) => (
+        {/* Exactly 5 Products in a Row on Desktop matching Image 1 */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4">
+          {displayProducts.slice(0, 5).map((prod) => (
             <HoneyProductCard key={prod.id} product={prod} />
           ))}
         </div>

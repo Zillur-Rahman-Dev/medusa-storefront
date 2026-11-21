@@ -144,13 +144,30 @@ export default function HoneyProductCard({
     }
   }
 
+  const discountPercent =
+    product.regularPrice && product.regularPrice > product.price
+      ? Math.round(((product.regularPrice - product.price) / product.regularPrice) * 100)
+      : null
+
   return (
-    <div className="relative flex flex-col justify-between p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 hover:border-amber-500/80 dark:hover:border-amber-500/80 shadow-xs hover:shadow-xl transition-all duration-300 group">
-      {/* Top Badge matching screenshot */}
-      {product.badge && (
-        <div className="absolute top-2.5 right-2.5 z-10">
-          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500 text-white shadow-xs">
+    <div className="relative flex flex-col justify-between p-3 rounded-[6px] bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-xs hover:shadow-md transition-all duration-200 group">
+      {/* Top Badges matching Image 1 */}
+      <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
+        {product.badge ? (
+          <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#ea580c] rounded-[3px] shadow-2xs select-none">
             {product.badge}
+          </span>
+        ) : (
+          <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#ea580c] rounded-[3px] shadow-2xs select-none">
+            Best Selling
+          </span>
+        )}
+      </div>
+
+      {discountPercent && discountPercent > 0 && (
+        <div className="absolute top-2 right-2 z-10">
+          <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#00a651] rounded-[3px] shadow-2xs select-none">
+            Save {discountPercent}%
           </span>
         </div>
       )}
@@ -159,7 +176,7 @@ export default function HoneyProductCard({
         {/* Product Real Image from Medusa Dashboard */}
         <LocalizedClientLink
           href={`/products/${product.handle}`}
-          className="relative block aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-b from-amber-50/40 to-transparent dark:from-zinc-800/30 dark:to-transparent p-2 sm:p-2.5 flex items-center justify-center transition-all duration-300"
+          className="relative block aspect-square w-full rounded-[4px] overflow-hidden bg-white dark:bg-zinc-800/20 p-2 sm:p-2.5 flex items-center justify-center transition-all duration-300"
         >
           {product.thumbnail ? (
             <Image
@@ -175,7 +192,7 @@ export default function HoneyProductCard({
               {product.icon}
             </span>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50/80 via-amber-100/40 to-orange-50/60 dark:from-zinc-800/60 dark:to-zinc-900/60 rounded-xl select-none">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-50/80 via-amber-100/40 to-orange-50/60 dark:from-zinc-800/60 dark:to-zinc-900/60 rounded-[4px] select-none">
               <span className="text-4xl sm:text-5xl drop-shadow-xs transition-transform duration-300 group-hover:scale-110">🍯</span>
               <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-amber-800/80 dark:text-amber-400 mt-1.5">
                 ১০০% খাঁটি মধু
@@ -186,7 +203,7 @@ export default function HoneyProductCard({
 
         {/* Product Title */}
         <LocalizedClientLink href={`/products/${product.handle}`} className="block mt-2.5">
-          <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2">
+          <h3 className="font-medium text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-[#f26522] dark:group-hover:text-[#f26522] transition-colors line-clamp-2">
             {product.title}
           </h3>
         </LocalizedClientLink>
@@ -194,7 +211,7 @@ export default function HoneyProductCard({
         {/* Compact Single Row: Price on LEFT, Weight / Kg on RIGHT */}
         <div className="mt-2 flex items-center justify-between gap-1.5">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400">
+            <span className="text-sm sm:text-base font-bold text-[#f26522]">
               {formatPrice(product.price)}
             </span>
             {product.regularPrice && product.regularPrice > product.price && (
@@ -205,32 +222,32 @@ export default function HoneyProductCard({
           </div>
 
           {product.weight && (
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-[3px] whitespace-nowrap">
               {formatSize(product.weight)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Ghorer Bazar Style Single Button: [ 🛒 কার্টে যোগ করুন ] or [ - qty + ] Stepper */}
+      {/* Ghorer Bazar Style Single Button (Image 1, 2, 3) */}
       <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center">
         {quantity > 0 ? (
-          <div className="w-full h-9 sm:h-10 flex items-center rounded-lg sm:rounded-xl overflow-hidden border border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
+          <div className="w-full h-9 flex items-center rounded-[4px] overflow-hidden border border-[#f26522] shadow-2xs bg-white dark:bg-zinc-900">
             <button
               type="button"
               onClick={handleDecrement}
-              className="w-10 sm:w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+              className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
               aria-label="পরিমাণ কমান"
             >
               -
             </button>
-            <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-xs sm:text-sm select-none border-x border-amber-600/30">
+            <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold text-xs sm:text-sm select-none border-x border-[#f26522]/30">
               {formatSize(String(quantity))}
             </span>
             <button
               type="button"
               onClick={handleIncrement}
-              className="w-10 sm:w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+              className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
               aria-label="পরিমাণ বাড়ান"
             >
               +
@@ -240,10 +257,10 @@ export default function HoneyProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="w-full h-9 sm:h-10 py-1.5 px-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold border border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs active:scale-[0.98]"
+            className="w-full h-9 py-1.5 px-3 rounded-[4px] text-xs sm:text-sm font-semibold border border-[#f26522] bg-white text-[#f26522] hover:bg-[#f26522] hover:text-white transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-inherit" />
-            <span>কার্টে যোগ করুন</span>
+            <span>Add To Cart</span>
           </button>
         )}
       </div>

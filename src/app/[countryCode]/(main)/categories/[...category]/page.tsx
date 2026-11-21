@@ -2,7 +2,8 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { getCategoryByHandle, listCategories } from "@lib/data/categories"
-import { listRegions } from "@lib/data/regions"
+import { listRegions, getRegion } from "@lib/data/regions"
+import { listProducts } from "@lib/data/products"
 import { StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -47,12 +48,11 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   try {
     const productCategory = await getCategoryByHandle(params.category)
 
-    const title = productCategory.name + " | Medusa Store"
-
+    const title = productCategory.name + " | Pure Honey"
     const description = productCategory.description ?? `${title} category.`
 
     return {
-      title: `${title} | Medusa Store`,
+      title: `${title} | Pure Honey`,
       description,
       alternates: {
         canonical: `${params.category.join("/")}`,
@@ -64,22 +64,39 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage(props: Props) {
-  const searchParams = await props.searchParams
   const params = await props.params
-  const { sortBy, page } = searchParams
+  const countryCode = params.countryCode || "bd"
 
-  const productCategory = await getCategoryByHandle(params.category)
+  const [productCategory, region, productsRes, categories] = await Promise.all([
+    getCategoryByHandle(params.category),
+    getRegion(countryCode),
+    listProducts({
+      pageParam: 0,
+      queryParams: { limit: 100 },
+      countryCode,
+    }),
+    listCategories(),
+  ])
 
-  if (!productCategory) {
+  if (!productCategory || !region) {
     notFound()
   }
+
+  const allProducts = productsRes?.response?.products || []
+  const categoryProducts = allProducts.filter((p) =>
+    p.categories?.some(
+      (c) => c.id === productCategory.id || params.category.includes(c.handle || "")
+    )
+  )
+  const displayProducts = categoryProducts.length > 0 ? categoryProducts : allProducts
 
   return (
     <CategoryTemplate
       category={productCategory}
-      sortBy={sortBy}
-      page={page}
-      countryCode={params.countryCode}
+      products={displayProducts}
+      categories={categories || []}
+      region={region}
+      countryCode={countryCode}
     />
   )
 }

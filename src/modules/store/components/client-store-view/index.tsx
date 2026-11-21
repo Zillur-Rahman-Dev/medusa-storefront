@@ -8,8 +8,10 @@ import { X, SlidersHorizontal, ListFilter, ArrowUpDown, Eye } from "lucide-react
 import PriceRangeSlider from "../price-range-slider"
 import WeightFilter, { WEIGHT_OPTIONS } from "../weight-filter"
 import CategoryFilter from "../category-filter"
+import BrandFilter, { DEFAULT_BRANDS } from "../brand-filter"
 import ProductFlagFilter from "../product-flag-filter"
 import ProductPreview from "@modules/products/components/product-preview"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { formatPrice } from "@lib/util/money"
 
 type ClientStoreViewProps = {
@@ -17,6 +19,8 @@ type ClientStoreViewProps = {
   categories: HttpTypes.StoreProductCategory[]
   region: HttpTypes.StoreRegion
   countryCode: string
+  title?: string
+  breadcrumb?: string
 }
 
 export type StoreSortOption =
@@ -50,6 +54,8 @@ export default function ClientStoreView({
   categories,
   region,
   countryCode,
+  title,
+  breadcrumb,
 }: ClientStoreViewProps) {
   const searchParams = useSearchParams()
 
@@ -75,12 +81,14 @@ export default function ClientStoreView({
   const initialCategory = searchParams?.get("category") || "all"
   const initialWeight = searchParams?.get("weight") || "all"
   const initialFlag = searchParams?.get("flag") || "all"
+  const initialBrand = searchParams?.get("brand") || "all"
   const initialSort = (searchParams?.get("sortBy") as StoreSortOption) || "default"
 
   const [searchQuery, setSearchQuery] = useState(initialQ)
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedWeight, setSelectedWeight] = useState(initialWeight)
   const [selectedFlag, setSelectedFlag] = useState(initialFlag)
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand)
   const [priceRange, setPriceRange] = useState<[number, number]>([
     0,
     maxPossiblePrice,
@@ -104,6 +112,7 @@ export default function ClientStoreView({
     if (selectedCategory !== "all") params.set("category", selectedCategory)
     if (selectedWeight !== "all") params.set("weight", selectedWeight)
     if (selectedFlag !== "all") params.set("flag", selectedFlag)
+    if (selectedBrand !== "all") params.set("brand", selectedBrand)
     if (priceRange[0] > minPossiblePrice) params.set("minPrice", priceRange[0].toString())
     if (priceRange[1] < maxPossiblePrice) params.set("maxPrice", priceRange[1].toString())
     if (sortBy !== "default" && sortBy !== "created_at") params.set("sortBy", sortBy)
@@ -116,6 +125,7 @@ export default function ClientStoreView({
     selectedCategory,
     selectedWeight,
     selectedFlag,
+    selectedBrand,
     priceRange,
     sortBy,
     countryCode,
@@ -181,6 +191,19 @@ export default function ClientStoreView({
     return { categoryCounts: catMap, weightCounts: weightMap, flagCounts: fMap }
   }, [products, categories])
 
+  // Dynamic counts for brands
+  const brandCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: products.length }
+    DEFAULT_BRANDS.forEach((b) => {
+      if (b.id === "all") return
+      counts[b.id] = products.filter((p) => {
+        const text = `${p.title} ${p.handle} ${p.description || ""}`.toLowerCase()
+        return b.keywords?.some((k) => text.includes(k.toLowerCase()))
+      }).length
+    })
+    return counts
+  }, [products])
+
   // In-Memory Filtering and Sorting (0ms, Zero Server Network Load)
   const filteredProducts = useMemo(() => {
     let result = products.filter((product, idx) => {
@@ -239,7 +262,17 @@ export default function ClientStoreView({
         if (!isNew) return false
       }
 
-      // 5. Price Range Filter
+      // 5. Brand Filter (Matching Image 4)
+      if (selectedBrand !== "all") {
+        const brandDef = DEFAULT_BRANDS.find((b) => b.id === selectedBrand)
+        if (brandDef?.keywords) {
+          const text = `${product.title} ${product.handle} ${product.description || ""}`.toLowerCase()
+          const matchesBrand = brandDef.keywords.some((k) => text.includes(k.toLowerCase()))
+          if (!matchesBrand) return false
+        }
+      }
+
+      // 6. Price Range Filter
       const [currentMin, currentMax] = priceRange
       const hasPriceInRange = product.variants?.some((v: any) => {
         const amt = v.calculated_price?.calculated_amount
@@ -298,6 +331,7 @@ export default function ClientStoreView({
     if (selectedCategory !== "all") count++
     if (selectedWeight !== "all") count++
     if (selectedFlag !== "all") count++
+    if (selectedBrand !== "all") count++
     if (priceRange[0] > minPossiblePrice || priceRange[1] < maxPossiblePrice) count++
     if (searchQuery.trim()) count++
     return count
@@ -305,6 +339,7 @@ export default function ClientStoreView({
     selectedCategory,
     selectedWeight,
     selectedFlag,
+    selectedBrand,
     priceRange,
     searchQuery,
     minPossiblePrice,
@@ -315,6 +350,7 @@ export default function ClientStoreView({
     setSelectedCategory("all")
     setSelectedWeight("all")
     setSelectedFlag("all")
+    setSelectedBrand("all")
     setPriceRange([minPossiblePrice, maxPossiblePrice])
     setSearchQuery("")
     setSortBy("default")
@@ -328,6 +364,13 @@ export default function ClientStoreView({
     )
     return found ? found.name?.trim() : selectedCategory
   }, [selectedCategory, categories])
+
+  // Active Brand Name for chip
+  const activeBrandName = useMemo(() => {
+    if (selectedBrand === "all") return null
+    const found = DEFAULT_BRANDS.find((b) => b.id === selectedBrand)
+    return found ? found.label : selectedBrand
+  }, [selectedBrand])
 
   // Active Weight Name for chip
   const activeWeightName = useMemo(() => {
@@ -386,15 +429,17 @@ export default function ClientStoreView({
   return (
     <div className="bg-zinc-50/50 dark:bg-zinc-950 min-h-screen py-5 sm:py-8">
       <div className="content-container">
-        {/* Breadcrumb row */}
-        <div className="flex items-center justify-between pb-3 sm:pb-4 text-xs text-zinc-500">
-          <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100">
-            আমাদের সকল খাঁটি মধু
+        {/* Breadcrumb & Title row matching Image 4 */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 sm:pb-4 text-xs text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            {title || "আমাদের সকল খাঁটি মধু"}
           </h1>
-          <div className="hidden sm:flex items-center gap-1.5">
-            <span>হোম</span>
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <LocalizedClientLink href="/" className="hover:text-[#f26522] transition-colors">
+              Home
+            </LocalizedClientLink>
             <span>&gt;</span>
-            <span className="text-zinc-900 dark:text-zinc-100 font-semibold">স্টোর</span>
+            <span className="text-zinc-900 dark:text-zinc-100 font-semibold">{breadcrumb || title || "স্টোর"}</span>
           </div>
         </div>
 
@@ -686,11 +731,25 @@ export default function ClientStoreView({
 
             {/* Flag tag */}
             {activeFlagName && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>ফ্ল্যাগ: {activeFlagName}</span>
                 <button
                   type="button"
                   onClick={() => setSelectedFlag("all")}
+                  className="hover:text-red-500 p-0.5 cursor-pointer"
+                >
+                  <X className="w-3 h-3 stroke-[2.5]" />
+                </button>
+              </span>
+            )}
+
+            {/* Brand tag */}
+            {activeBrandName && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
+                <span>ব্র্যান্ড: {activeBrandName}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBrand("all")}
                   className="hover:text-red-500 p-0.5 cursor-pointer"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
@@ -735,7 +794,15 @@ export default function ClientStoreView({
               </button>
             )}
 
-            {/* 2. Price Range Slider (Centered thumb, matching Image 6) */}
+            {/* 1. Category Filter (FILTER BY CATEGORY) */}
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onChange={setSelectedCategory}
+              productCounts={categoryCounts}
+            />
+
+            {/* 2. Price Range Slider (PRICE RANGE - Centered thumb, matching Image 4) */}
             <PriceRangeSlider
               min={minPossiblePrice}
               max={maxPossiblePrice}
@@ -744,26 +811,25 @@ export default function ClientStoreView({
               step={50}
             />
 
-            {/* 3. Categories Filter (With tick mark checkboxes, matching Image) */}
-            <CategoryFilter
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onChange={setSelectedCategory}
-              productCounts={categoryCounts}
+            {/* 3. Brand Filter (BRANDS - Matching Image 4) */}
+            <BrandFilter
+              selectedBrand={selectedBrand}
+              onChange={setSelectedBrand}
+              productCounts={brandCounts}
             />
 
-            {/* 4. Weight / Pack Size Filter (Compact tag chips) */}
-            <WeightFilter
-              selectedWeight={selectedWeight}
-              onChange={setSelectedWeight}
-              productCounts={weightCounts}
-            />
-
-            {/* 5. Product Flag Filter (Best Selling, New Arrival, matching Image 3rd card) */}
+            {/* 4. Product Flag Filter (PRODUCT FLAG - Matching Image 4) */}
             <ProductFlagFilter
               selectedFlag={selectedFlag}
               onChange={setSelectedFlag}
               productCounts={flagCounts}
+            />
+
+            {/* 5. Weight / Pack Size Filter (Compact tag chips) */}
+            <WeightFilter
+              selectedWeight={selectedWeight}
+              onChange={setSelectedWeight}
+              productCounts={weightCounts}
             />
           </aside>
 
@@ -851,7 +917,15 @@ export default function ClientStoreView({
                 </button>
               )}
 
-              {/* Price Range Slider */}
+              {/* 1. Categories Filter (Tick mark checkboxes) */}
+              <CategoryFilter
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onChange={setSelectedCategory}
+                productCounts={categoryCounts}
+              />
+
+              {/* 2. Price Range Slider */}
               <PriceRangeSlider
                 min={minPossiblePrice}
                 max={maxPossiblePrice}
@@ -860,26 +934,25 @@ export default function ClientStoreView({
                 step={50}
               />
 
-              {/* Categories Filter (Tick mark checkboxes) */}
-              <CategoryFilter
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onChange={setSelectedCategory}
-                productCounts={categoryCounts}
+              {/* 3. Brand Filter */}
+              <BrandFilter
+                selectedBrand={selectedBrand}
+                onChange={setSelectedBrand}
+                productCounts={brandCounts}
               />
 
-              {/* Weight Filter (Compact tag chips) */}
-              <WeightFilter
-                selectedWeight={selectedWeight}
-                onChange={setSelectedWeight}
-                productCounts={weightCounts}
-              />
-
-              {/* Product Flag Filter */}
+              {/* 4. Product Flag Filter */}
               <ProductFlagFilter
                 selectedFlag={selectedFlag}
                 onChange={setSelectedFlag}
                 productCounts={flagCounts}
+              />
+
+              {/* 5. Weight Filter (Compact tag chips) */}
+              <WeightFilter
+                selectedWeight={selectedWeight}
+                onChange={setSelectedWeight}
+                productCounts={weightCounts}
               />
             </div>
 

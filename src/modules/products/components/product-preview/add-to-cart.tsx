@@ -137,22 +137,22 @@ export default function PreviewAddToCart({
 
   if (quantity > 0) {
     return (
-      <div className="w-full h-9 sm:h-10 flex items-center rounded-lg sm:rounded-xl overflow-hidden border border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
+      <div className="w-full h-9 flex items-center rounded-[4px] overflow-hidden border border-[#f26522] shadow-2xs bg-white dark:bg-zinc-900">
         <button
           type="button"
           onClick={handleDecrement}
-          className="w-10 sm:w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+          className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
           aria-label="পরিমাণ কমান"
         >
           -
         </button>
-        <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-xs sm:text-sm select-none border-x border-amber-600/30">
+        <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold text-xs sm:text-sm select-none border-x border-[#f26522]/30">
           {formatSize(String(quantity))}
         </span>
         <button
           type="button"
           onClick={handleIncrement}
-          className="w-10 sm:w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-base select-none transition-colors cursor-pointer"
+          className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
           aria-label="পরিমাণ বাড়ান"
         >
           +
@@ -165,10 +165,10 @@ export default function PreviewAddToCart({
     <button
       type="button"
       onClick={handleAddToCart}
-      className="w-full h-9 sm:h-10 py-1.5 px-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-2xs border border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-500 hover:text-white cursor-pointer"
+      className="w-full h-9 py-1.5 px-3 rounded-[4px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 active:scale-[0.98] shadow-2xs border border-[#f26522] bg-white text-[#f26522] hover:bg-[#f26522] hover:text-white cursor-pointer"
     >
       <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-inherit" />
-      <span>কার্টে যোগ করুন</span>
+      <span>Add To Cart</span>
     </button>
   )
 }

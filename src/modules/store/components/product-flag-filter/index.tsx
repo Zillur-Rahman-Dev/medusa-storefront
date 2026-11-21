@@ -22,7 +22,7 @@ export default function ProductFlagFilter({
   ]
 
   return (
-    <div className="w-full bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+    <div className="w-full bg-white dark:bg-zinc-900 rounded-[6px] p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
       {/* Title Header matching the reference image */}
       <div className="pb-2 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center justify-between">

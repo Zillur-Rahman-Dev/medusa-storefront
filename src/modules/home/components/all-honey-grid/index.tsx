@@ -134,8 +134,8 @@ export default function AllHoneyGrid({ products }: AllHoneyGridProps) {
           </LocalizedClientLink>
         </div>
 
-        {/* 4 Products per row grid matching user screenshot */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4.5">
+        {/* 5 Products per row grid on desktop matching Image 1 */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4">
           {displayProducts.map((prod) => (
             <HoneyProductCard key={prod.id} product={prod} />
           ))}

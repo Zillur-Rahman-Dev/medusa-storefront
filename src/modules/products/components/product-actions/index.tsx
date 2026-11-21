@@ -374,24 +374,24 @@ export default function ProductActions({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           {/* 1. Add To Cart Button (Transforms to Stepper when quantity > 0) */}
           {quantity > 0 ? (
-            <div className="w-full h-11 sm:h-12 flex items-center rounded-xl overflow-hidden border-2 border-amber-600 shadow-2xs bg-white dark:bg-zinc-900">
+            <div className="w-full h-11 sm:h-12 flex items-center rounded-[4px] overflow-hidden border border-[#f26522] shadow-2xs bg-white dark:bg-zinc-900">
               <button
                 type="button"
                 onClick={handleDecrement}
                 disabled={isOrdering}
-                className="w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-lg select-none transition-colors cursor-pointer"
+                className="w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-lg select-none transition-colors duration-150 cursor-pointer"
                 aria-label="পরিমাণ কমান"
               >
                 -
               </button>
-              <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-black text-sm sm:text-base select-none border-x border-amber-600/30">
+              <span className="flex-1 h-full flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold text-sm sm:text-base select-none border-x border-[#f26522]/30">
                 {formatSize(String(quantity))}
               </span>
               <button
                 type="button"
                 onClick={handleIncrement}
                 disabled={isOrdering}
-                className="w-12 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black text-lg select-none transition-colors cursor-pointer"
+                className="w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-lg select-none transition-colors duration-150 cursor-pointer"
                 aria-label="পরিমাণ বাড়ান"
               >
                 +
@@ -408,10 +408,10 @@ export default function ProductActions({
                 isOrdering ||
                 !isValidVariant
               }
-              className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base border-2 border-amber-500 hover:border-amber-600 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer shadow-2xs"
+              className="w-full h-11 sm:h-12 px-4 rounded-[4px] font-semibold text-sm sm:text-base border border-[#f26522] bg-white dark:bg-zinc-900 text-[#f26522] hover:bg-[#f26522] hover:text-white transition-colors duration-150 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer shadow-2xs"
             >
-              <ShoppingCart className="w-5 h-5 text-amber-600" />
-              <span>কার্টে যোগ করুন</span>
+              <ShoppingCart className="w-5 h-5 text-inherit" />
+              <span>Add To Cart</span>
             </button>
           )}
 
@@ -420,7 +420,7 @@ export default function ProductActions({
             type="button"
             onClick={handleDirectCheckout}
             disabled={!inStock || !selectedVariant || isOrdering}
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-sm sm:text-base bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+            className="w-full h-11 sm:h-12 px-4 rounded-[4px] font-semibold text-sm sm:text-base bg-[#f26522] hover:bg-[#d9531e] text-white shadow-xs transition-colors flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
           >
             {isOrdering ? (
               <>
@@ -440,7 +440,7 @@ export default function ProductActions({
             href={`https://wa.me/8801999602203?text=আসসালামু%20আলাইকুম,%20আমি%20${encodeURIComponent(product.title)}%20(${selectedVariant?.title || ""})%20অর্ডার%20করতে%20চাই।`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+            className="w-full h-11 sm:h-12 px-4 rounded-[4px] font-semibold text-xs sm:text-sm bg-[#25D366] hover:bg-[#20ba59] text-white shadow-xs transition-colors flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <MessageCircle className="w-4 h-4 fill-white shrink-0" />
             <span>হোয়াটসঅ্যাপে অর্ডার করুন</span>
@@ -449,7 +449,7 @@ export default function ProductActions({
           {/* 4. Call Order Button (Bottom-Right: White with black border) */}
           <a
             href={`tel:${((product.metadata as Record<string, any>)?.call_phone) || t.globalPolicies.hotline}`}
-            className="w-full h-11 sm:h-12 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+            className="w-full h-11 sm:h-12 px-4 rounded-[4px] font-semibold text-xs sm:text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-900 dark:border-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <PhoneCall className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
             <span>কল অর্ডার: {((product.metadata as Record<string, any>)?.call_phone) || t.globalPolicies.hotline}</span>

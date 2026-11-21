@@ -7,7 +7,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { useParams, useRouter, usePathname } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ShoppingCart, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag } from "lucide-react"
+import { ShoppingCart, ShoppingBag, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
 const KNOWN_HONEY_IMAGES: Record<string, string> = {
@@ -993,26 +993,28 @@ export default function CartDropdown({
       {mounted &&
         createPortal(
           <>
-            {/* Ghorer Bazar Style Sticky Floating Cart Widget on Right Edge */}
+            {/* Ghorer Bazar Style Sticky Floating Cart Widget on Right Edge (100% Matching Image 1) */}
             {totalItems > 0 && !isDrawerOpen && !isCheckoutPage && (
               <button
                 type="button"
                 onClick={openDrawer}
-                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] bg-amber-600 hover:bg-amber-700 active:scale-95 text-white py-2.5 px-3 rounded-l-2xl shadow-2xl flex flex-col items-center justify-center gap-1 border-y border-l border-amber-400/60 cursor-pointer transition-all duration-200 select-none group"
+                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] flex flex-col rounded-l-[6px] overflow-hidden shadow-xl hover:shadow-2xl border-l border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:-translate-x-0.5"
                 aria-label="শপিং কার্ট খুলুন"
               >
-                <div className="relative">
-                  <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1.5 -right-2 bg-white text-amber-600 text-[10px] font-black rounded-full min-w-4 h-4 px-1 flex items-center justify-center shadow-xs">
-                    {formatSize(String(totalItems))}
+                {/* Top Half: Solid Orange with Shopping Bag + Item Count */}
+                <div className="bg-[#f26522] py-2 px-3 flex flex-col items-center justify-center text-white min-w-[72px]">
+                  <ShoppingBag className="w-5 h-5 text-white stroke-[2.2] group-hover:scale-105 transition-transform" />
+                  <span className="text-[11px] font-bold leading-tight mt-0.5 whitespace-nowrap">
+                    {totalItems} Items
                   </span>
                 </div>
-                <span className="text-[11px] font-bold leading-tight mt-0.5">
-                  {formatSize(String(totalItems))} টি পণ্য
-                </span>
-                <span className="text-[11px] font-black bg-amber-700/90 text-amber-100 px-2 py-0.5 rounded-full leading-none shadow-inner">
-                  ৳{formatPrice(totalSubtotal - effectiveDiscount)}
-                </span>
+
+                {/* Bottom Half: Pure White with Orange Price */}
+                <div className="bg-white dark:bg-zinc-900 py-1.5 px-2 text-center border-t border-orange-200 dark:border-zinc-800">
+                  <span className="text-[11px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
+                    ৳{formatPrice(totalSubtotal - effectiveDiscount)}
+                  </span>
+                </div>
               </button>
             )}
 

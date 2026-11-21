@@ -45,7 +45,7 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   return (
     <div
       className={clx(
-        "relative w-full overflow-hidden rounded-2xl bg-transparent transition-all duration-300",
+        "relative w-full overflow-hidden rounded-[4px] bg-transparent transition-all duration-300",
         className,
         {
           "aspect-[11/14]": isFeatured,

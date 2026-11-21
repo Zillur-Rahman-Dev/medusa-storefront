@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { HttpTypes } from "@medusajs/types"
 import ClientStoreView from "@modules/store/components/client-store-view"
 
@@ -15,11 +16,13 @@ export default function StoreTemplate({
   countryCode,
 }: StoreTemplateProps) {
   return (
-    <ClientStoreView
-      products={products}
-      categories={categories}
-      region={region}
-      countryCode={countryCode}
-    />
+    <Suspense fallback={<div className="min-h-screen py-10 text-center">লোড হচ্ছে...</div>}>
+      <ClientStoreView
+        products={products}
+        categories={categories}
+        region={region}
+        countryCode={countryCode}
+      />
+    </Suspense>
   )
 }

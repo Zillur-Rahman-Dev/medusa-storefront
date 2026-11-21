@@ -34,7 +34,7 @@ export default async function ProductRail({
           সকল মধু দেখুন
         </InteractiveLink>
       </div>
-      <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-6 gap-y-24 small:gap-y-36">
+      <ul className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4">
         {pricedProducts &&
           pricedProducts.map((product) => (
             <li key={product.id}>

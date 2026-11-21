@@ -208,8 +208,8 @@ export default function HoneyShelves({ shelves }: HoneyShelvesProps) {
             </LocalizedClientLink>
           </div>
 
-          {/* Exactly 4 Products Grid matching user screenshot */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4.5">
+          {/* Exactly 5 Products Grid on Desktop matching Image 1 */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4">
             {shelf.products.map((prod) => (
               <HoneyProductCard key={prod.id} product={prod} />
             ))}

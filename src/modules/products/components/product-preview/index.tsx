@@ -88,7 +88,22 @@ export default function ProductPreview({
   }, [matchedVariant, product, selectedWeight])
 
   return (
-    <div className="group flex flex-col justify-between h-full bg-white dark:bg-zinc-900 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-800 shadow-xs hover:shadow-xl hover:border-amber-500/80 dark:hover:border-amber-500/60 transition-all duration-300">
+    <div className="relative group flex flex-col justify-between h-full bg-white dark:bg-zinc-900 p-3 rounded-[6px] border border-zinc-200/90 dark:border-zinc-800 shadow-xs hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200">
+      {/* Top Badges matching Image 1 */}
+      <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
+        <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#ea580c] rounded-[3px] shadow-2xs select-none">
+          Best Selling
+        </span>
+      </div>
+
+      {activePrice?.percentage_diff && Number(activePrice.percentage_diff) > 0 && (
+        <div className="absolute top-2 right-2 z-10">
+          <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#00a651] rounded-[3px] shadow-2xs select-none">
+            Save {activePrice.percentage_diff}%
+          </span>
+        </div>
+      )}
+
       <LocalizedClientLink
         href={
           targetVariantId
@@ -110,7 +125,7 @@ export default function ProductPreview({
         <div className="mt-2.5 space-y-1.5">
           {/* Product Title */}
           <h3
-            className="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm line-clamp-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors"
+            className="font-medium text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm line-clamp-2 group-hover:text-[#f26522] dark:group-hover:text-[#f26522] transition-colors"
             data-testid="product-title"
           >
             {product.title}
@@ -119,18 +134,23 @@ export default function ProductPreview({
           {/* Compact Single Row: Price on LEFT, Weight badge on RIGHT (always resolved dynamically) */}
           <div className="pt-0.5 flex items-center justify-between gap-1.5">
             {activePrice && (
-              <div className="text-zinc-900 dark:text-zinc-100 font-black text-sm sm:text-base">
-                <PreviewPrice price={activePrice} />
+              <div className="flex items-baseline gap-1.5 text-sm sm:text-base font-bold text-[#f26522]">
+                <span className="text-[#f26522]">{activePrice.calculated_price}</span>
+                {activePrice.price_type === "sale" && (
+                  <span className="line-through text-zinc-400 text-[11px] font-normal">
+                    {activePrice.original_price}
+                  </span>
+                )}
               </div>
             )}
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-full whitespace-nowrap">
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-[3px] whitespace-nowrap">
               {formatSize(displayWeight)}
             </span>
           </div>
         </div>
       </LocalizedClientLink>
 
-      {/* Action Button: 'কার্টে যোগ করুন' button for Store / Collections / Categories with instant Optimistic UI */}
+      {/* Action Button: 'Add To Cart' button for Store / Collections / Categories with instant Optimistic UI */}
       <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center">
         <PreviewAddToCart
           key={targetVariantId}
