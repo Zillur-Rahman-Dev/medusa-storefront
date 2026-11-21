@@ -112,25 +112,51 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
   const displayProducts = products && products.length > 0 ? products : naturalHoneyProducts
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
-  const totalDots = Math.min(Math.max(displayProducts.length - 3, 1), 6)
+  const [itemsPerView, setItemsPerView] = useState(5)
+
+  useEffect(() => {
+    const updateItemsPerView = () => {
+      if (typeof window === "undefined") return
+      if (window.innerWidth >= 1024) {
+        setItemsPerView(5)
+      } else if (window.innerWidth >= 768) {
+        setItemsPerView(3)
+      } else {
+        setItemsPerView(2)
+      }
+    }
+    updateItemsPerView()
+    window.addEventListener("resize", updateItemsPerView)
+    return () => window.removeEventListener("resize", updateItemsPerView)
+  }, [])
+
+  const maxIndex = Math.max(0, displayProducts.length - itemsPerView)
+  const totalDots = Math.min(maxIndex + 1, 6)
+
+  // Clamp currentIndex if out of bounds on viewport resize
+  useEffect(() => {
+    if (currentIndex > maxIndex) {
+      setCurrentIndex(maxIndex)
+    }
+  }, [maxIndex, currentIndex])
 
   // Auto-slide every 3.5 seconds with pause-on-hover
   useEffect(() => {
-    if (isPaused) return
+    if (isPaused || maxIndex <= 0) return
 
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev >= totalDots - 1 ? 0 : prev + 1))
+      setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
     }, 3500)
 
     return () => clearInterval(timer)
-  }, [isPaused, totalDots])
+  }, [isPaused, maxIndex])
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev <= 0 ? totalDots - 1 : prev - 1))
+    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1))
   }
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev >= totalDots - 1 ? 0 : prev + 1))
+    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
   }
 
   return (
@@ -165,28 +191,32 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
           onMouseLeave={() => setIsPaused(false)}
         >
           {/* Navigation Arrows (Visible on Desktop / Hover) */}
-          <button
-            type="button"
-            onClick={handlePrev}
-            aria-label="Previous slide"
-            className="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:border-amber-500 flex items-center justify-center transition-all opacity-80 group-hover/slider:opacity-100 hover:scale-105"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+          {maxIndex > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrev}
+                aria-label="Previous slide"
+                className="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:border-amber-500 flex items-center justify-center transition-all opacity-80 group-hover/slider:opacity-100 hover:scale-105"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            aria-label="Next slide"
-            className="absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:border-amber-500 flex items-center justify-center transition-all opacity-80 group-hover/slider:opacity-100 hover:scale-105"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label="Next slide"
+                className="absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:border-amber-500 flex items-center justify-center transition-all opacity-80 group-hover/slider:opacity-100 hover:scale-105"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </>
+          )}
 
-          {/* Carousel Track with Responsive Items Per View */}
-          <div className="overflow-hidden py-2 -mx-2 px-2">
+          {/* Carousel Track with Responsive 5 Items Per View on Desktop */}
+          <div className="overflow-hidden py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2">
             <div
-              className="flex transition-transform duration-500 ease-out [--items-per-view:1] sm:[--items-per-view:2] md:[--items-per-view:3] lg:[--items-per-view:4]"
+              className="flex transition-transform duration-500 ease-out [--items-per-view:2] sm:[--items-per-view:2] md:[--items-per-view:3] lg:[--items-per-view:5] xl:[--items-per-view:5]"
               style={{
                 transform: `translateX(calc(-1 * ${currentIndex} * (100% / var(--items-per-view))))`,
               }}
@@ -194,7 +224,7 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
               {displayProducts.map((prod) => (
                 <div
                   key={prod.id}
-                  className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 shrink-0 px-2 sm:px-3"
+                  className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/5 xl:w-1/5 shrink-0 px-1.5 sm:px-2"
                 >
                   <HoneyProductCard product={prod} />
                 </div>
@@ -202,25 +232,27 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
             </div>
           </div>
 
-          {/* Bottom Pagination Dots matching screenshot: o o [===] o o */}
-          <div className="mt-8 flex items-center justify-center gap-2">
-            {[...Array(totalDots)].map((_, dotIdx) => {
-              const isActive = dotIdx === currentIndex
-              return (
-                <button
-                  key={dotIdx}
-                  type="button"
-                  onClick={() => setCurrentIndex(dotIdx)}
-                  aria-label={`Go to slide ${dotIdx + 1}`}
-                  className={`transition-all duration-300 ${
-                    isActive
-                      ? "w-8 h-2.5 rounded-full bg-amber-500 shadow-sm"
-                      : "w-2.5 h-2.5 rounded-full border-2 border-amber-500 bg-transparent hover:bg-amber-400/20"
-                  }`}
-                />
-              )
-            })}
-          </div>
+          {/* Bottom Pagination Dots matching screenshot */}
+          {totalDots > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              {[...Array(totalDots)].map((_, dotIdx) => {
+                const isActive = dotIdx === currentIndex
+                return (
+                  <button
+                    key={dotIdx}
+                    type="button"
+                    onClick={() => setCurrentIndex(dotIdx)}
+                    aria-label={`Go to slide ${dotIdx + 1}`}
+                    className={`transition-all duration-300 ${
+                      isActive
+                        ? "w-8 h-2.5 rounded-full bg-amber-500 shadow-sm"
+                        : "w-2.5 h-2.5 rounded-full border-2 border-amber-500 bg-transparent hover:bg-amber-400/20"
+                    }`}
+                  />
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </section>

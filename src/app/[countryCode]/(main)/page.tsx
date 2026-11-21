@@ -73,11 +73,18 @@ export default async function Home() {
         p.categories?.some((c) => c.handle === "top-selling")
       )
       topSellingProducts =
-        topSellingRaw.length > 0
+        topSellingRaw.length >= 5
           ? topSellingRaw
-              .slice(0, 4)
+              .slice(0, 5)
               .map((p) => mapMedusaProductToHoneyItem(p, "সেরা বিক্রি"))
-          : allHoneyItems.slice(0, 4)
+          : [
+              ...topSellingRaw.map((p) =>
+                mapMedusaProductToHoneyItem(p, "সেরা বিক্রি")
+              ),
+              ...allHoneyItems.filter(
+                (p) => !topSellingRaw.some((tr) => tr.id === p.id)
+              ),
+            ].slice(0, 5)
 
       // 3. Shelves (Categories: sundarban-honey, flower-honey, wild-hill-honey)
       const sundarbanRaw = allRawProducts.filter((p) =>

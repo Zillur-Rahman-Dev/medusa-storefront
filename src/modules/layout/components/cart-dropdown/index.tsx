@@ -1002,17 +1002,17 @@ export default function CartDropdown({
                 aria-label="শপিং কার্ট খুলুন"
               >
                 {/* Top Half: Solid Orange with Shopping Bag + Item Count */}
-                <div className="bg-[#f26522] py-2 px-3 flex flex-col items-center justify-center text-white min-w-[72px]">
+                <div className="bg-[#f26522] py-2 px-2.5 sm:px-3 flex flex-col items-center justify-center text-white min-w-[76px]">
                   <ShoppingBag className="w-5 h-5 text-white stroke-[2.2] group-hover:scale-105 transition-transform" />
                   <span className="text-[11px] font-bold leading-tight mt-0.5 whitespace-nowrap">
-                    {totalItems} Items
+                    {formatSize(String(totalItems))} টি পণ্য
                   </span>
                 </div>
 
                 {/* Bottom Half: Pure White with Orange Price */}
                 <div className="bg-white dark:bg-zinc-900 py-1.5 px-2 text-center border-t border-orange-200 dark:border-zinc-800">
                   <span className="text-[11px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
-                    ৳{formatPrice(totalSubtotal - effectiveDiscount)}
+                    {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
                   </span>
                 </div>
               </button>

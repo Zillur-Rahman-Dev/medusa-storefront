@@ -51,6 +51,18 @@ const topSellingHoneys: HoneyProductItem[] = [
     icon: "⛰️",
     badge: "সেরা বিক্রি",
   },
+  {
+    id: "top-5",
+    title: "লিচু ফুলের মিষ্টি মধু",
+    handle: "litchi-flower-honey",
+    variantId: "variant_01M6T7Q2TTB94FMQ7H2V3YWEDV",
+    weight: "১ কেজি কাচের জার",
+    price: 950,
+    rating: 5,
+    reviewCount: 54,
+    icon: "🍯",
+    badge: "সেরা বিক্রি",
+  },
 ]
 
 type TopSellingProps = {
