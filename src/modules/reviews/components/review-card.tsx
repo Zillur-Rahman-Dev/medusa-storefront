@@ -1,5 +1,5 @@
 import React from "react"
-import { Star, MessageSquareQuote } from "lucide-react"
+import { Star } from "lucide-react"
 import { ReviewItem } from "../types"
 
 type ReviewCardProps = {
@@ -33,73 +33,70 @@ export default function ReviewCard({ review }: ReviewCardProps) {
   const palette = getAvatarPalette(review.name)
 
   return (
-    <div className="flex flex-col justify-between p-6 sm:p-7 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="space-y-4">
-        {/* Customer Header: Avatar + Name + Rating */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {/* Avatar: Custom Image or Dynamic Initials */}
-            {review.avatarUrl ? (
-              <img
-                src={review.avatarUrl}
-                alt={review.name}
-                className="w-10 h-10 rounded-full object-cover border border-amber-300/80 dark:border-amber-700 shadow-xs shrink-0"
-              />
-            ) : (
-              <div
-                className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold text-base shadow-xs shrink-0 ${palette}`}
-              >
-                {initial}
-              </div>
-            )}
-
-            <div>
-              <h4 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 leading-tight">
-                {review.name}
-              </h4>
-              {review.productTitle && (
-                <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
-                  {review.productTitle}
-                </p>
-              )}
+    <div className="flex flex-col p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs hover:shadow-md transition-all duration-200">
+      {/* Header: Avatar + Customer Info + Star Rating */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          {review.avatarUrl ? (
+            <img
+              src={review.avatarUrl}
+              alt={review.name}
+              className="w-10 h-10 rounded-full object-cover border border-amber-300/80 dark:border-amber-700 shadow-xs shrink-0"
+            />
+          ) : (
+            <div
+              className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold text-base shadow-xs shrink-0 ${palette}`}
+            >
+              {initial}
             </div>
-          </div>
+          )}
 
-          {/* Star Rating */}
-          <div className="flex items-center gap-0.5 shrink-0 pt-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
-                  i < review.rating
-                    ? "fill-amber-400 text-amber-400"
-                    : "text-zinc-200 dark:text-zinc-700"
-                }`}
-              />
-            ))}
+          <div>
+            <h4 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 leading-tight">
+              {review.name}
+            </h4>
+            {review.productTitle && (
+              <span className="inline-block text-[11px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md mt-1 border border-amber-200/50 dark:border-amber-900/40">
+                {review.productTitle}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Review Comment Body */}
-        <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal">
-          &ldquo;{review.comment}&rdquo;
-        </p>
+        {/* Stars */}
+        <div className="flex items-center gap-0.5 shrink-0 pt-0.5">
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                i < review.rating
+                  ? "fill-amber-400 text-amber-400"
+                  : "text-zinc-200 dark:text-zinc-700"
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Admin / Seller Official Reply (If Present) */}
+      {/* Review Comment (Tightly connected without gaps) */}
+      <p className="mt-3.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+        &ldquo;{review.comment}&rdquo;
+      </p>
+
+      {/* Admin Reply (If Present - naturally fitted right under the comment) */}
       {review.adminReply && (
-        <div className="mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
-          <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50">
-            <div className="flex items-center gap-2 mb-1.5">
-              {/* Admin Avatar */}
+        <div className="mt-3.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+          <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50">
+            <div className="flex items-center gap-2 mb-1">
               {review.adminReply.avatarUrl ? (
                 <img
                   src={review.adminReply.avatarUrl}
                   alt={review.adminReply.author}
-                  className="w-6 h-6 rounded-full object-cover border border-amber-400 shrink-0"
+                  className="w-5 h-5 rounded-full object-cover border border-amber-400 shrink-0"
                 />
               ) : (
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0 shadow-xs">
                   🍯
                 </div>
               )}
@@ -107,7 +104,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
                 {review.adminReply.author} (অফিশিয়াল উত্তর)
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-amber-950/90 dark:text-amber-200/90 leading-relaxed pl-8">
+            <p className="text-[11px] sm:text-xs text-amber-950/90 dark:text-amber-200/90 leading-relaxed pl-7">
               {review.adminReply.comment}
             </p>
           </div>

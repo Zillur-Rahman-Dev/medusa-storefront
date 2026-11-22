@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Star, Plus, ThumbsUp } from "lucide-react"
+import { Star, Plus } from "lucide-react"
 import { ReviewItem } from "../types"
 import ReviewCard from "./review-card"
 import ReviewModal from "./review-modal"
@@ -29,7 +29,7 @@ const DEFAULT_REVIEWS: ReviewItem[] = [
     rating: 5,
     productTitle: "সুন্দরবনের খলিশা ফুলের মধু",
     comment:
-      "খলিশা ফুলের মধুর স্বাদ ও ঘ্রাণ সত্যি চমৎকার! এর আগে অনেক জায়গা থেকে মধু কিনেছি কিন্তু এটা একদম খাঁটি বুনো মধুর মতো ফিল দেয়। কাচের জারের সুরক্ষিত প্যাকিংও দারুণ ছিল।",
+      "খলিশা ফুলের মধুর স্বাদ ও ঘ্রাণ সত্যি চমৎকার! এর আগে অনেক জায়গা থেকে মধু কিনেছি কিন্তু এটা একদম খাঁটি বুনো মধুর ফ্লেভার। কাচের জারের সুরক্ষিত প্যাকিংও দারুণ ছিল।",
     adminReply: {
       author: "Pure Honey BD",
       comment:
@@ -104,38 +104,80 @@ export default function ReviewsSection({
   const [filterRating, setFilterRating] = useState<number | null>(null)
   const [visibleCount, setVisibleCount] = useState<number>(6)
 
-  // Load any local client reviews saved in browser
+  // Fetch dynamic reviews from Neon DB (via Next.js /api/reviews) with fallbacks
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("pure_honey_client_reviews")
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setReviews([...parsed, ...DEFAULT_REVIEWS])
+    let isMounted = true
+
+    async function loadReviews() {
+      try {
+        const res = await fetch("/api/reviews")
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success && Array.isArray(data.reviews) && data.reviews.length > 0) {
+            if (isMounted) {
+              setReviews([...data.reviews, ...DEFAULT_REVIEWS])
+              return
+            }
+          }
         }
+      } catch (err) {
+        // Fallback to local storage or defaults if offline / network issue
       }
-    } catch (e) {
-      // LocalStorage access fallback
+
+      // LocalStorage fallback
+      try {
+        const saved = localStorage.getItem("pure_honey_client_reviews")
+        if (saved && isMounted) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setReviews([...parsed, ...DEFAULT_REVIEWS])
+          }
+        }
+      } catch (e) {}
+    }
+
+    loadReviews()
+
+    return () => {
+      isMounted = false
     }
   }, [])
 
-  const handleAddReview = (newRevData: Omit<ReviewItem, "id">) => {
-    const newReview: ReviewItem = {
-      ...newRevData,
-      id: `user-${Date.now()}`,
-    }
-
-    const updated = [newReview, ...reviews]
-    setReviews(updated)
-
+  const handleAddReview = async (newRevData: Omit<ReviewItem, "id">) => {
     try {
-      const userReviews = updated.filter((r) => r.id.startsWith("user-"))
-      localStorage.setItem(
-        "pure_honey_client_reviews",
-        JSON.stringify(userReviews)
-      )
-    } catch (e) {
-      // LocalStorage fallback
+      // 1. Post to dynamic API route (saves to Neon DB + sends Telegram notification)
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newRevData),
+      })
+
+      let createdReview: ReviewItem
+
+      if (res.ok) {
+        const data = await res.json()
+        createdReview = data.review
+      } else {
+        createdReview = {
+          ...newRevData,
+          id: `user-${Date.now()}`,
+        }
+      }
+
+      const updated = [createdReview, ...reviews]
+      setReviews(updated)
+
+      try {
+        const userReviews = updated.filter((r) => r.id.startsWith("rev-") || r.id.startsWith("user-"))
+        localStorage.setItem("pure_honey_client_reviews", JSON.stringify(userReviews.slice(0, 10)))
+      } catch (e) {}
+    } catch (err) {
+      // Local fallback
+      const fallbackReview: ReviewItem = {
+        ...newRevData,
+        id: `user-${Date.now()}`,
+      }
+      setReviews([fallbackReview, ...reviews])
     }
   }
 
@@ -161,12 +203,12 @@ export default function ReviewsSection({
   return (
     <section
       id="reviews-section"
-      className="py-16 sm:py-24 bg-zinc-50 dark:bg-zinc-900/40 border-t border-zinc-200/80 dark:border-zinc-800/80 transition-colors"
+      className="py-14 sm:py-20 bg-zinc-50 dark:bg-zinc-900/40 border-t border-zinc-200/80 dark:border-zinc-800/80 transition-colors"
     >
       <div className="content-container">
         {/* Section Header */}
-        <div className="max-w-3xl mx-auto text-center mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 mb-3">
+        <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 mb-2.5">
             <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
             <span>সন্তুষ্ট গ্রাহকদের রিভিউ</span>
           </div>
@@ -179,9 +221,9 @@ export default function ReviewsSection({
         </div>
 
         {/* Rating Summary Bar & 'Write a Review' Action */}
-        <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mb-7 p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Left: Overall Score */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-center sm:text-left">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
                 ⭐ {toBengaliDigits(avgRating)}
@@ -216,7 +258,7 @@ export default function ReviewsSection({
         </div>
 
         {/* Filter Pills (All, 5 Star, 4 Star) */}
-        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
             onClick={() => setFilterRating(null)}
@@ -254,11 +296,13 @@ export default function ReviewsSection({
           </button>
         </div>
 
-        {/* Reviews Grid */}
+        {/* Masonry Columns Layout: Zero Empty White Spaces */}
         {displayedReviews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-5 space-y-5">
             {displayedReviews.map((rev) => (
-              <ReviewCard key={rev.id} review={rev} />
+              <div key={rev.id} className="break-inside-avoid">
+                <ReviewCard review={rev} />
+              </div>
             ))}
           </div>
         ) : (
@@ -269,13 +313,13 @@ export default function ReviewsSection({
           </div>
         )}
 
-        {/* Load More Button (If needed) */}
+        {/* Load More Button */}
         {filteredReviews.length > visibleCount && (
-          <div className="mt-10 text-center">
+          <div className="mt-8 text-center">
             <button
               type="button"
               onClick={() => setVisibleCount((prev) => prev + 6)}
-              className="px-6 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              className="px-6 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
             >
               আরও রিভিউ দেখুন
             </button>
@@ -283,7 +327,7 @@ export default function ReviewsSection({
         )}
       </div>
 
-      {/* Review Modal Dialog */}
+      {/* Centered Modal Dialog with Safe Margins */}
       <ReviewModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
