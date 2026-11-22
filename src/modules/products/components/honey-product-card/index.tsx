@@ -209,20 +209,20 @@ export default function HoneyProductCard({
         </LocalizedClientLink>
 
         {/* Compact Single Row: Price on LEFT, Weight / Kg on RIGHT */}
-        <div className="mt-2 flex items-center justify-between gap-1.5">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-sm sm:text-base font-bold text-[#f26522]">
+        <div className="mt-2 flex items-center justify-between gap-1">
+          <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap min-w-0">
+            <span className="text-sm sm:text-base font-bold text-[#f26522] whitespace-nowrap">
               {formatPrice(product.price)}
             </span>
             {product.regularPrice && product.regularPrice > product.price && (
-              <span className="text-[11px] text-zinc-400 line-through">
+              <span className="text-[10px] sm:text-[11px] text-zinc-400 line-through whitespace-nowrap">
                 {formatPrice(product.regularPrice)}
               </span>
             )}
           </div>
 
           {product.weight && (
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-[3px] whitespace-nowrap">
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-[3px] whitespace-nowrap shrink-0">
               {formatSize(product.weight)}
             </span>
           )}
@@ -236,7 +236,7 @@ export default function HoneyProductCard({
             <button
               type="button"
               onClick={handleDecrement}
-              className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
+              className="w-9 sm:w-11 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
               aria-label="পরিমাণ কমান"
             >
               -
@@ -247,7 +247,7 @@ export default function HoneyProductCard({
             <button
               type="button"
               onClick={handleIncrement}
-              className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
+              className="w-9 sm:w-11 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
               aria-label="পরিমাণ বাড়ান"
             >
               +
@@ -257,7 +257,7 @@ export default function HoneyProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="w-full h-9 py-1.5 px-3 rounded-[4px] text-xs sm:text-sm font-semibold border border-[#f26522] bg-white text-[#f26522] hover:bg-[#f26522] hover:text-white transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+            className="w-full h-9 py-1.5 px-2 sm:px-3 rounded-[4px] text-xs sm:text-sm font-semibold border border-[#f26522] bg-white text-[#f26522] hover:bg-[#f26522] hover:text-white transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-inherit" />
             <span>Add To Cart</span>

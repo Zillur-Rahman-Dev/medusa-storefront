@@ -101,7 +101,7 @@ export default function HeaderSearch() {
   return (
     <div
       ref={containerRef}
-      className="relative flex items-center w-full max-w-xs sm:max-w-sm mx-auto"
+      className="relative flex items-center w-full max-w-none md:max-w-xs sm:max-w-sm mx-auto"
     >
       <form onSubmit={handleSearchSubmit} className="relative w-full">
         <input

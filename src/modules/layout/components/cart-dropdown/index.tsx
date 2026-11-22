@@ -996,7 +996,7 @@ export default function CartDropdown({
               <button
                 type="button"
                 onClick={openDrawer}
-                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] flex flex-col rounded-l-[6px] overflow-hidden shadow-xl hover:shadow-2xl border-l border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:-translate-x-0.5"
+                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] hidden md:flex flex-col rounded-l-[6px] overflow-hidden shadow-xl hover:shadow-2xl border-l border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:-translate-x-0.5"
                 aria-label="শপিং কার্ট খুলুন"
               >
                 {/* Top Half: Solid Orange with Shopping Bag + Item Count */}

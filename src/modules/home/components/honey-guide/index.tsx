@@ -190,7 +190,10 @@ export default function HoneyGuide() {
         </div>
 
         {/* Tab Buttons (Horizontal scrollable on mobile) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8 justify-start lg:justify-center">
+        <div
+          className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8 justify-start lg:justify-center scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {honeyDetails.map((h) => {
             const isSelected = h.id === selectedId
             return (
@@ -212,7 +215,7 @@ export default function HoneyGuide() {
         </div>
 
         {/* Active Honey Details Card */}
-        <div className="rounded-3xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80 p-6 sm:p-10 shadow-sm">
+        <div className="rounded-2xl sm:rounded-3xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80 p-4 sm:p-8 lg:p-10 shadow-sm">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column (5 cols) */}
             <div className="lg:col-span-5 space-y-6">
@@ -292,7 +295,7 @@ export default function HoneyGuide() {
               </div>
 
               {/* Order Action Banner */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md">
+              <div className="pt-2 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md">
                 <div>
                   <h5 className="font-bold text-sm sm:text-base">
                     {activeHoney.name} সংগ্রহ করতে চান?

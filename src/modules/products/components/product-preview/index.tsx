@@ -132,18 +132,18 @@ export default function ProductPreview({
           </h3>
 
           {/* Compact Single Row: Price on LEFT, Weight badge on RIGHT (always resolved dynamically) */}
-          <div className="pt-0.5 flex items-center justify-between gap-1.5">
+          <div className="pt-0.5 flex items-center justify-between gap-1">
             {activePrice && (
-              <div className="flex items-baseline gap-1.5 text-sm sm:text-base font-bold text-[#f26522]">
-                <span className="text-[#f26522]">{activePrice.calculated_price}</span>
+              <div className="flex items-baseline gap-1 sm:gap-1.5 text-sm sm:text-base font-bold text-[#f26522] flex-wrap min-w-0">
+                <span className="text-[#f26522] whitespace-nowrap">{activePrice.calculated_price}</span>
                 {activePrice.price_type === "sale" && (
-                  <span className="line-through text-zinc-400 text-[11px] font-normal">
+                  <span className="line-through text-zinc-400 text-[10px] sm:text-[11px] font-normal whitespace-nowrap">
                     {activePrice.original_price}
                   </span>
                 )}
               </div>
             )}
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-[3px] whitespace-nowrap">
+            <span className="px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60 rounded-[3px] whitespace-nowrap shrink-0">
               {formatSize(displayWeight)}
             </span>
           </div>

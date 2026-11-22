@@ -141,7 +141,7 @@ export default function PreviewAddToCart({
         <button
           type="button"
           onClick={handleDecrement}
-          className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
+          className="w-9 sm:w-11 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
           aria-label="পরিমাণ কমান"
         >
           -
@@ -152,7 +152,7 @@ export default function PreviewAddToCart({
         <button
           type="button"
           onClick={handleIncrement}
-          className="w-11 sm:w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
+          className="w-9 sm:w-11 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
           aria-label="পরিমাণ বাড়ান"
         >
           +

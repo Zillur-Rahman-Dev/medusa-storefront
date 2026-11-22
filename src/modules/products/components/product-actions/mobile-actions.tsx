@@ -72,7 +72,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
           leaveTo="opacity-0"
         >
           <div
-            className="bg-white flex flex-col gap-y-3 justify-center items-center text-large-regular p-4 h-full w-full border-t border-gray-200"
+            className="bg-white dark:bg-zinc-900 flex flex-col gap-y-2.5 justify-center items-center text-sm p-3.5 h-full w-full border-t border-zinc-200 dark:border-zinc-800 shadow-xl"
             data-testid="mobile-actions"
           >
             <div className="flex items-center gap-x-2">
@@ -106,8 +106,9 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               {!isSimple && <Button
                 onClick={open}
                 variant="secondary"
-                className={clx("w-full transition-all duration-200", {
-                  "bg-emerald-600 text-white hover:bg-emerald-700": isOptimisticAdded,
+                className={clx("w-full transition-all duration-200 text-white font-bold", {
+                  "bg-emerald-600 hover:bg-emerald-700": isOptimisticAdded,
+                  "bg-[#f26522] hover:bg-[#d9531e]": !isOptimisticAdded,
                 })}
                 data-testid="mobile-actions-button"
               >
@@ -123,8 +124,9 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               <Button
                 onClick={handleAddToCart}
                 disabled={!inStock || !variant || isAdding || isOptimisticAdded || optionsDisabled}
-                className={clx("w-full transition-all duration-200", {
-                  "bg-emerald-600 text-white hover:bg-emerald-700": isOptimisticAdded,
+                className={clx("w-full transition-all duration-200 text-white font-bold", {
+                  "bg-emerald-600 hover:bg-emerald-700": isOptimisticAdded,
+                  "bg-[#f26522] hover:bg-[#d9531e]": !isOptimisticAdded,
                 })}
 
                 data-testid="mobile-cart-button"
@@ -179,7 +181,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                       <X />
                     </button>
                   </div>
-                  <div className="bg-white px-6 py-12">
+                  <div className="bg-white dark:bg-zinc-900 px-6 py-8 border-t border-zinc-200 dark:border-zinc-800">
                     {(product.variants?.length ?? 0) > 1 && (
                       <div className="flex flex-col gap-y-6">
                         {(product.options || []).map((option) => {

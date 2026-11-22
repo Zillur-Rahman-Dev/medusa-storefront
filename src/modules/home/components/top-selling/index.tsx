@@ -124,12 +124,13 @@ export default function TopSelling({ products }: TopSellingProps) {
         */}
         <div
           ref={scrollRef}
-          className="flex lg:grid lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-none snap-x snap-mandatory -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0"
+          className="flex lg:grid lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-none snap-x snap-mandatory scroll-smooth -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0"
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
           {displayProducts.slice(0, 5).map((prod) => (
             <div
               key={prod.id}
-              className="w-[180px] sm:w-[220px] md:w-[240px] lg:w-auto shrink-0 snap-start"
+              className="w-[170px] sm:w-[220px] md:w-[240px] lg:w-auto shrink-0 snap-start"
             >
               <HoneyProductCard product={prod} />
             </div>

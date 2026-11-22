@@ -4,7 +4,7 @@ import { PhoneCall, Mail, MapPin } from "lucide-react"
 export default function Footer() {
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300 w-full mt-auto">
-      <div className="content-container flex flex-col w-full py-14 sm:py-20">
+      <div className="content-container flex flex-col w-full pt-12 pb-24 sm:py-20">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12">
           {/* 1. Brand Info & Contact (5 Cols) */}
           <div className="space-y-4 md:col-span-5">
