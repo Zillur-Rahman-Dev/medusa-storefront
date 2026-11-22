@@ -110,122 +110,119 @@ type NaturalHoneySliderProps = {
 
 export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps) {
   const displayProducts = products && products.length > 0 ? products : naturalHoneyProducts
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const sliderRef = useRef<HTMLDivElement>(null)
   const [itemsPerView, setItemsPerView] = useState(5)
+  const [activeDot, setActiveDot] = useState(0)
+  const [isInteracting, setIsInteracting] = useState(false)
 
-  // Drag & Swipe states
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState(0)
+  // Mouse Drag state (Rock-solid scrollLeft clamping)
+  const isDownRef = useRef(false)
   const startXRef = useRef(0)
-  const isMouseDownRef = useRef(false)
+  const scrollLeftRef = useRef(0)
   const hasMovedRef = useRef(false)
 
+  // Responsive itemsPerView
   useEffect(() => {
-    const updateItemsPerView = () => {
+    const update = () => {
       if (typeof window === "undefined") return
-      if (window.innerWidth >= 1024) {
-        setItemsPerView(5)
-      } else if (window.innerWidth >= 768) {
-        setItemsPerView(3)
-      } else {
-        setItemsPerView(2)
-      }
+      if (window.innerWidth >= 1024) setItemsPerView(5)
+      else if (window.innerWidth >= 768) setItemsPerView(3)
+      else setItemsPerView(2)
     }
-    updateItemsPerView()
-    window.addEventListener("resize", updateItemsPerView)
-    return () => window.removeEventListener("resize", updateItemsPerView)
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
   }, [])
 
   const maxIndex = Math.max(0, displayProducts.length - itemsPerView)
-  const totalDots = Math.min(maxIndex + 1, 6)
+  const totalDots = maxIndex > 0 ? Math.min(maxIndex + 1, 6) : 0
 
-  // Clamp currentIndex if out of bounds on viewport resize
-  useEffect(() => {
-    if (currentIndex > maxIndex) {
-      setCurrentIndex(maxIndex)
-    }
-  }, [maxIndex, currentIndex])
+  // Track active dot on scroll
+  const handleScroll = () => {
+    if (!sliderRef.current || totalDots <= 1) return
+    const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current
+    const maxScroll = scrollWidth - clientWidth
+    if (maxScroll <= 0) return
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1))
+    const progress = Math.max(0, Math.min(1, scrollLeft / maxScroll))
+    const currentDot = Math.min(Math.round(progress * (totalDots - 1)), totalDots - 1)
+    setActiveDot(currentDot)
   }
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
+  // Scroll to dot
+  const scrollToDot = (dotIdx: number) => {
+    if (!sliderRef.current || totalDots <= 1) return
+    const { scrollWidth, clientWidth } = sliderRef.current
+    const maxScroll = scrollWidth - clientWidth
+    const targetScroll = (dotIdx / (totalDots - 1)) * maxScroll
+    sliderRef.current.scrollTo({ left: targetScroll, behavior: "smooth" })
   }
 
-  // Smooth Auto-slide every 3.5 seconds (only pauses during active drag)
+  // Continuous Auto-slide every 3.5 seconds
   useEffect(() => {
-    if (isDragging || maxIndex <= 0) return
+    if (isInteracting || maxIndex <= 0) return
 
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
+      if (!sliderRef.current) return
+      const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current
+      const maxScroll = scrollWidth - clientWidth
+      if (maxScroll <= 10) return // All items visible on desktop, no need to scroll
+
+      const cardWidth = clientWidth / itemsPerView
+      let nextLeft = scrollLeft + cardWidth
+      if (nextLeft >= maxScroll - 5) {
+        nextLeft = 0 // loop back smoothly
+      }
+      sliderRef.current.scrollTo({ left: nextLeft, behavior: "smooth" })
     }, 3500)
 
     return () => clearInterval(timer)
-  }, [isDragging, maxIndex])
-
-  // Touch Swipe handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true)
-    startXRef.current = e.touches[0].clientX
-    setDragOffset(0)
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return
-    const diff = e.touches[0].clientX - startXRef.current
-    setDragOffset(diff)
-  }
-
-  const handleTouchEnd = () => {
-    if (!isDragging) return
-    setIsDragging(false)
-    if (dragOffset < -40) {
-      handleNext()
-    } else if (dragOffset > 40) {
-      handlePrev()
-    }
-    setDragOffset(0)
-  }
+  }, [isInteracting, maxIndex, itemsPerView])
 
   // Mouse Drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    isMouseDownRef.current = true
+    if (!sliderRef.current) return
+    isDownRef.current = true
     hasMovedRef.current = false
-    startXRef.current = e.clientX
-    setDragOffset(0)
+    startXRef.current = e.pageX - sliderRef.current.offsetLeft
+    scrollLeftRef.current = sliderRef.current.scrollLeft
+    setIsInteracting(true)
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isMouseDownRef.current) return
-    const diff = e.clientX - startXRef.current
-    if (Math.abs(diff) > 5) {
+    if (!isDownRef.current || !sliderRef.current) return
+    const x = e.pageX - sliderRef.current.offsetLeft
+    const walk = (x - startXRef.current) * 1.4 // natural drag multiplier
+    if (Math.abs(walk) > 4) {
       hasMovedRef.current = true
-      setIsDragging(true)
-      setDragOffset(diff)
+      sliderRef.current.scrollLeft = scrollLeftRef.current - walk
     }
   }
 
   const handleMouseUp = () => {
-    if (!isMouseDownRef.current) return
-    isMouseDownRef.current = false
-    if (hasMovedRef.current) {
-      if (dragOffset < -40) {
-        handleNext()
-      } else if (dragOffset > 40) {
-        handlePrev()
-      }
-    }
-    setIsDragging(false)
-    setDragOffset(0)
-    hasMovedRef.current = false
+    if (!isDownRef.current) return
+    isDownRef.current = false
+    setTimeout(() => {
+      setIsInteracting(false)
+      hasMovedRef.current = false
+    }, 2000)
+  }
+
+  // Touch Swipe handlers
+  const handleTouchStart = () => {
+    setIsInteracting(true)
+  }
+
+  const handleTouchEnd = () => {
+    setTimeout(() => {
+      setIsInteracting(false)
+    }, 2000)
   }
 
   return (
     <section className="py-10 sm:py-14 bg-white dark:bg-zinc-950 transition-colors">
       <div className="content-container">
-        {/* Section Header matching exact user screenshot */}
+        {/* Section Header */}
         <div className="flex items-end justify-between mb-6 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
             <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1">
@@ -237,7 +234,6 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
             <div className="w-14 h-1 bg-amber-500 rounded-full mt-2" />
           </div>
 
-          {/* VIEW ALL ITEMS -> Link matching screenshot */}
           <LocalizedClientLink
             href="/store"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
@@ -249,46 +245,39 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
 
         {/* Carousel Slider Container (Side buttons removed - Drag & Auto-slide enabled) */}
         <div className="relative">
-          {/* Carousel Track with Mouse Drag & Touch Swipe */}
+          {/* Scroll Container: Bounded strictly by browser (never shifts or leaves empty blank spaces!) */}
           <div
-            className="overflow-hidden py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2 cursor-grab active:cursor-grabbing select-none"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            ref={sliderRef}
+            onScroll={handleScroll}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="flex overflow-x-auto scrollbar-none py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2 select-none cursor-grab active:cursor-grabbing snap-x snap-mandatory scroll-smooth"
+            style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <div
-              className={`flex ease-out [--items-per-view:2] sm:[--items-per-view:2] md:[--items-per-view:3] lg:[--items-per-view:5] xl:[--items-per-view:5] ${
-                isDragging ? "transition-none" : "transition-transform duration-500"
-              }`}
-              style={{
-                transform: `translateX(calc(-1 * ${currentIndex} * (100% / var(--items-per-view)) + ${dragOffset}px))`,
-              }}
-            >
-              {displayProducts.map((prod) => (
-                <div
-                  key={prod.id}
-                  className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/5 xl:w-1/5 shrink-0 px-1.5 sm:px-2"
-                >
-                  <HoneyProductCard product={prod} />
-                </div>
-              ))}
-            </div>
+            {displayProducts.map((prod) => (
+              <div
+                key={prod.id}
+                className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/5 shrink-0 px-1.5 sm:px-2 snap-start"
+              >
+                <HoneyProductCard product={prod} />
+              </div>
+            ))}
           </div>
 
           {/* Bottom Pagination Dots (Preserved below products) */}
           {totalDots > 1 && (
             <div className="mt-8 flex items-center justify-center gap-2">
               {[...Array(totalDots)].map((_, dotIdx) => {
-                const isActive = dotIdx === currentIndex
+                const isActive = dotIdx === activeDot
                 return (
                   <button
                     key={dotIdx}
                     type="button"
-                    onClick={() => setCurrentIndex(dotIdx)}
+                    onClick={() => scrollToDot(dotIdx)}
                     aria-label={`Go to slide ${dotIdx + 1}`}
                     className={`transition-all duration-300 ${
                       isActive
