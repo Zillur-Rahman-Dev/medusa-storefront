@@ -64,13 +64,22 @@ export default async function Home() {
           p.collection?.id === "pcol_01M6ZE4FSD4EBN2S7X6MSZWENT"
       )
       featuredProducts =
-        featuredRaw.length > 0
+        featuredRaw.length >= 5
           ? featuredRaw.map((p) => mapMedusaProductToHoneyItem(p, "প্রাকৃতিক"))
-          : allHoneyItems.slice(0, 8)
+          : [
+              ...featuredRaw.map((p) =>
+                mapMedusaProductToHoneyItem(p, "প্রাকৃতিক")
+              ),
+              ...allHoneyItems.filter(
+                (p) => !featuredRaw.some((fr) => fr.id === p.id)
+              ),
+            ].slice(0, 8)
 
-      // 2. Top Selling (Category: "সর্বাধিক বিক্রিত সেরা মধু" -> category: top-selling)
-      const topSellingRaw = allRawProducts.filter((p) =>
-        p.categories?.some((c) => c.handle === "top-selling")
+      // 2. Top Selling (Collection / Category: "সর্বাধিক বিক্রিত সেরা মধু" -> handle: top-selling)
+      const topSellingRaw = allRawProducts.filter(
+        (p) =>
+          p.collection?.handle === "top-selling" ||
+          p.categories?.some((c) => c.handle === "top-selling")
       )
       topSellingProducts =
         topSellingRaw.length >= 5
@@ -136,9 +145,10 @@ export default async function Home() {
       {/* 2. Featured Categories (Live from Medusa Dashboard) */}
       <FeaturedCategories categories={liveCategories} />
 
-      {/* 3. Top Selling Products (Live from 'top-selling' category in Dashboard) */}
+      {/* 3. Top Selling Products (Live from 'top-selling' collection in Dashboard) */}
       <TopSelling
         products={topSellingProducts.length > 0 ? topSellingProducts : undefined}
+        viewAllHref="/collections/top-selling"
       />
 
       {/* 4. Quality Trust & Certification Bar */}
@@ -147,6 +157,7 @@ export default async function Home() {
       {/* 5. "১০০% খাঁটি ও প্রাকৃতিক মধু" (Live from 'featured-honey' collection in Dashboard) */}
       <NaturalHoneySlider
         products={featuredProducts.length > 0 ? featuredProducts : undefined}
+        viewAllHref="/collections/featured-honey"
       />
 
       {/* 6. Categorized Product Shelves (Live from sundarban-honey, flower-honey, wild-hill-honey in Dashboard) */}

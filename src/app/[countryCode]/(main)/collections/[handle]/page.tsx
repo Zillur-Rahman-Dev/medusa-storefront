@@ -77,7 +77,11 @@ export default async function CollectionPage(props: Props) {
     getRegion(countryCode),
     listProducts({
       pageParam: 0,
-      queryParams: { limit: 100 },
+      queryParams: {
+        limit: 100,
+        fields:
+          "*categories,*collection,*thumbnail,*images,*variants,*variants.calculated_price",
+      },
       countryCode,
     }),
     listCategories(),

@@ -15,6 +15,7 @@ const shelvesData: HoneyShelfSection[] = [
   {
     title: "সুন্দরবন ও ম্যানগ্রোভের খাঁটি মধু",
     subtitle: "সুন্দরবনের গভীর ম্যানগ্রোভ ও বুনো মৌচাকের ১০০% খাঁটি কাঁচা মধু",
+    handle: "sundarban-honey",
     products: [
       {
         id: "sh-1",
@@ -81,6 +82,7 @@ const shelvesData: HoneyShelfSection[] = [
   {
     title: "ফুলভিত্তিক প্রাকৃতিক মধু",
     subtitle: "সরিষা, লিচু, কালোজিরা ও ধনে ফুলের প্রাকৃতিক মধু",
+    handle: "flower-honey",
     products: [
       {
         id: "sh-5",
@@ -147,6 +149,7 @@ const shelvesData: HoneyShelfSection[] = [
   {
     title: "পাহাড়ি ও বুনো মৌচাকের মধু",
     subtitle: "পাহাড়ের মৌচাক, বাবলা-কুল এবং কুসুম ও সূর্যমুখী ফুল",
+    handle: "wild-hill-honey",
     products: [
       {
         id: "sh-9",

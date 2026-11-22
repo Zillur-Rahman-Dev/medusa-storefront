@@ -106,9 +106,13 @@ const naturalHoneyProducts: HoneyProductItem[] = [
 
 type NaturalHoneySliderProps = {
   products?: HoneyProductItem[]
+  viewAllHref?: string
 }
 
-export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps) {
+export default function NaturalHoneySlider({
+  products,
+  viewAllHref = "/collections/featured-honey",
+}: NaturalHoneySliderProps) {
   const displayProducts = products && products.length > 0 ? products : naturalHoneyProducts
   const sliderRef = useRef<HTMLDivElement>(null)
   const [itemsPerView, setItemsPerView] = useState(5)
@@ -235,7 +239,7 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
           </div>
 
           <LocalizedClientLink
-            href="/store"
+            href={viewAllHref}
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
           >
             <span>সকল মধু দেখুন</span>

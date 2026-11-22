@@ -37,7 +37,7 @@ export default function PanoramaBanner() {
             </div>
 
             <LocalizedClientLink
-              href="/store"
+              href="/categories/flower-honey"
               className="w-full sm:w-auto py-3.5 px-7 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shrink-0 text-center"
             >
               <span>সকল ফুলের মধু দেখুন</span>

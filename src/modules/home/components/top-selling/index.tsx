@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useRef } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
 
 const topSellingHoneys: HoneyProductItem[] = [
@@ -69,9 +70,13 @@ const topSellingHoneys: HoneyProductItem[] = [
 
 type TopSellingProps = {
   products?: HoneyProductItem[]
+  viewAllHref?: string
 }
 
-export default function TopSelling({ products }: TopSellingProps) {
+export default function TopSelling({
+  products,
+  viewAllHref = "/collections/top-selling",
+}: TopSellingProps) {
   const displayProducts = products && products.length > 0 ? products : topSellingHoneys
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -85,8 +90,8 @@ export default function TopSelling({ products }: TopSellingProps) {
   return (
     <section className="py-10 sm:py-14 bg-white dark:bg-zinc-950 transition-colors">
       <div className="content-container">
-        {/* Section Header with Mobile/Tablet Arrow Navigation */}
-        <div className="flex items-end justify-between mb-6 pb-2 border-b border-zinc-200 dark:border-zinc-800 lg:border-none lg:mb-8 lg:pb-0 lg:block lg:text-center">
+        {/* Section Header */}
+        <div className="flex items-end justify-between mb-6 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
             <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1">
               জনপ্রিয় পছন্দ
@@ -94,27 +99,37 @@ export default function TopSelling({ products }: TopSellingProps) {
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
               সর্বাধিক বিক্রিত সেরা মধু
             </h2>
-            <div className="w-14 h-1 bg-amber-500 rounded-full mt-2 lg:mx-auto" />
+            <div className="w-14 h-1 bg-amber-500 rounded-full mt-2" />
           </div>
 
-          {/* Quick Slide Navigation for Mobile & Tablet */}
-          <div className="flex items-center gap-1.5 lg:hidden">
-            <button
-              type="button"
-              onClick={() => handleScroll("left")}
-              aria-label="Previous"
-              className="w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 active:scale-95 transition-all"
+          <div className="flex items-center gap-3">
+            {/* Quick Slide Navigation for Mobile & Tablet */}
+            <div className="flex items-center gap-1 lg:hidden">
+              <button
+                type="button"
+                onClick={() => handleScroll("left")}
+                aria-label="Previous"
+                className="w-7 h-7 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 active:scale-95 transition-all"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleScroll("right")}
+                aria-label="Next"
+                className="w-7 h-7 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 active:scale-95 transition-all"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <LocalizedClientLink
+              href={viewAllHref}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleScroll("right")}
-              aria-label="Next"
-              className="w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 active:scale-95 transition-all"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              <span>সকল মধু দেখুন</span>
+              <ArrowRight className="w-4 h-4" />
+            </LocalizedClientLink>
           </div>
         </div>
 
