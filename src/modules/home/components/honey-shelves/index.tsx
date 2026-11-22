@@ -244,10 +244,15 @@ export default function HoneyShelves({ shelves }: HoneyShelvesProps) {
             </LocalizedClientLink>
           </div>
 
-          {/* Exactly 5 Products Grid on Desktop matching Image 1 */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-3 sm:gap-4">
+          {/* Exactly 5 Products Grid on Desktop; Smooth swipeable track on Mobile & Tablet */}
+          <div className="flex lg:grid lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-none snap-x snap-mandatory -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
             {shelf.products.map((prod) => (
-              <HoneyProductCard key={prod.id} product={prod} />
+              <div
+                key={prod.id}
+                className="w-[180px] sm:w-[220px] md:w-[240px] lg:w-auto shrink-0 snap-start"
+              >
+                <HoneyProductCard product={prod} />
+              </div>
             ))}
           </div>
         </section>

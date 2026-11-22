@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 import { X, SlidersHorizontal, ListFilter, ArrowUpDown, Eye } from "lucide-react"
 
@@ -58,6 +58,8 @@ export default function ClientStoreView({
   breadcrumb,
 }: ClientStoreViewProps) {
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
 
   // Calculate global min and max prices from inventory
   const { minPossiblePrice, maxPossiblePrice } = useMemo(() => {
@@ -109,7 +111,13 @@ export default function ClientStoreView({
   useEffect(() => {
     const params = new URLSearchParams()
     if (searchQuery.trim()) params.set("q", searchQuery.trim())
-    if (selectedCategory !== "all") params.set("category", selectedCategory)
+
+    const isCategoryPage = pathname?.includes("/categories/")
+    // Only set category query param if on /store page (not on /categories/[handle] page)
+    if (!isCategoryPage && selectedCategory !== "all") {
+      params.set("category", selectedCategory)
+    }
+
     if (selectedWeight !== "all") params.set("weight", selectedWeight)
     if (selectedFlag !== "all") params.set("flag", selectedFlag)
     if (selectedBrand !== "all") params.set("brand", selectedBrand)
@@ -118,8 +126,15 @@ export default function ClientStoreView({
     if (sortBy !== "default" && sortBy !== "created_at") params.set("sortBy", sortBy)
 
     const queryStr = params.toString()
-    const newUrl = queryStr ? `/${countryCode}/store?${queryStr}` : `/${countryCode}/store`
-    window.history.replaceState(null, "", newUrl)
+    const basePath = pathname || `/${countryCode}/store`
+    const newUrl = queryStr ? `${basePath}?${queryStr}` : basePath
+
+    if (typeof window !== "undefined") {
+      const currentFullUrl = window.location.pathname + window.location.search
+      if (currentFullUrl !== newUrl) {
+        window.history.replaceState(null, "", newUrl)
+      }
+    }
   }, [
     searchQuery,
     selectedCategory,
@@ -129,9 +144,24 @@ export default function ClientStoreView({
     priceRange,
     sortBy,
     countryCode,
+    pathname,
     minPossiblePrice,
     maxPossiblePrice,
   ])
+
+  // Handle category change intelligently based on current page
+  const handleCategoryChange = (catIdOrHandle: string) => {
+    const isCategoryPage = pathname?.includes("/categories/")
+    if (isCategoryPage) {
+      if (catIdOrHandle === "all") {
+        router.push(`/${countryCode}/store`)
+      } else {
+        router.push(`/${countryCode}/categories/${catIdOrHandle}`)
+      }
+      return
+    }
+    setSelectedCategory(catIdOrHandle)
+  }
 
   // Dynamic counts for categories, weights, and flags
   const { categoryCounts, weightCounts, flagCounts } = useMemo(() => {
@@ -798,7 +828,7 @@ export default function ClientStoreView({
             <CategoryFilter
               categories={categories}
               selectedCategory={selectedCategory}
-              onChange={setSelectedCategory}
+              onChange={handleCategoryChange}
               productCounts={categoryCounts}
             />
 
@@ -921,7 +951,7 @@ export default function ClientStoreView({
               <CategoryFilter
                 categories={categories}
                 selectedCategory={selectedCategory}
-                onChange={setSelectedCategory}
+                onChange={handleCategoryChange}
                 productCounts={categoryCounts}
               />
 
