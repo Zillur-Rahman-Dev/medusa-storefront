@@ -189,10 +189,14 @@ export default function HoneyGuide() {
           </p>
         </div>
 
-        {/* Tab Buttons (Horizontal scrollable on mobile) */}
+        {/* Tab Buttons (Wrapped & Centered on Desktop; Smooth Swipe with No Scrollbar on Mobile) */}
         <div
-          className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8 justify-start lg:justify-center scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          className="flex md:flex-wrap items-center gap-2 overflow-x-auto md:overflow-visible pb-3 md:pb-0 scrollbar-none no-scrollbar mb-8 justify-start md:justify-center scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
         >
           {honeyDetails.map((h) => {
             const isSelected = h.id === selectedId
@@ -201,9 +205,9 @@ export default function HoneyGuide() {
                 key={h.id}
                 type="button"
                 onClick={() => setSelectedId(h.id)}
-                className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 border ${
+                className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 border cursor-pointer ${
                   isSelected
-                    ? "bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-500/20"
+                    ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20 scale-[1.02]"
                     : "bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/60 dark:hover:bg-zinc-800"
                 }`}
               >

@@ -68,8 +68,12 @@ export default function FeaturedCategories({ categories = [] }: FeaturedCategori
 
         {/* Categories Icon Row (Live from Medusa Dashboard) */}
         <div
-          className="flex items-center gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none pb-2 justify-start md:justify-center scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          className="flex items-center gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none no-scrollbar pb-2 justify-start md:justify-center scroll-smooth -mx-2 px-2 sm:mx-0 sm:px-0"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
         >
           {displayList.map((cat, idx) => (
             <LocalizedClientLink

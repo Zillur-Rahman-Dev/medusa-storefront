@@ -158,5 +158,29 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-radix")()],
+  plugins: [
+    require("tailwindcss-radix")(),
+    function ({ addUtilities }) {
+      addUtilities({
+        ".scrollbar-none": {
+          "-ms-overflow-style": "none",
+          "scrollbar-width": "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+            width: "0px",
+            height: "0px",
+          },
+        },
+        ".no-scrollbar": {
+          "-ms-overflow-style": "none",
+          "scrollbar-width": "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+            width: "0px",
+            height: "0px",
+          },
+        },
+      })
+    },
+  ],
 }

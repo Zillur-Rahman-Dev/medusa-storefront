@@ -2,22 +2,28 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 const categories = [
   { name: "সকল মধু", href: "/store", icon: "🍯", isSpecial: false },
-  { name: "খলিশা ও সুন্দরবন", href: "/store", icon: "🌸", isSpecial: false },
-  { name: "সরিষা ফুল", href: "/store", icon: "🌼", isSpecial: false },
-  { name: "কালোজিরা ফুল", href: "/store", icon: "🌿", isSpecial: false },
-  { name: "লিচু ফুল", href: "/store", icon: "🍯", isSpecial: false },
-  { name: "ধনে ফুল", href: "/store", icon: "🌱", isSpecial: false },
-  { name: "পাহাড়ে মৌচাক", href: "/store", icon: "⛰️", isSpecial: false },
-  { name: "বাবলা ও কুল (বরই)", href: "/store", icon: "🍒", isSpecial: false },
-  { name: "কুসুম ও সূর্যমুখী", href: "/store", icon: "🌻", isSpecial: false },
-  { name: "বুনো ফুলের মধু", href: "/store", icon: "🌾", isSpecial: false },
+  { name: "খলিশা ও সুন্দরবন", href: "/categories/sundarban-honey", icon: "🌸", isSpecial: false },
+  { name: "সরিষা ফুল", href: "/categories/flower-honey", icon: "🌼", isSpecial: false },
+  { name: "কালোজিরা ফুল", href: "/categories/flower-honey", icon: "🌿", isSpecial: false },
+  { name: "লিচু ফুল", href: "/categories/flower-honey", icon: "🍯", isSpecial: false },
+  { name: "ধনে ফুল", href: "/categories/flower-honey", icon: "🌱", isSpecial: false },
+  { name: "পাহাড়ে মৌচাক", href: "/categories/wild-hill-honey", icon: "⛰️", isSpecial: false },
+  { name: "বাবলা ও কুল (বরই)", href: "/categories/wild-hill-honey", icon: "🍒", isSpecial: false },
+  { name: "কুসুম ও সূর্যমুখী", href: "/categories/wild-hill-honey", icon: "🌻", isSpecial: false },
+  { name: "বুনো ফুলের মধু", href: "/categories/wild-hill-honey", icon: "🌾", isSpecial: false },
 ]
 
 export default function CategoryBar() {
   return (
     <div className="bg-emerald-900 text-emerald-100 border-t border-emerald-800/80 hidden md:block">
       <div className="content-container">
-        <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-none text-xs font-semibold">
+        <div
+          className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-none no-scrollbar text-xs font-semibold"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
           {categories.map((cat, idx) => (
             <LocalizedClientLink
               key={idx}

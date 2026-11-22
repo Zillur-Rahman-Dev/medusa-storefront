@@ -31,7 +31,13 @@ export default function ImageGallery({ images }: ImageGalleryProps) {
     <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 w-full">
       {/* Left Side: Vertical Small Thumbnails (matching user uploaded screenshot) */}
       {hasImages && imageList.length > 1 && (
-        <div className="flex sm:flex-col gap-2.5 overflow-x-auto sm:overflow-y-auto max-h-[480px] scrollbar-none w-full sm:w-20 shrink-0 order-2 sm:order-1">
+        <div
+          className="flex sm:flex-col gap-2.5 overflow-x-auto sm:overflow-y-auto max-h-[480px] scrollbar-none no-scrollbar w-full sm:w-20 shrink-0 order-2 sm:order-1"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
           {imageList.map((img, idx) => {
             const isSelected = idx === selectedIndex
             return (

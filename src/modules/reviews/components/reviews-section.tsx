@@ -258,7 +258,13 @@ export default function ReviewsSection({
         </div>
 
         {/* Filter Pills (All, 5 Star, 4 Star) */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
+        <div
+          className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none no-scrollbar"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
           <button
             type="button"
             onClick={() => setFilterRating(null)}

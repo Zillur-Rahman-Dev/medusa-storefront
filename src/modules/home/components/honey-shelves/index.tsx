@@ -249,8 +249,12 @@ export default function HoneyShelves({ shelves }: HoneyShelvesProps) {
 
           {/* Exactly 5 Products Grid on Desktop; Smooth swipeable track on Mobile & Tablet */}
           <div
-            className="flex lg:grid lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-none snap-x snap-mandatory scroll-smooth -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            className="flex lg:grid lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 scrollbar-none no-scrollbar snap-x snap-mandatory scroll-smooth -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0"
+            style={{
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
           >
             {shelf.products.map((prod) => (
               <div

@@ -259,8 +259,12 @@ export default function NaturalHoneySlider({
             onMouseLeave={handleMouseUp}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            className="flex overflow-x-auto scrollbar-none py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2 select-none cursor-grab active:cursor-grabbing snap-x snap-mandatory scroll-smooth"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            className="flex overflow-x-auto scrollbar-none no-scrollbar py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2 select-none cursor-grab active:cursor-grabbing snap-x snap-mandatory scroll-smooth"
+            style={{
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
           >
             {displayProducts.map((prod) => (
               <div
