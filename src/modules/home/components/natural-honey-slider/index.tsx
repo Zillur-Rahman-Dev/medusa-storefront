@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
 
 const naturalHoneyProducts: HoneyProductItem[] = [
@@ -98,9 +98,9 @@ const naturalHoneyProducts: HoneyProductItem[] = [
     weight: "১ কেজি কাচের জার",
     price: 950,
     rating: 5,
-    reviewCount: 35,
-    icon: "🍒",
-    badge: "খাঁটি মধু",
+    reviewCount: 31,
+    icon: "🐝",
+    badge: "মৌসুমী মধু",
   },
 ]
 
@@ -111,8 +111,14 @@ type NaturalHoneySliderProps = {
 export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps) {
   const displayProducts = products && products.length > 0 ? products : naturalHoneyProducts
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
   const [itemsPerView, setItemsPerView] = useState(5)
+
+  // Drag & Swipe states
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState(0)
+  const startXRef = useRef(0)
+  const isMouseDownRef = useRef(false)
+  const hasMovedRef = useRef(false)
 
   useEffect(() => {
     const updateItemsPerView = () => {
@@ -140,23 +146,80 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
     }
   }, [maxIndex, currentIndex])
 
-  // Auto-slide every 3.5 seconds with pause-on-hover
-  useEffect(() => {
-    if (isPaused || maxIndex <= 0) return
-
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
-    }, 3500)
-
-    return () => clearInterval(timer)
-  }, [isPaused, maxIndex])
-
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1))
   }
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
+  }
+
+  // Smooth Auto-slide every 3.5 seconds (only pauses during active drag)
+  useEffect(() => {
+    if (isDragging || maxIndex <= 0) return
+
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
+    }, 3500)
+
+    return () => clearInterval(timer)
+  }, [isDragging, maxIndex])
+
+  // Touch Swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true)
+    startXRef.current = e.touches[0].clientX
+    setDragOffset(0)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return
+    const diff = e.touches[0].clientX - startXRef.current
+    setDragOffset(diff)
+  }
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return
+    setIsDragging(false)
+    if (dragOffset < -40) {
+      handleNext()
+    } else if (dragOffset > 40) {
+      handlePrev()
+    }
+    setDragOffset(0)
+  }
+
+  // Mouse Drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isMouseDownRef.current = true
+    hasMovedRef.current = false
+    startXRef.current = e.clientX
+    setDragOffset(0)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isMouseDownRef.current) return
+    const diff = e.clientX - startXRef.current
+    if (Math.abs(diff) > 5) {
+      hasMovedRef.current = true
+      setIsDragging(true)
+      setDragOffset(diff)
+    }
+  }
+
+  const handleMouseUp = () => {
+    if (!isMouseDownRef.current) return
+    isMouseDownRef.current = false
+    if (hasMovedRef.current) {
+      if (dragOffset < -40) {
+        handleNext()
+      } else if (dragOffset > 40) {
+        handlePrev()
+      }
+    }
+    setIsDragging(false)
+    setDragOffset(0)
+    hasMovedRef.current = false
   }
 
   return (
@@ -184,41 +247,25 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
           </LocalizedClientLink>
         </div>
 
-        {/* Carousel Slider Container */}
-        <div
-          className="relative group/slider"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          {/* Navigation Arrows (Visible on Desktop / Hover) */}
-          {maxIndex > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={handlePrev}
-                aria-label="Previous slide"
-                className="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:border-amber-500 flex items-center justify-center transition-all opacity-80 group-hover/slider:opacity-100 hover:scale-105"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNext}
-                aria-label="Next slide"
-                className="absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md text-zinc-700 dark:text-zinc-200 hover:text-amber-600 hover:border-amber-500 flex items-center justify-center transition-all opacity-80 group-hover/slider:opacity-100 hover:scale-105"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </>
-          )}
-
-          {/* Carousel Track with Responsive 5 Items Per View on Desktop */}
-          <div className="overflow-hidden py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2">
+        {/* Carousel Slider Container (Side buttons removed - Drag & Auto-slide enabled) */}
+        <div className="relative">
+          {/* Carousel Track with Mouse Drag & Touch Swipe */}
+          <div
+            className="overflow-hidden py-2 -mx-1.5 sm:-mx-2 px-1.5 sm:px-2 cursor-grab active:cursor-grabbing select-none"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
             <div
-              className="flex transition-transform duration-500 ease-out [--items-per-view:2] sm:[--items-per-view:2] md:[--items-per-view:3] lg:[--items-per-view:5] xl:[--items-per-view:5]"
+              className={`flex ease-out [--items-per-view:2] sm:[--items-per-view:2] md:[--items-per-view:3] lg:[--items-per-view:5] xl:[--items-per-view:5] ${
+                isDragging ? "transition-none" : "transition-transform duration-500"
+              }`}
               style={{
-                transform: `translateX(calc(-1 * ${currentIndex} * (100% / var(--items-per-view))))`,
+                transform: `translateX(calc(-1 * ${currentIndex} * (100% / var(--items-per-view)) + ${dragOffset}px))`,
               }}
             >
               {displayProducts.map((prod) => (
@@ -232,7 +279,7 @@ export default function NaturalHoneySlider({ products }: NaturalHoneySliderProps
             </div>
           </div>
 
-          {/* Bottom Pagination Dots matching screenshot */}
+          {/* Bottom Pagination Dots (Preserved below products) */}
           {totalDots > 1 && (
             <div className="mt-8 flex items-center justify-center gap-2">
               {[...Array(totalDots)].map((_, dotIdx) => {
