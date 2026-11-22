@@ -11,6 +11,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import { ChevronRight, Home, Star } from "lucide-react"
+import { ReviewsSection } from "@modules/reviews"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -83,9 +84,12 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
               </div>
-              <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                ৫.০ (৪৮টি ভেরিফাইড রিভিউ)
-              </span>
+              <a
+                href="#reviews-section"
+                className="text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+              >
+                ৫.০ (৪৮টি রিভিউ)
+              </a>
             </div>
 
             {/* Product Title & Info */}
@@ -109,6 +113,15 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         {/* Detailed Tabs: Description, Benefits, Usage */}
         <div className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800">
           <ProductTabs product={product} />
+        </div>
+
+        {/* Customer Reviews Section */}
+        <div className="mt-8">
+          <ReviewsSection
+            productTitle={product.title}
+            title={`${product.title}-এর রিভিউ ও গ্রাহক মতামত`}
+            subtitle="আমাদের এই খাঁটি মধু ব্যবহারকারী সম্মানিত গ্রাহকদের বাস্তব অভিজ্ঞতা।"
+          />
         </div>
 
         {/* Related Products Carousel/Grid */}
