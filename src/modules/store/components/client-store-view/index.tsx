@@ -8,8 +8,7 @@ import { X, SlidersHorizontal, ListFilter, ArrowUpDown, Eye } from "lucide-react
 import PriceRangeSlider from "../price-range-slider"
 import WeightFilter, { WEIGHT_OPTIONS } from "../weight-filter"
 import CategoryFilter from "../category-filter"
-import BrandFilter, { DEFAULT_BRANDS } from "../brand-filter"
-import ProductFlagFilter from "../product-flag-filter"
+import OfferAvailabilityFilter from "../offer-availability-filter"
 import ProductPreview from "@modules/products/components/product-preview"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { formatPrice } from "@lib/util/money"
@@ -78,19 +77,22 @@ export default function ClientStoreView({
     return { minPossiblePrice: min, maxPossiblePrice: max }
   }, [products])
 
+  // Detect if current route is a Category page (e.g. /bd/categories/sundarban-honey)
+  const isCategoryPage = Boolean(pathname?.includes("/categories/"))
+
   // Initial states from URL params if present
   const initialQ = searchParams?.get("q") || ""
   const initialCategory = searchParams?.get("category") || "all"
   const initialWeight = searchParams?.get("weight") || "all"
-  const initialFlag = searchParams?.get("flag") || "all"
-  const initialBrand = searchParams?.get("brand") || "all"
+  const initialDiscount = searchParams?.get("discount") === "true"
+  const initialInStock = searchParams?.get("inStock") === "true"
   const initialSort = (searchParams?.get("sortBy") as StoreSortOption) || "default"
 
   const [searchQuery, setSearchQuery] = useState(initialQ)
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedWeight, setSelectedWeight] = useState(initialWeight)
-  const [selectedFlag, setSelectedFlag] = useState(initialFlag)
-  const [selectedBrand, setSelectedBrand] = useState(initialBrand)
+  const [onlyDiscount, setOnlyDiscount] = useState(initialDiscount)
+  const [onlyInStock, setOnlyInStock] = useState(initialInStock)
   const [priceRange, setPriceRange] = useState<[number, number]>([
     0,
     maxPossiblePrice,
@@ -112,15 +114,14 @@ export default function ClientStoreView({
     const params = new URLSearchParams()
     if (searchQuery.trim()) params.set("q", searchQuery.trim())
 
-    const isCategoryPage = pathname?.includes("/categories/")
     // Only set category query param if on /store page (not on /categories/[handle] page)
     if (!isCategoryPage && selectedCategory !== "all") {
       params.set("category", selectedCategory)
     }
 
     if (selectedWeight !== "all") params.set("weight", selectedWeight)
-    if (selectedFlag !== "all") params.set("flag", selectedFlag)
-    if (selectedBrand !== "all") params.set("brand", selectedBrand)
+    if (onlyDiscount) params.set("discount", "true")
+    if (onlyInStock) params.set("inStock", "true")
     if (priceRange[0] > minPossiblePrice) params.set("minPrice", priceRange[0].toString())
     if (priceRange[1] < maxPossiblePrice) params.set("maxPrice", priceRange[1].toString())
     if (sortBy !== "default" && sortBy !== "created_at") params.set("sortBy", sortBy)
@@ -139,6 +140,11 @@ export default function ClientStoreView({
     searchQuery,
     selectedCategory,
     selectedWeight,
+    onlyDiscount,
+    onlyInStock,
+    priceRange,
+    sortBy,
+    isCategoryPage,
     selectedFlag,
     selectedBrand,
     priceRange,
@@ -163,11 +169,12 @@ export default function ClientStoreView({
     setSelectedCategory(catIdOrHandle)
   }
 
-  // Dynamic counts for categories, weights, and flags
-  const { categoryCounts, weightCounts, flagCounts } = useMemo(() => {
+  // Dynamic counts for categories, weights, discount deals, and stock
+  const { categoryCounts, weightCounts, discountCount, inStockCount } = useMemo(() => {
     const catMap: Record<string, number> = { all: products.length }
     const weightMap: Record<string, number> = { all: products.length }
-    const fMap: Record<string, number> = { best_selling: 0, new_arrival: 0 }
+    let discCount = 0
+    let stkCount = 0
 
     categories.forEach((c) => {
       catMap[c.id] = 0
@@ -178,7 +185,7 @@ export default function ClientStoreView({
       weightMap[w.id] = 0
     })
 
-    products.forEach((p, idx) => {
+    products.forEach((p) => {
       // Categories
       p.categories?.forEach((c) => {
         catMap[c.id] = (catMap[c.id] || 0) + 1
@@ -199,44 +206,36 @@ export default function ClientStoreView({
         }
       })
 
-      // Flags
-      const isBest =
-        p.categories?.some(
-          (c) =>
-            c.handle?.includes("top-selling") ||
-            c.name?.includes("বিক্রিত") ||
-            c.name?.includes("সেরা")
-        ) ||
-        p.tags?.some((t) => t.value?.toLowerCase().includes("best")) ||
-        idx < 4
+      // Discount
+      const hasDiscount =
+        p.tags?.some((t) => t.value?.toLowerCase().includes("offer") || t.value?.toLowerCase().includes("sale")) ||
+        p.variants?.some((v: any) => {
+          const calc = v.calculated_price?.calculated_amount
+          const orig = v.calculated_price?.original_amount
+          return (orig && orig > calc) || v.calculated_price?.price_type === "sale"
+        }) ||
+        Boolean((p.metadata as Record<string, any>)?.discount || (p.metadata as Record<string, any>)?.sale)
+      if (hasDiscount) discCount++
 
-      if (isBest) fMap.best_selling = (fMap.best_selling || 0) + 1
-
-      // New arrival (top 4 or tags)
-      if (idx < 5 || p.tags?.some((t) => t.value?.toLowerCase().includes("new"))) {
-        fMap.new_arrival = (fMap.new_arrival || 0) + 1
-      }
+      // In stock
+      const inStock = p.variants?.some((v: any) => {
+        if (v.manage_inventory === false || v.allow_backorder === true) return true
+        return typeof v.inventory_quantity === "number" ? v.inventory_quantity > 0 : true
+      })
+      if (inStock) stkCount++
     })
 
-    return { categoryCounts: catMap, weightCounts: weightMap, flagCounts: fMap }
+    return {
+      categoryCounts: catMap,
+      weightCounts: weightMap,
+      discountCount: discCount,
+      inStockCount: stkCount,
+    }
   }, [products, categories])
-
-  // Dynamic counts for brands
-  const brandCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: products.length }
-    DEFAULT_BRANDS.forEach((b) => {
-      if (b.id === "all") return
-      counts[b.id] = products.filter((p) => {
-        const text = `${p.title} ${p.handle} ${p.description || ""}`.toLowerCase()
-        return b.keywords?.some((k) => text.includes(k.toLowerCase()))
-      }).length
-    })
-    return counts
-  }, [products])
 
   // In-Memory Filtering and Sorting (0ms, Zero Server Network Load)
   const filteredProducts = useMemo(() => {
-    let result = products.filter((product, idx) => {
+    let result = products.filter((product) => {
       // 1. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
@@ -251,8 +250,8 @@ export default function ClientStoreView({
         }
       }
 
-      // 2. Category Filter
-      if (selectedCategory !== "all") {
+      // 2. Category Filter (Only applied on store/collections, not on specific category pages)
+      if (!isCategoryPage && selectedCategory !== "all") {
         const matchesCategory = product.categories?.some(
           (c) => c.id === selectedCategory || c.handle === selectedCategory
         )
@@ -274,32 +273,26 @@ export default function ClientStoreView({
         }
       }
 
-      // 4. Product Flag Filter (Best Selling / New Arrival)
-      if (selectedFlag === "best_selling") {
-        const isBest =
-          product.categories?.some(
-            (c) =>
-              c.handle?.includes("top-selling") ||
-              c.name?.includes("বিক্রিত") ||
-              c.name?.includes("সেরা")
-          ) ||
-          product.tags?.some((t) => t.value?.toLowerCase().includes("best")) ||
-          idx < 4
-        if (!isBest) return false
-      } else if (selectedFlag === "new_arrival") {
-        const isNew =
-          idx < 5 || product.tags?.some((t) => t.value?.toLowerCase().includes("new"))
-        if (!isNew) return false
+      // 4. Discount Deals Filter
+      if (onlyDiscount) {
+        const hasDisc =
+          product.tags?.some((t) => t.value?.toLowerCase().includes("offer") || t.value?.toLowerCase().includes("sale")) ||
+          product.variants?.some((v: any) => {
+            const calc = v.calculated_price?.calculated_amount
+            const orig = v.calculated_price?.original_amount
+            return (orig && orig > calc) || v.calculated_price?.price_type === "sale"
+          }) ||
+          Boolean((product.metadata as Record<string, any>)?.discount || (product.metadata as Record<string, any>)?.sale)
+        if (!hasDisc) return false
       }
 
-      // 5. Brand Filter (Matching Image 4)
-      if (selectedBrand !== "all") {
-        const brandDef = DEFAULT_BRANDS.find((b) => b.id === selectedBrand)
-        if (brandDef?.keywords) {
-          const text = `${product.title} ${product.handle} ${product.description || ""}`.toLowerCase()
-          const matchesBrand = brandDef.keywords.some((k) => text.includes(k.toLowerCase()))
-          if (!matchesBrand) return false
-        }
+      // 5. In-Stock Filter
+      if (onlyInStock) {
+        const inStk = product.variants?.some((v: any) => {
+          if (v.manage_inventory === false || v.allow_backorder === true) return true
+          return typeof v.inventory_quantity === "number" ? v.inventory_quantity > 0 : true
+        })
+        if (!inStk) return false
       }
 
       // 6. Price Range Filter
@@ -348,9 +341,11 @@ export default function ClientStoreView({
   }, [
     products,
     searchQuery,
+    isCategoryPage,
     selectedCategory,
     selectedWeight,
-    selectedFlag,
+    onlyDiscount,
+    onlyInStock,
     priceRange,
     sortBy,
   ])
@@ -358,18 +353,19 @@ export default function ClientStoreView({
   // Count active filters
   const activeFiltersCount = useMemo(() => {
     let count = 0
-    if (selectedCategory !== "all") count++
+    if (!isCategoryPage && selectedCategory !== "all") count++
     if (selectedWeight !== "all") count++
-    if (selectedFlag !== "all") count++
-    if (selectedBrand !== "all") count++
+    if (onlyDiscount) count++
+    if (onlyInStock) count++
     if (priceRange[0] > minPossiblePrice || priceRange[1] < maxPossiblePrice) count++
     if (searchQuery.trim()) count++
     return count
   }, [
+    isCategoryPage,
     selectedCategory,
     selectedWeight,
-    selectedFlag,
-    selectedBrand,
+    onlyDiscount,
+    onlyInStock,
     priceRange,
     searchQuery,
     minPossiblePrice,
@@ -379,8 +375,8 @@ export default function ClientStoreView({
   const handleResetFilters = () => {
     setSelectedCategory("all")
     setSelectedWeight("all")
-    setSelectedFlag("all")
-    setSelectedBrand("all")
+    setOnlyDiscount(false)
+    setOnlyInStock(false)
     setPriceRange([minPossiblePrice, maxPossiblePrice])
     setSearchQuery("")
     setSortBy("default")
@@ -395,26 +391,12 @@ export default function ClientStoreView({
     return found ? found.name?.trim() : selectedCategory
   }, [selectedCategory, categories])
 
-  // Active Brand Name for chip
-  const activeBrandName = useMemo(() => {
-    if (selectedBrand === "all") return null
-    const found = DEFAULT_BRANDS.find((b) => b.id === selectedBrand)
-    return found ? found.label : selectedBrand
-  }, [selectedBrand])
-
   // Active Weight Name for chip
   const activeWeightName = useMemo(() => {
     if (selectedWeight === "all") return null
     const found = WEIGHT_OPTIONS.find((w) => w.id === selectedWeight)
     return found ? found.label : selectedWeight
   }, [selectedWeight])
-
-  // Active Flag Name for chip
-  const activeFlagName = useMemo(() => {
-    if (selectedFlag === "best_selling") return "সর্বাধিক বিক্রিত"
-    if (selectedFlag === "new_arrival") return "নতুন আগমন"
-    return null
-  }, [selectedFlag])
 
   // Pagination slice
   const displayedProducts = useMemo(() => {
@@ -593,8 +575,8 @@ export default function ClientStoreView({
                   </span>
                 )}
 
-                {/* Category tag */}
-                {activeCategoryName && (
+                {/* Category tag (only shown on store/collections) */}
+                {!isCategoryPage && activeCategoryName && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
                     <span>ক্যাটেগরি: {activeCategoryName}</span>
                     <button
@@ -623,15 +605,30 @@ export default function ClientStoreView({
                   </span>
                 )}
 
-                {/* Flag tag */}
-                {activeFlagName && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800 shadow-sm">
-                    <span>ফ্ল্যাগ: {activeFlagName}</span>
+                {/* Discount tag */}
+                {onlyDiscount && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-50 dark:bg-orange-950/60 text-orange-900 dark:text-orange-200 border border-orange-300 dark:border-orange-800 shadow-sm">
+                    <span>অফার: ছাড়যুক্ত মধু</span>
                     <button
                       type="button"
-                      onClick={() => setSelectedFlag("all")}
+                      onClick={() => setOnlyDiscount(false)}
                       className="hover:text-red-500 p-0.5 cursor-pointer"
-                      aria-label="Remove flag filter"
+                      aria-label="Remove discount filter"
+                    >
+                      <X className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </span>
+                )}
+
+                {/* In Stock tag */}
+                {onlyInStock && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 shadow-sm">
+                    <span>প্রাপ্যতা: রেডি স্টক</span>
+                    <button
+                      type="button"
+                      onClick={() => setOnlyInStock(false)}
+                      className="hover:text-red-500 p-0.5 cursor-pointer"
+                      aria-label="Remove in stock filter"
                     >
                       <X className="w-3 h-3 stroke-[2.5]" />
                     </button>
@@ -731,8 +728,8 @@ export default function ClientStoreView({
               </span>
             )}
 
-            {/* Category tag */}
-            {activeCategoryName && (
+            {/* Category tag (only shown on store/collections) */}
+            {!isCategoryPage && activeCategoryName && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
                 <span>ক্যাটেগরি: {activeCategoryName}</span>
                 <button
@@ -759,13 +756,13 @@ export default function ClientStoreView({
               </span>
             )}
 
-            {/* Flag tag */}
-            {activeFlagName && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
-                <span>ফ্ল্যাগ: {activeFlagName}</span>
+            {/* Discount tag */}
+            {onlyDiscount && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 dark:bg-orange-950/60 text-orange-900 dark:text-orange-200 border border-orange-300 dark:border-orange-800">
+                <span>অফার: ছাড়যুক্ত মধু</span>
                 <button
                   type="button"
-                  onClick={() => setSelectedFlag("all")}
+                  onClick={() => setOnlyDiscount(false)}
                   className="hover:text-red-500 p-0.5 cursor-pointer"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
@@ -773,13 +770,13 @@ export default function ClientStoreView({
               </span>
             )}
 
-            {/* Brand tag */}
-            {activeBrandName && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] text-xs font-semibold bg-amber-50/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-800">
-                <span>ব্র্যান্ড: {activeBrandName}</span>
+            {/* In Stock tag */}
+            {onlyInStock && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800">
+                <span>প্রাপ্যতা: রেডি স্টক</span>
                 <button
                   type="button"
-                  onClick={() => setSelectedBrand("all")}
+                  onClick={() => setOnlyInStock(false)}
                   className="hover:text-red-500 p-0.5 cursor-pointer"
                 >
                   <X className="w-3 h-3 stroke-[2.5]" />
@@ -824,15 +821,7 @@ export default function ClientStoreView({
               </button>
             )}
 
-            {/* 1. Category Filter (FILTER BY CATEGORY) */}
-            <CategoryFilter
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onChange={handleCategoryChange}
-              productCounts={categoryCounts}
-            />
-
-            {/* 2. Price Range Slider (PRICE RANGE - Centered thumb, matching Image 4) */}
+            {/* 1. Price Range Slider (TOP - Always First) */}
             <PriceRangeSlider
               min={minPossiblePrice}
               max={maxPossiblePrice}
@@ -841,25 +830,31 @@ export default function ClientStoreView({
               step={50}
             />
 
-            {/* 3. Brand Filter (BRANDS - Matching Image 4) */}
-            <BrandFilter
-              selectedBrand={selectedBrand}
-              onChange={setSelectedBrand}
-              productCounts={brandCounts}
-            />
+            {/* 2. Category Filter (Hidden if link is category; Shown if link is collection or store) */}
+            {!isCategoryPage && (
+              <CategoryFilter
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onChange={handleCategoryChange}
+                productCounts={categoryCounts}
+              />
+            )}
 
-            {/* 4. Product Flag Filter (PRODUCT FLAG - Matching Image 4) */}
-            <ProductFlagFilter
-              selectedFlag={selectedFlag}
-              onChange={setSelectedFlag}
-              productCounts={flagCounts}
-            />
-
-            {/* 5. Weight / Pack Size Filter (Compact tag chips) */}
+            {/* 3. Weight / Pack Size Filter (প্যাক সাইজ / ওজন) */}
             <WeightFilter
               selectedWeight={selectedWeight}
               onChange={setSelectedWeight}
               productCounts={weightCounts}
+            />
+
+            {/* 4. Better Option: Offers & Availability Filter */}
+            <OfferAvailabilityFilter
+              onlyDiscount={onlyDiscount}
+              onChangeDiscount={setOnlyDiscount}
+              onlyInStock={onlyInStock}
+              onChangeInStock={setOnlyInStock}
+              discountCount={discountCount}
+              inStockCount={inStockCount}
             />
           </aside>
 
@@ -947,15 +942,7 @@ export default function ClientStoreView({
                 </button>
               )}
 
-              {/* 1. Categories Filter (Tick mark checkboxes) */}
-              <CategoryFilter
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onChange={handleCategoryChange}
-                productCounts={categoryCounts}
-              />
-
-              {/* 2. Price Range Slider */}
+              {/* 1. Price Range Slider (TOP - Always First) */}
               <PriceRangeSlider
                 min={minPossiblePrice}
                 max={maxPossiblePrice}
@@ -964,25 +951,31 @@ export default function ClientStoreView({
                 step={50}
               />
 
-              {/* 3. Brand Filter */}
-              <BrandFilter
-                selectedBrand={selectedBrand}
-                onChange={setSelectedBrand}
-                productCounts={brandCounts}
-              />
+              {/* 2. Category Filter (Hidden if link is category; Shown if link is collection or store) */}
+              {!isCategoryPage && (
+                <CategoryFilter
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  onChange={handleCategoryChange}
+                  productCounts={categoryCounts}
+                />
+              )}
 
-              {/* 4. Product Flag Filter */}
-              <ProductFlagFilter
-                selectedFlag={selectedFlag}
-                onChange={setSelectedFlag}
-                productCounts={flagCounts}
-              />
-
-              {/* 5. Weight Filter (Compact tag chips) */}
+              {/* 3. Weight / Pack Size Filter (প্যাক সাইজ / ওজন) */}
               <WeightFilter
                 selectedWeight={selectedWeight}
                 onChange={setSelectedWeight}
                 productCounts={weightCounts}
+              />
+
+              {/* 4. Better Option: Offers & Availability Filter */}
+              <OfferAvailabilityFilter
+                onlyDiscount={onlyDiscount}
+                onChangeDiscount={setOnlyDiscount}
+                onlyInStock={onlyInStock}
+                onChangeInStock={setOnlyInStock}
+                discountCount={discountCount}
+                inStockCount={inStockCount}
               />
             </div>
 
