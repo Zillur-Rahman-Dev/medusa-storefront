@@ -7,7 +7,7 @@ import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { formatPrice, formatSize } from "@lib/util/money"
-import { Tag, Pencil } from "lucide-react"
+import { Tag } from "lucide-react"
 
 export type CheckoutItem = {
   id: string
@@ -198,7 +198,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   return (
     <div className="relative lg:sticky lg:top-6 flex flex-col w-full">
       <div className="w-full bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-stone-200/80 shadow-2xs flex flex-col">
-        {/* Header with Title and [ ✏️ অর্ডার পরিবর্তন করুন ] */}
+        {/* Header with Title (100% Read-Only Summary) */}
         <div className="flex items-center justify-between pb-3 mb-2 border-b border-stone-200/80">
           <Heading
             level="h2"
@@ -206,17 +206,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
           >
             অর্ডারের সারসংক্ষেপ ({formatSize(String(items.reduce((s, i) => s + i.quantity, 0)))}টি পণ্য)
           </Heading>
-          <button
-            type="button"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent("cart:open-drawer"))
-            }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 transition-colors cursor-pointer group shadow-2xs select-none"
-            aria-label="অর্ডার পরিবর্তন করুন"
-          >
-            <Pencil className="w-3.5 h-3.5 group-hover:scale-110 transition-transform text-orange-600" />
-            <span>অর্ডার পরিবর্তন করুন</span>
-          </button>
         </div>
 
         {/* 1. Products List (100% Read-Only, Clean & Fast) */}
