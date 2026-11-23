@@ -5,7 +5,7 @@ import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useParams, useRouter, usePathname } from "next/navigation"
-import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { ShoppingCart, ShoppingBag, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag, Trash2 } from "lucide-react"
 
@@ -100,8 +100,38 @@ export default function CartDropdown({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBadgePulsing, setIsBadgePulsing] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [isWaitingForRefresh, setIsWaitingForRefresh] = useState(false)
+  const refreshStartedRef = useRef(false)
   const [mounted, setMounted] = useState(false)
   const badgeTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Coordination: Keep drawer open & locked until server refresh DOM commit completes
+  useEffect(() => {
+    if (isPending && isWaitingForRefresh) {
+      refreshStartedRef.current = true
+    } else if (refreshStartedRef.current && !isPending && isWaitingForRefresh) {
+      refreshStartedRef.current = false
+      setIsWaitingForRefresh(false)
+      setIsCheckingOut(false)
+      setIsDrawerOpen(false)
+    }
+  }, [isPending, isWaitingForRefresh])
+
+  // Safety fallback: Never leave drawer stuck in updating state
+  useEffect(() => {
+    if (isWaitingForRefresh) {
+      const timer = setTimeout(() => {
+        refreshStartedRef.current = false
+        setIsWaitingForRefresh(false)
+        setIsCheckingOut(false)
+        setIsDrawerOpen(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [isWaitingForRefresh])
+
+  const isBusyUpdating = isCheckingOut || isWaitingForRefresh || (isCheckoutPage && isPending && isDrawerOpen)
 
   // Max Limit Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -212,16 +242,21 @@ export default function CartDropdown({
   }
 
   const closeDrawer = () => {
+    if (isBusyUpdating) return
     setIsDrawerOpen(false)
     if (isCheckoutPage) {
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current)
         syncTimeoutRef.current = null
         performServerSync().then(() => {
-          router.refresh()
+          startTransition(() => {
+            router.refresh()
+          })
         })
       } else {
-        router.refresh()
+        startTransition(() => {
+          router.refresh()
+        })
       }
     }
   }
@@ -265,8 +300,8 @@ export default function CartDropdown({
 
   // Global drawer events
   useEffect(() => {
-    const handleOpen = () => setIsDrawerOpen(true)
-    const handleClose = () => setIsDrawerOpen(false)
+    const handleOpen = () => openDrawer()
+    const handleClose = () => closeDrawer()
     window.addEventListener("cart:open-drawer", handleOpen)
     window.addEventListener("cart:close-drawer", handleClose)
     return () => {
@@ -873,11 +908,13 @@ export default function CartDropdown({
       console.error("[handleCheckoutClick] direct sync error:", err)
     }
 
-    // 4. Navigate only after backend has confirmed and committed the saved cart
+    // 4. On checkout page, keep drawer locked with spinner until router.refresh commits to DOM
     if (isCheckoutPage) {
-      closeDrawer()
-      setIsCheckingOut(false)
-      router.refresh()
+      refreshStartedRef.current = true
+      setIsWaitingForRefresh(true)
+      startTransition(() => {
+        router.refresh()
+      })
     } else {
       window.location.href = `/${countryCode}/checkout`
     }
@@ -1094,7 +1131,9 @@ export default function CartDropdown({
               className={`fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[9999] transition-opacity duration-300 ease-in-out ${
                 isDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
               }`}
-              onClick={closeDrawer}
+              onClick={() => {
+                if (!isBusyUpdating) closeDrawer()
+              }}
               aria-hidden="true"
             />
 
@@ -1114,7 +1153,8 @@ export default function CartDropdown({
                 <button
                   type="button"
                   onClick={closeDrawer}
-                  className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer group"
+                  disabled={isBusyUpdating}
+                  className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="কার্ট বন্ধ করুন"
                   data-testid="close-cart-drawer"
                 >
@@ -1142,7 +1182,7 @@ export default function CartDropdown({
               )}
 
               {/* Active Processing Lock Overlay */}
-              {isCheckingOut && (
+              {isBusyUpdating && (
                 <div className="absolute inset-0 bg-white/75 dark:bg-zinc-900/75 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
                   <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
@@ -1324,10 +1364,10 @@ export default function CartDropdown({
                     <button
                       type="button"
                       onClick={handleCheckoutClick}
-                      disabled={isCheckingOut}
+                      disabled={isBusyUpdating}
                       className="w-full h-12 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/25 cursor-pointer disabled:opacity-80 uppercase tracking-wide"
                     >
-                      {isCheckingOut ? (
+                      {isBusyUpdating ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
                           <span>{isCheckoutPage ? "আপডেট সংরক্ষণ হচ্ছে..." : "আপনার অর্ডারটি প্রস্তুত হচ্ছে..."}</span>

@@ -29,67 +29,75 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     return cart?.promotions || []
   })
 
-  const isTransitioningRef = useRef(false)
-  const prevPromotionsCountRef = useRef(promotionsList.length)
+  const wasPendingRef = useRef(false)
+  const pendingPromotionsRef = useRef<HttpTypes.StorePromotion[] | null>(null)
 
-  // Sync directly with Server Component cart promotions
+  // Strict Sequential Lock & Mutex:
+  // If ANY operation (applying or removing) is active or transition is pending, lock everything!
+  const isPromoBusy = isApplying || Boolean(removingCode) || isPending
+  const isApplyLoading = isApplying || (isPending && !removingCode)
+  const isRemoveLoading = (code: string) => removingCode === code
+
+  // Sync with Server Component cart promotions when NOT in the middle of a user action
   useEffect(() => {
-    setPromotionsList(cart?.promotions || [])
+    if (!isPromoBusy) {
+      setPromotionsList(cart?.promotions || [])
+    }
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("purehoney_promotions")
       } catch {}
     }
-  }, [cart?.promotions])
+  }, [cart?.promotions, isPromoBusy])
 
   // Listen to broadcast events from other components
   useEffect(() => {
     const handlePromoUpdated = (e: Event) => {
       const detail = (e as CustomEvent).detail
-      if (detail && Array.isArray(detail.promotions)) {
+      if (detail && Array.isArray(detail.promotions) && !isPromoBusy) {
         setPromotionsList(detail.promotions)
       }
     }
     window.addEventListener("cart:promo-updated", handlePromoUpdated)
     return () => window.removeEventListener("cart:promo-updated", handlePromoUpdated)
-  }, [])
+  }, [isPromoBusy])
 
-  // 1. When Server Component updates promotionsList:
-  useEffect(() => {
-    if (promotionsList.length > prevPromotionsCountRef.current) {
-      setIsOpen(false)
-      setIsApplying(false)
-    }
-    if (promotionsList.length < prevPromotionsCountRef.current) {
-      setRemovingCode(null)
-    }
-    prevPromotionsCountRef.current = promotionsList.length
-  }, [promotionsList.length])
-
-  // 2. Track startTransition(() => router.refresh()) completion without wiping states early:
+  // Track startTransition(() => router.refresh()) completion:
+  // ONLY release lock and clear loading states when router.refresh() has fully settled & committed to DOM!
   useEffect(() => {
     if (isPending) {
-      isTransitioningRef.current = true
-    } else if (isTransitioningRef.current) {
-      isTransitioningRef.current = false
+      wasPendingRef.current = true
+    } else if (wasPendingRef.current) {
+      wasPendingRef.current = false
+      if (pendingPromotionsRef.current !== null) {
+        setPromotionsList(pendingPromotionsRef.current)
+        pendingPromotionsRef.current = null
+      }
       setIsApplying(false)
       setRemovingCode(null)
+      setIsOpen(false)
     }
   }, [isPending])
 
-  const isApplyLoading = isApplying || isPending
-  const isRemoveLoading = (code: string) => removingCode === code
+  // Safety timer: Never leave user locked out if transition never fires or network hangs
+  useEffect(() => {
+    if (isApplying || removingCode) {
+      const timer = setTimeout(() => {
+        setIsApplying(false)
+        setRemovingCode(null)
+      }, 8000)
+      return () => clearTimeout(timer)
+    }
+  }, [isApplying, removingCode])
 
   const removePromotionCode = async (code: string) => {
-    if (removingCode || isApplyLoading || isPending) return
+    if (isPromoBusy) return // STRICT SEQUENTIAL LOCK: only one add or remove action at a time!
     setRemovingCode(code)
     setErrorMessage("")
 
     const validPromotions = promotionsList.filter(
       (promotion) => promotion.code !== code
     )
-
-    setPromotionsList(validPromotions)
 
     try {
       const res = await applyPromotions(
@@ -101,7 +109,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       } else {
         const updatedPromos = res?.cart?.promotions ?? validPromotions
         const updatedDiscountTotal = res?.cart?.discount_total ?? 0
-        setPromotionsList(updatedPromos)
+
+        // 1. Instantly broadcast calculated discount & totals to CheckoutSummary
         window.dispatchEvent(
           new CustomEvent("cart:promo-updated", {
             detail: {
@@ -112,12 +121,14 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             },
           })
         )
+
+        // 2. Queue updated promotions to commit only after server refresh settles
+        pendingPromotionsRef.current = updatedPromos
+
+        // 3. Keep spinner "মুছছে..." spinning until server component renders new DOM
         startTransition(() => {
           router.refresh()
         })
-        setTimeout(() => {
-          setRemovingCode(null)
-        }, 800)
       }
     } catch (e: any) {
       setErrorMessage("প্রোমো কোড মুছতে সমস্যা হয়েছে।")
@@ -127,6 +138,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
 
   const handleApplyPromotion = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isPromoBusy) return // STRICT SEQUENTIAL LOCK: only one add or remove action at a time!
     setErrorMessage("")
 
     const cleanCode = codeValue.trim()
@@ -156,22 +168,27 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         )
         setIsApplying(false)
       } else {
-        if (res?.cart) {
-          const updatedPromos = res.cart.promotions || []
-          setPromotionsList(updatedPromos)
-          window.dispatchEvent(
-            new CustomEvent("cart:promo-updated", {
-              detail: {
-                promotions: updatedPromos,
-                discount_total: res.cart.discount_total ?? 0,
-                subtotal: res.cart.subtotal,
-                total: res.cart.total,
-              },
-            })
-          )
-        }
+        const updatedPromos = res?.cart?.promotions || []
+        const updatedDiscountTotal = res?.cart?.discount_total ?? 0
+
+        // 1. Instantly broadcast calculated discount & totals to CheckoutSummary
+        window.dispatchEvent(
+          new CustomEvent("cart:promo-updated", {
+            detail: {
+              promotions: updatedPromos,
+              discount_total: updatedDiscountTotal,
+              subtotal: res?.cart?.subtotal,
+              total: res?.cart?.total,
+            },
+          })
+        )
+
+        // 2. Queue updated promotions to commit only after server refresh settles
+        pendingPromotionsRef.current = updatedPromos
         setCodeValue("")
         setErrorMessage("")
+
+        // 3. Keep spinner "প্রয়োগ হচ্ছে..." spinning until server component renders new DOM
         startTransition(() => {
           router.refresh()
         })
@@ -190,9 +207,12 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         <form onSubmit={handleApplyPromotion} className="w-full mb-5">
           <Label className="flex gap-x-1 my-2 items-center">
             <button
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={() => {
+                if (!isPromoBusy) setIsOpen(!isOpen)
+              }}
               type="button"
-              className="txt-medium text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 font-semibold hover:underline flex items-center gap-1.5 cursor-pointer"
+              disabled={isPromoBusy}
+              className="txt-medium text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 font-semibold hover:underline flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none"
               data-testid="add-discount-button"
             >
               <span>🏷️</span>
@@ -213,7 +233,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                     setCodeValue(e.target.value)
                     if (errorMessage) setErrorMessage("")
                   }}
-                  disabled={isApplyLoading}
+                  disabled={isPromoBusy}
                   placeholder="কুপন বা প্রোমো কোড লিখুন"
                   autoFocus={false}
                   autoCapitalize="none"
@@ -223,7 +243,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                 />
                 <button
                   type="submit"
-                  disabled={isApplyLoading}
+                  disabled={isPromoBusy || !codeValue.trim()}
                   className="h-10 px-5 rounded-lg bg-stone-800 hover:bg-stone-900 text-white font-medium text-sm flex items-center justify-center gap-1.5 shrink-0 transition-colors disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                   data-testid="discount-apply-button"
                 >
@@ -263,7 +283,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
 
                 return (
                   <div
-                    key={promotion.id}
+                    key={promotion.id || promotion.code}
                     className="flex items-center justify-between w-full max-w-full mb-2 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800"
                     data-testid="discount-row"
                   >
@@ -305,9 +325,9 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                           <button
                             type="button"
                             className="flex items-center gap-1 text-red-600 hover:text-red-700 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-100/60 dark:hover:bg-red-950/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-xs font-semibold"
-                            disabled={Boolean(removingCode) || isApplyLoading || isPending}
+                            disabled={isPromoBusy}
                             onClick={() => {
-                              if (!promotion.code || Boolean(removingCode) || isApplyLoading || isPending) return
+                              if (!promotion.code || isPromoBusy) return
                               removePromotionCode(promotion.code)
                             }}
                             data-testid="remove-discount-button"
