@@ -30,7 +30,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   const countryCode = (params?.countryCode as string) || "bd"
 
   // 1. Initial items mapped from server cart (Server-First metadata priority & deduplication)
-  const initialItems: CheckoutItem[] = useMemo(() => {
+  const items: CheckoutItem[] = useMemo(() => {
     const map = new Map<string, CheckoutItem>()
     for (const item of cart?.items || []) {
       const key = item.variant_id || item.variant?.id || item.id
@@ -63,7 +63,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     return Array.from(map.values()).filter((i) => i.quantity > 0)
   }, [cart?.items])
 
-  const [items, setItems] = useState<CheckoutItem[]>(initialItems)
   const [shippingAmount, setShippingAmount] = useState<number>(() => {
     return cart?.shipping_methods?.[0]?.amount ?? 60
   })
@@ -75,11 +74,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   useEffect(() => {
     setActivePromotions(cart?.promotions || [])
     setActiveDiscountTotal(cart?.discount_total ?? 0)
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem("purehoney_promotions")
-      } catch {}
-    }
   }, [cart?.promotions, cart?.discount_total])
 
   useEffect(() => {
@@ -125,98 +119,12 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [router])
 
-  // 3. Server-First Cart Synchronization: Server items are the absolute source of truth
+  // If cart is completely empty on server, return to store
   useEffect(() => {
-    setItems(initialItems)
-    if (typeof window !== "undefined") {
-      try {
-        if (initialItems.length === 0) {
-          localStorage.removeItem("purehoney_cart_v2")
-          sessionStorage.removeItem("medusa_cart_map")
-        } else {
-          localStorage.setItem(
-            "purehoney_cart_v2",
-            JSON.stringify({
-              items: initialItems.map((i) => ({
-                id: i.id,
-                lineId: i.lineId,
-                variantId: i.variantId,
-                title: i.title,
-                product_handle: i.product_handle,
-                thumbnail: i.thumbnail,
-                variantTitle: i.variantTitle,
-                quantity: i.quantity,
-                unit_price: i.unit_price,
-              })),
-              timestamp: Date.now(),
-            })
-          )
-        }
-        const cartMap: Record<string, any> = {}
-        initialItems.forEach((i) => {
-          if (i.variantId) cartMap[i.variantId] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
-          if (i.id) cartMap[i.id] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
-        })
-        sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
-        window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
-      } catch (e) {}
-    }
-  }, [initialItems])
-
-  // 4. Live Drawer updates sync (when user edits in drawer while on checkout)
-  useEffect(() => {
-    const handleSyncState = (e: Event) => {
-      const cartMap = (e as CustomEvent).detail
-      if (cartMap) {
-        setItems((prev) =>
-          prev
-            .filter((item) => {
-              const key = item.variantId || item.id
-              return cartMap[key] !== undefined ? cartMap[key].quantity > 0 : true
-            })
-            .map((item) => {
-              const key = item.variantId || item.id
-              const mapped = cartMap[key]
-              if (mapped && typeof mapped.quantity === "number") {
-                return {
-                  ...item,
-                  quantity: mapped.quantity,
-                  total: mapped.quantity * item.unit_price,
-                }
-              }
-              return item
-            })
-        )
-      }
-    }
-
-    const handleItemDeleted = (e: Event) => {
-      const detail = (e as CustomEvent).detail
-      if (detail) {
-        setItems((prev) =>
-          prev.filter((i) => {
-            if (detail.variantId && i.variantId) return i.variantId !== detail.variantId
-            if (detail.id) return i.id !== detail.id && i.lineId !== detail.id
-            return true
-          })
-        )
-      }
-    }
-
-    window.addEventListener("cart:sync-state", handleSyncState)
-    window.addEventListener("cart:item-deleted", handleItemDeleted)
-    return () => {
-      window.removeEventListener("cart:sync-state", handleSyncState)
-      window.removeEventListener("cart:item-deleted", handleItemDeleted)
-    }
-  }, [])
-
-  // If cart becomes completely empty, return to store
-  useEffect(() => {
-    if (items.length === 0 && initialItems.length > 0) {
+    if (items.length === 0 && (!cart?.items || cart.items.length === 0)) {
       window.location.href = `/${countryCode}/store`
     }
-  }, [items.length, initialItems.length, countryCode])
+  }, [items.length, cart?.items, countryCode])
 
   // 5. Live Totals calculation
   const liveSubtotal = useMemo(() => {

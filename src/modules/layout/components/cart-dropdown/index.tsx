@@ -172,6 +172,17 @@ export default function CartDropdown({
   // Manage drawer state with smart server-first reconciliation
   const openDrawer = () => {
     setIsDrawerOpen(true)
+    if (isCheckoutPage && cartState?.items) {
+      const serverUnified = convertServerItemsToUnified(cartState.items)
+      setItems(serverUnified)
+      itemsRef.current = serverUnified
+      serverItemsRef.current = cartState.items
+      const order = serverUnified.map((i) => i.variantId || i.id)
+      setVariantOrder(order)
+      variantOrderRef.current = order
+      return
+    }
+
     if (serverItemsRef.current.length > 0) {
       setItems((prev) => {
         const refreshed = prev.map((item) => {
@@ -198,12 +209,20 @@ export default function CartDropdown({
         return refreshed
       })
     }
-    scheduleServerSync(50)
   }
+
   const closeDrawer = () => {
     setIsDrawerOpen(false)
     if (isCheckoutPage) {
-      router.refresh()
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = null
+        performServerSync().then(() => {
+          router.refresh()
+        })
+      } else {
+        router.refresh()
+      }
     }
   }
 
@@ -285,6 +304,7 @@ export default function CartDropdown({
   // Save local snapshot helper
   const saveLocalSnapshot = (curItems: UnifiedCartItem[], curOrder: string[]) => {
     if (typeof window === "undefined") return
+    if (isCheckoutPage) return // NEVER write to localStorage from checkout page!
     try {
       const snapshot = {
         items: curItems.map((i) => ({
@@ -498,88 +518,66 @@ export default function CartDropdown({
     const rawServer = cartState?.items || []
     serverItemsRef.current = rawServer
 
+    // 1. Checkout Page: 100% Server-First source of truth. Zero localStorage reads/writes.
+    if (isCheckoutPage) {
+      const serverUnified = convertServerItemsToUnified(rawServer)
+      setItems(serverUnified)
+      itemsRef.current = serverUnified
+      const initialOrder = serverUnified.map((i) => i.variantId || i.id)
+      setVariantOrder(initialOrder)
+      variantOrderRef.current = initialOrder
+      setIsInitialized(true)
+      return
+    }
+
+    // 2. If server cart has items, server data ALWAYS wins!
+    if (rawServer.length > 0) {
+      const serverUnified = convertServerItemsToUnified(rawServer)
+      setItems(serverUnified)
+      itemsRef.current = serverUnified
+      const initialOrder = serverUnified.map((i) => i.variantId || i.id)
+      setVariantOrder(initialOrder)
+      variantOrderRef.current = initialOrder
+      saveLocalSnapshot(serverUnified, initialOrder)
+      setIsInitialized(true)
+      return
+    }
+
+    // 3. Fallback for anonymous shoppers before server cart initialization
     try {
       const stored = localStorage.getItem("purehoney_cart_v2")
       if (stored) {
         const parsed = JSON.parse(stored)
         const isRecent = Date.now() - (parsed.timestamp || 0) < 5 * 60 * 1000
 
-        if (isRecent && Array.isArray(parsed.items)) {
-          if (parsed.items.length === 0 && rawServer.length > 0) {
-            setItems([])
-            itemsRef.current = []
-            setVariantOrder([])
-            variantOrderRef.current = []
-            fetch("/api/cart/batch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ clearAll: true }),
-              keepalive: true,
-            })
-            setIsInitialized(true)
-            return
-          }
-
-          if (parsed.items.length > 0) {
-            // Reconcile client snapshot with server data so fresh titles/prices immediately override stale localStorage
-            const merged = parsed.items.map((loc: UnifiedCartItem) => {
-              const srv = rawServer.find(
-                (s: any) =>
-                  (loc.variantId && (s.variant_id === loc.variantId || s.variant?.id === loc.variantId)) ||
-                  (loc.lineId && s.id === loc.lineId)
-              )
-              if (srv) {
-                const liveTitle =
-                  (srv as any).variant?.product?.title || (srv as any).product_title || srv.title
-                const livePrice = srv.unit_price || loc.unit_price
-                const liveThumbnail =
-                  srv.thumbnail || (srv as any).variant?.product?.thumbnail || loc.thumbnail
-                return {
-                  ...loc,
-                  lineId: srv.id,
-                  lineIds: [srv.id],
-                  title: liveTitle || loc.title,
-                  unit_price: livePrice,
-                  thumbnail: liveThumbnail,
-                  raw: srv,
-                }
-              }
-              return loc
-            })
-
-            setItems(merged)
-            itemsRef.current = merged
-            const curOrder = Array.isArray(parsed.order)
-              ? parsed.order
-              : merged.map((i: any) => i.variantId || i.id)
-            setVariantOrder(curOrder)
-            variantOrderRef.current = curOrder
-            saveLocalSnapshot(merged, curOrder)
-            setIsInitialized(true)
-            setTimeout(() => {
-              performServerSync()
-            }, 100)
-            return
-          }
+        if (isRecent && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          setItems(parsed.items)
+          itemsRef.current = parsed.items
+          const curOrder = Array.isArray(parsed.order)
+            ? parsed.order
+            : parsed.items.map((i: any) => i.variantId || i.id)
+          setVariantOrder(curOrder)
+          variantOrderRef.current = curOrder
+          setIsInitialized(true)
+          scheduleServerSync(100)
+          return
         }
       }
     } catch (e) {
       console.warn("Cart local storage read error:", e)
     }
 
-    const serverUnified = convertServerItemsToUnified(rawServer)
-    setItems(serverUnified)
-    itemsRef.current = serverUnified
-    const initialOrder = serverUnified.map((i) => i.variantId || i.id)
-    setVariantOrder(initialOrder)
-    variantOrderRef.current = initialOrder
-    saveLocalSnapshot(serverUnified, initialOrder)
+    setItems([])
+    itemsRef.current = []
+    setVariantOrder([])
+    variantOrderRef.current = []
     setIsInitialized(true)
-  }, [cartState])
+  }, [cartState, isCheckoutPage])
 
   // Sync active cart item quantities globally for product cards & sessionStorage
   useEffect(() => {
     if (typeof window === "undefined") return
+    if (isCheckoutPage) return // Do not emit client events or touch sessionStorage on checkout
     const cartMap: Record<string, { quantity: number; lineId?: string; variantId?: string }> = {}
     items.forEach((item) => {
       const info = { quantity: item.quantity, lineId: item.lineId, variantId: item.variantId }
@@ -591,7 +589,7 @@ export default function CartDropdown({
       sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
     } catch (e) {}
     window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
-  }, [items])
+  }, [items, isCheckoutPage])
 
   // Sorted items strictly following variantOrder (newest added on TOP!)
   const displayItems = useMemo(() => {
