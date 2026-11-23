@@ -112,13 +112,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             },
           })
         )
-        if (res?.cart) {
-          window.dispatchEvent(
-            new CustomEvent("cart:server-updated", {
-              detail: { cart: res.cart },
-            })
-          )
-        }
         startTransition(() => {
           router.refresh()
         })
@@ -174,11 +167,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                 subtotal: res.cart.subtotal,
                 total: res.cart.total,
               },
-            })
-          )
-          window.dispatchEvent(
-            new CustomEvent("cart:server-updated", {
-              detail: { cart: res.cart },
             })
           )
         }
