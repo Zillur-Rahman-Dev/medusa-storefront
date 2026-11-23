@@ -5,7 +5,7 @@ import { addToCart, deleteLineItem, updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useParams, useRouter, usePathname } from "next/navigation"
-import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { ShoppingCart, ShoppingBag, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag, Trash2 } from "lucide-react"
 
@@ -97,9 +97,11 @@ export default function CartDropdown({
   const pathname = usePathname()
   const countryCode = (params?.countryCode as string) || "bd"
   const isCheckoutPage = pathname?.includes("/checkout")
+  const [isPending, startTransition] = useTransition()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isBadgePulsing, setIsBadgePulsing] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [isNavigatingToCheckout, setIsNavigatingToCheckout] = useState(false)
   const [mounted, setMounted] = useState(false)
   const badgeTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -218,10 +220,14 @@ export default function CartDropdown({
         clearTimeout(syncTimeoutRef.current)
         syncTimeoutRef.current = null
         performServerSync().then(() => {
-          router.refresh()
+          startTransition(() => {
+            router.refresh()
+          })
         })
       } else {
-        router.refresh()
+        startTransition(() => {
+          router.refresh()
+        })
       }
     }
   }
@@ -478,6 +484,11 @@ export default function CartDropdown({
               saveLocalSnapshot(updated, variantOrderRef.current)
               return updated
             })
+          }
+          if (isCheckoutPage && data?.cart) {
+            window.dispatchEvent(
+              new CustomEvent("cart:server-updated", { detail: { cart: data.cart } })
+            )
           }
         }
       }
@@ -834,7 +845,7 @@ export default function CartDropdown({
   // Navigation handlers (Immediate Flush & Gatekeeper)
   const handleCheckoutClick = async (e: React.MouseEvent) => {
     e.preventDefault()
-    if (isCheckingOut) return
+    if (isCheckingOut || isNavigatingToCheckout) return
     setIsCheckingOut(true)
 
     // 1. Immediately cancel pending debounce timer
@@ -854,6 +865,7 @@ export default function CartDropdown({
       .filter((c) => Boolean(c.variantId) && c.quantity > 0)
       .map((c) => ({ variantId: c.variantId!, quantity: c.quantity }))
 
+    let updatedCart: any = null
     try {
       const res = await fetch("/api/cart/batch", {
         method: "POST",
@@ -869,6 +881,9 @@ export default function CartDropdown({
         if (data?.items && Array.isArray(data.items)) {
           serverItemsRef.current = data.items
         }
+        if (data?.cart) {
+          updatedCart = data.cart
+        }
       }
     } catch (err) {
       console.error("[handleCheckoutClick] direct sync error:", err)
@@ -876,12 +891,20 @@ export default function CartDropdown({
 
     // 4. Navigate only after backend has confirmed and committed the saved cart
     if (isCheckoutPage) {
-      closeDrawer()
+      if (updatedCart) {
+        window.dispatchEvent(
+          new CustomEvent("cart:server-updated", { detail: { cart: updatedCart } })
+        )
+      }
       setIsCheckingOut(false)
-      router.refresh()
-    } else {
       closeDrawer()
-      window.location.href = `/${countryCode}/checkout`
+      startTransition(() => {
+        router.refresh()
+      })
+    } else {
+      setIsNavigatingToCheckout(true)
+      setIsDrawerOpen(false)
+      window.location.assign(`/${countryCode}/checkout`)
     }
   }
 
@@ -1364,6 +1387,29 @@ export default function CartDropdown({
               )}
             </aside>
           </>,
+          document.body
+        )}
+
+      {/* Fullscreen Branded Transition Gateway when navigating to checkout */}
+      {isNavigatingToCheckout &&
+        mounted &&
+        createPortal(
+          <div className="fixed inset-0 z-[99999] bg-stone-900/60 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl p-8 max-w-sm w-full mx-auto shadow-2xl flex flex-col items-center text-center border border-amber-200/80 dark:border-zinc-800">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-3xl mb-4 animate-bounce">
+                🍯
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5 tracking-tight">
+                PURE HONEY
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 font-medium mb-6">
+                আপনার অর্ডারটি সুরক্ষিতভাবে প্রস্তুত হচ্ছে... চেকআউট পেজে নেওয়া হচ্ছে...
+              </p>
+              <div className="w-full bg-amber-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden relative">
+                <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 h-full w-full rounded-full animate-pulse" />
+              </div>
+            </div>
+          </div>,
           document.body
         )}
     </div>

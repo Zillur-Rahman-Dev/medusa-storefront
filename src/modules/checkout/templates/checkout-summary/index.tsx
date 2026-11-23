@@ -29,10 +29,38 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
-  // 1. Initial items mapped from server cart (Server-First metadata priority & deduplication)
+  // 1. Direct Server Handshake State: Initialized with server cart, and instantly synchronizes
+  // with verified HTTP 200 server cart payloads from /api/cart/batch or promo actions
+  const [activeCart, setActiveCart] = useState<any>(cart)
+
+  useEffect(() => {
+    setActiveCart(cart)
+  }, [cart])
+
+  // Direct Handshake: listen to confirmed server cart from /api/cart/batch response
+  useEffect(() => {
+    const handleServerUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.cart) {
+        setActiveCart(detail.cart)
+        if (detail.cart.promotions) {
+          setActivePromotions(detail.cart.promotions)
+        }
+        if (typeof detail.cart.discount_total === "number") {
+          setActiveDiscountTotal(detail.cart.discount_total)
+        }
+      }
+    }
+    window.addEventListener("cart:server-updated", handleServerUpdated)
+    return () => {
+      window.removeEventListener("cart:server-updated", handleServerUpdated)
+    }
+  }, [])
+
+  // 2. Initial items mapped from server cart (Server-First metadata priority & deduplication)
   const items: CheckoutItem[] = useMemo(() => {
     const map = new Map<string, CheckoutItem>()
-    for (const item of cart?.items || []) {
+    for (const item of activeCart?.items || []) {
       const key = item.variant_id || item.variant?.id || item.id
       const itemTitle = item.variant?.product?.title || item.product_title || item.title || "খাঁটি প্রাকৃতিক মধু"
       const itemHandle = item.variant?.product?.handle || item.product_handle
@@ -61,20 +89,20 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
       }
     }
     return Array.from(map.values()).filter((i) => i.quantity > 0)
-  }, [cart?.items])
+  }, [activeCart?.items])
 
   const [shippingAmount, setShippingAmount] = useState<number>(() => {
-    return cart?.shipping_methods?.[0]?.amount ?? 60
+    return activeCart?.shipping_methods?.[0]?.amount ?? 60
   })
 
   // Direct server-managed promotions & discount state (single source of truth)
-  const [activePromotions, setActivePromotions] = useState<any[]>(() => cart?.promotions || [])
-  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => cart?.discount_total ?? 0)
+  const [activePromotions, setActivePromotions] = useState<any[]>(() => activeCart?.promotions || [])
+  const [activeDiscountTotal, setActiveDiscountTotal] = useState<number>(() => activeCart?.discount_total ?? 0)
 
   useEffect(() => {
-    setActivePromotions(cart?.promotions || [])
-    setActiveDiscountTotal(cart?.discount_total ?? 0)
-  }, [cart?.promotions, cart?.discount_total])
+    setActivePromotions(activeCart?.promotions || [])
+    setActiveDiscountTotal(activeCart?.discount_total ?? 0)
+  }, [activeCart?.promotions, activeCart?.discount_total])
 
   useEffect(() => {
     const handlePromoUpdated = (e: Event) => {
@@ -121,10 +149,10 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
   // If cart is completely empty on server, return to store
   useEffect(() => {
-    if (items.length === 0 && (!cart?.items || cart.items.length === 0)) {
+    if (items.length === 0 && (!activeCart?.items || activeCart.items.length === 0)) {
       window.location.href = `/${countryCode}/store`
     }
-  }, [items.length, cart?.items, countryCode])
+  }, [items.length, activeCart?.items, countryCode])
 
   // 5. Live Totals calculation
   const liveSubtotal = useMemo(() => {
@@ -338,7 +366,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
         {/* 3. Discount Code Section */}
         <div className="mt-2 mb-1">
-          <DiscountCode cart={cart} />
+          <DiscountCode cart={activeCart || cart} />
         </div>
       </div>
     </div>
