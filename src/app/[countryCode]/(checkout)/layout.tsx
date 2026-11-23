@@ -1,5 +1,6 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ChevronDown from "@modules/common/icons/chevron-down"
+import CartButton from "@modules/layout/components/cart-button"
 
 export default function CheckoutLayout({
   children,
@@ -27,7 +28,9 @@ export default function CheckoutLayout({
           >
             <span className="text-xl">🍯</span> PURE HONEY
           </LocalizedClientLink>
-          <div className="flex-1 basis-0" />
+          <div className="flex-1 basis-0 flex justify-end">
+            <CartButton />
+          </div>
         </nav>
       </div>
       <div className="relative" data-testid="checkout-container">{children}</div>

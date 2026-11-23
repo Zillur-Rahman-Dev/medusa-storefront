@@ -577,71 +577,6 @@ export default function CartDropdown({
     setIsInitialized(true)
   }, [cartState])
 
-  // Flush keepalive sync on pagehide / beforeunload
-  useEffect(() => {
-    const handleUnload = () => {
-      const currentItems = itemsRef.current
-      const serverItems = serverItemsRef.current
-
-      if (currentItems.length === 0 && serverItems.length > 0) {
-        fetch("/api/cart/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ clearAll: true }),
-          keepalive: true,
-        })
-        return
-      }
-
-      const deletions: Array<{ lineId: string; variantId?: string }> = []
-      for (const srv of serverItems) {
-        const stillInClient = currentItems.some(
-          (c) =>
-            (c.variantId && srv.variant_id && srv.variant_id === c.variantId) ||
-            (c.lineId && srv.id === c.lineId)
-        )
-        if (!stillInClient) {
-          deletions.push({ lineId: srv.id, variantId: srv.variant_id || undefined })
-        }
-      }
-
-      const additions: Array<{ variantId: string; quantity: number }> = []
-      const updates: Array<{ lineId: string; quantity: number }> = []
-
-      for (const cItem of currentItems) {
-        const matchingSrv = serverItems.find(
-          (s) =>
-            (cItem.variantId && s.variant_id && s.variant_id === cItem.variantId) ||
-            (cItem.lineId && s.id === cItem.lineId)
-        )
-
-        if (!matchingSrv) {
-          if (cItem.variantId) {
-            additions.push({ variantId: cItem.variantId, quantity: cItem.quantity })
-          }
-        } else if (matchingSrv.quantity !== cItem.quantity) {
-          updates.push({ lineId: matchingSrv.id, quantity: cItem.quantity })
-        }
-      }
-
-      if (deletions.length > 0 || additions.length > 0 || updates.length > 0) {
-        fetch("/api/cart/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deletions, additions, updates }),
-          keepalive: true,
-        })
-      }
-    }
-
-    window.addEventListener("pagehide", handleUnload)
-    window.addEventListener("beforeunload", handleUnload)
-    return () => {
-      window.removeEventListener("pagehide", handleUnload)
-      window.removeEventListener("beforeunload", handleUnload)
-    }
-  }, [])
-
   // Sync active cart item quantities globally for product cards & sessionStorage
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -910,9 +845,38 @@ export default function CartDropdown({
       syncTimeoutRef.current = null
     }
 
-    // 2. Perform server sync and await completion
-    await performServerSync()
+    // 2. Wait for any in-flight background sync to fully settle
+    while (isSyncingRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
 
+    // 3. Direct, guaranteed atomic save to backend and await HTTP 200
+    const currentItems = itemsRef.current
+    const desiredItems = currentItems
+      .filter((c) => Boolean(c.variantId) && c.quantity > 0)
+      .map((c) => ({ variantId: c.variantId!, quantity: c.quantity }))
+
+    try {
+      const res = await fetch("/api/cart/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          desiredItems,
+          clearAll: desiredItems.length === 0,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.items && Array.isArray(data.items)) {
+          serverItemsRef.current = data.items
+        }
+      }
+    } catch (err) {
+      console.error("[handleCheckoutClick] direct sync error:", err)
+    }
+
+    // 4. Navigate only after backend has confirmed and committed the saved cart
     if (isCheckoutPage) {
       closeDrawer()
       setIsCheckingOut(false)

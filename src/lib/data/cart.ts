@@ -143,7 +143,7 @@ export async function addToCart({
     // Fast single roundtrip: Retrieve or create cart including line items to avoid duplicate network requests
     let cart = await getOrSetCart(
       "bd",
-      "id,region_id,currency_code,*items.id,*items.variant_id,*items.quantity,*items.unit_price,*items.title,*items.thumbnail,*items.variant.product.title,*items.variant.product.handle,*items.variant.product.thumbnail"
+      "*items,id,region_id,currency_code"
     )
 
     if (!cart) {
@@ -403,7 +403,7 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
 
     let cart = await getOrSetCart(
       "bd",
-      "id,region_id,currency_code,*items.id,*items.variant_id,*items.quantity,*items.unit_price,*items.title,*items.thumbnail,*items.variant.product.title,*items.variant.product.handle,*items.variant.product.thumbnail"
+      "*items,id,region_id,currency_code"
     )
 
     if (!cart) {
@@ -569,7 +569,7 @@ export async function batchSyncCart(payload: BatchSyncPayload) {
     let isCartEmpty = false
     const finalCart = await retrieveCart(
       cart.id,
-      "id,*items.id,*items.variant_id,*items.quantity,*items.unit_price,*items.title,*items.thumbnail,*items.variant.product.title,*items.variant.product.handle,*items.variant.product.thumbnail,+discount_total,*promotions,+promotions.*,*promotions.application_method"
+      "*items,id,+discount_total,*promotions,+promotions.*,*promotions.application_method"
     )
     if (
       finalCart &&

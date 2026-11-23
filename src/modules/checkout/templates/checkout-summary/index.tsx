@@ -29,22 +29,38 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   const params = useParams()
   const countryCode = (params?.countryCode as string) || "bd"
 
-  // 1. Initial items mapped from server cart (Server-First metadata priority)
+  // 1. Initial items mapped from server cart (Server-First metadata priority & deduplication)
   const initialItems: CheckoutItem[] = useMemo(() => {
-    return (cart?.items || []).map((item: any) => ({
-      id: item.id,
-      lineId: item.id,
-      variantId: item.variant_id || item.variant?.id,
-      title: item.variant?.product?.title || item.product_title || item.title || "খাঁটি প্রাকৃতিক মধু",
-      product_handle: item.variant?.product?.handle || item.product_handle,
-      thumbnail: item.thumbnail || item.variant?.product?.thumbnail,
-      images: item.variant?.product?.images,
-      variantTitle: item.variant?.title || item.subtitle || "১ কেজি",
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total: item.total || item.unit_price * item.quantity,
-      raw: item,
-    }))
+    const map = new Map<string, CheckoutItem>()
+    for (const item of cart?.items || []) {
+      const key = item.variant_id || item.variant?.id || item.id
+      const itemTitle = item.variant?.product?.title || item.product_title || item.title || "খাঁটি প্রাকৃতিক মধু"
+      const itemHandle = item.variant?.product?.handle || item.product_handle
+      const itemThumb = item.thumbnail || item.variant?.product?.thumbnail
+      const itemVariantTitle = item.variant?.title || item.subtitle || "১ কেজি"
+
+      if (map.has(key)) {
+        const existing = map.get(key)!
+        existing.quantity += item.quantity
+        existing.total += item.total || item.unit_price * item.quantity
+      } else {
+        map.set(key, {
+          id: item.id,
+          lineId: item.id,
+          variantId: item.variant_id || item.variant?.id,
+          title: itemTitle,
+          product_handle: itemHandle,
+          thumbnail: itemThumb,
+          images: item.variant?.product?.images,
+          variantTitle: itemVariantTitle,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.total || item.unit_price * item.quantity,
+          raw: item,
+        })
+      }
+    }
+    return Array.from(map.values()).filter((i) => i.quantity > 0)
   }, [cart?.items])
 
   const [items, setItems] = useState<CheckoutItem[]>(initialItems)
