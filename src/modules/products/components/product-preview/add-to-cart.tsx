@@ -5,6 +5,8 @@ import { ShoppingCart } from "lucide-react"
 import { useCartItem } from "@lib/hooks/use-cart-item"
 import { formatSize } from "@lib/util/money"
 
+const MAX_ITEM_QUANTITY = 20
+
 export default function PreviewAddToCart({
   variantId,
   productHandle,
@@ -74,8 +76,9 @@ export default function PreviewAddToCart({
     e.stopPropagation()
 
     if (!variantId) return
+    if (quantity >= MAX_ITEM_QUANTITY) return
 
-    const nextQty = quantity + 1
+    const nextQty = Math.min(MAX_ITEM_QUANTITY, quantity + 1)
     setQuantity(nextQty)
 
     if (typeof window !== "undefined") {
@@ -152,8 +155,10 @@ export default function PreviewAddToCart({
         <button
           type="button"
           onClick={handleIncrement}
-          className="w-9 sm:w-11 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer"
+          disabled={quantity >= MAX_ITEM_QUANTITY}
+          className="w-9 sm:w-11 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-base select-none transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="পরিমাণ বাড়ান"
+          title={quantity >= MAX_ITEM_QUANTITY ? "সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে" : "পরিমাণ বাড়ান"}
         >
           +
         </button>

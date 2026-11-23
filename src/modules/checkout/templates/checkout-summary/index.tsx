@@ -1,13 +1,13 @@
 "use client"
 
 import { Heading } from "@medusajs/ui"
-import { useEffect, useState, useMemo, useRef } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { formatPrice, formatSize } from "@lib/util/money"
-import { Minus, Plus, Trash2, Tag } from "lucide-react"
+import { Tag, Pencil } from "lucide-react"
 
 export type CheckoutItem = {
   id: string
@@ -80,35 +80,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [])
 
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const itemsRef = useRef<CheckoutItem[]>(items)
-  itemsRef.current = items
-
-  // Guaranteed keepalive sync on page unload / tab close
-  useEffect(() => {
-    const handleUnload = () => {
-      const cur = itemsRef.current
-      if (cur && cur.length > 0) {
-        fetch("/api/cart/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            desiredItems: cur
-              .filter((i) => Boolean(i.variantId) && i.quantity > 0)
-              .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
-          }),
-          keepalive: true,
-        })
-      }
-    }
-    window.addEventListener("pagehide", handleUnload)
-    window.addEventListener("beforeunload", handleUnload)
-    return () => {
-      window.removeEventListener("pagehide", handleUnload)
-      window.removeEventListener("beforeunload", handleUnload)
-    }
-  }, [])
-
   // 2. Listen to shipping method selection from Section 2
   useEffect(() => {
     const handleShippingChanged = (e: Event) => {
@@ -176,168 +147,62 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [initialItems])
 
-  // 4. Update items and debounce background server sync with keepalive
-  const updateItemsAndSync = (nextItems: CheckoutItem[]) => {
-    setItems(nextItems)
-
-    try {
-      const snapshot = {
-        items: nextItems.map((i) => ({
-          id: i.id,
-          lineId: i.lineId,
-          variantId: i.variantId,
-          title: i.title,
-          product_handle: i.product_handle,
-          thumbnail: i.thumbnail,
-          variantTitle: i.variantTitle,
-          quantity: i.quantity,
-          unit_price: i.unit_price,
-        })),
-        timestamp: Date.now(),
+  // 4. Live Drawer updates sync (when user edits in drawer while on checkout)
+  useEffect(() => {
+    const handleSyncState = (e: Event) => {
+      const cartMap = (e as CustomEvent).detail
+      if (cartMap) {
+        setItems((prev) =>
+          prev
+            .filter((item) => {
+              const key = item.variantId || item.id
+              return cartMap[key] !== undefined ? cartMap[key].quantity > 0 : true
+            })
+            .map((item) => {
+              const key = item.variantId || item.id
+              const mapped = cartMap[key]
+              if (mapped && typeof mapped.quantity === "number") {
+                return {
+                  ...item,
+                  quantity: mapped.quantity,
+                  total: mapped.quantity * item.unit_price,
+                }
+              }
+              return item
+            })
+        )
       }
-      localStorage.setItem("purehoney_cart_v2", JSON.stringify(snapshot))
-
-      const cartMap: Record<string, any> = {}
-      nextItems.forEach((i) => {
-        if (i.variantId) cartMap[i.variantId] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
-        if (i.id) cartMap[i.id] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
-      })
-      sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
-      window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
-    } catch (e) {}
-
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current)
     }
-    syncTimeoutRef.current = setTimeout(() => {
-      fetch("/api/cart/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          desiredItems: nextItems
-            .filter((i) => Boolean(i.variantId) && i.quantity > 0)
-            .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
-        }),
-        keepalive: true,
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.success) {
-            if (Array.isArray(data.promotions)) {
-              setActivePromotions(data.promotions)
-            }
-            if (typeof data.discount_total === "number") {
-              setActiveDiscountTotal(data.discount_total)
-            }
-          }
-        })
-        .catch((e) => console.warn("[CheckoutSummary] debounce sync error:", e))
-    }, 150)
-  }
 
-  // 5. Interactive controls
-  const handleIncrement = (item: CheckoutItem) => {
-    const maxStock = item.raw?.variant?.inventory_quantity ?? item.raw?.inventory_quantity
-    if (typeof maxStock === "number" && maxStock > 0 && item.quantity >= maxStock) {
-      return
-    }
-    const nextItems = items.map((it) =>
-      it.id === item.id || (item.variantId && it.variantId === item.variantId)
-        ? { ...it, quantity: it.quantity + 1, total: (it.quantity + 1) * it.unit_price }
-        : it
-    )
-    updateItemsAndSync(nextItems)
-  }
-
-  const handleDecrement = (item: CheckoutItem) => {
-    if (item.quantity > 1) {
-      const nextItems = items.map((it) =>
-        it.id === item.id || (item.variantId && it.variantId === item.variantId)
-          ? { ...it, quantity: it.quantity - 1, total: (it.quantity - 1) * it.unit_price }
-          : it
-      )
-      updateItemsAndSync(nextItems)
-    } else {
-      handleRemove(item)
-    }
-  }
-
-  // Instant & guaranteed removal: updates UI immediately and fires keepalive request to backend
-  const handleRemove = async (item: CheckoutItem) => {
-    const nextItems = items.filter(
-      (it) => !(it.id === item.id || (item.variantId && it.variantId === item.variantId))
-    )
-    setItems(nextItems)
-
-    try {
-      if (nextItems.length === 0) {
-        localStorage.removeItem("purehoney_cart_v2")
-        sessionStorage.removeItem("medusa_cart_map")
-      } else {
-        localStorage.setItem(
-          "purehoney_cart_v2",
-          JSON.stringify({
-            items: nextItems,
-            timestamp: Date.now(),
+    const handleItemDeleted = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail) {
+        setItems((prev) =>
+          prev.filter((i) => {
+            if (detail.variantId && i.variantId) return i.variantId !== detail.variantId
+            if (detail.id) return i.id !== detail.id && i.lineId !== detail.id
+            return true
           })
         )
       }
-      const cartMap: Record<string, any> = {}
-      nextItems.forEach((i) => {
-        if (i.variantId) cartMap[i.variantId] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
-        if (i.id) cartMap[i.id] = { quantity: i.quantity, lineId: i.lineId, variantId: i.variantId }
-      })
-      sessionStorage.setItem("medusa_cart_map", JSON.stringify(cartMap))
-      window.dispatchEvent(new CustomEvent("cart:sync-state", { detail: cartMap }))
-      window.dispatchEvent(
-        new CustomEvent("cart:item-deleted", {
-          detail: { id: item.id, variantId: item.variantId, handle: item.product_handle },
-        })
-      )
-    } catch (e) {}
-
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current)
-      syncTimeoutRef.current = null
     }
 
-    try {
-      const payload: any = {
-        deletions: [{ lineId: item.lineId || item.id, variantId: item.variantId }],
-        desiredItems: nextItems
-          .filter((i) => Boolean(i.variantId) && i.quantity > 0)
-          .map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
-      }
-      if (nextItems.length === 0) {
-        payload.clearAll = true
-      }
-      const res = await fetch("/api/cart/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        keepalive: true,
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data?.success) {
-          if (Array.isArray(data.promotions)) {
-            setActivePromotions(data.promotions)
-          }
-          if (typeof data.discount_total === "number") {
-            setActiveDiscountTotal(data.discount_total)
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("[handleRemove] deletion backend warning:", e)
+    window.addEventListener("cart:sync-state", handleSyncState)
+    window.addEventListener("cart:item-deleted", handleItemDeleted)
+    return () => {
+      window.removeEventListener("cart:sync-state", handleSyncState)
+      window.removeEventListener("cart:item-deleted", handleItemDeleted)
     }
+  }, [])
 
-    if (nextItems.length === 0) {
+  // If cart becomes completely empty, return to store
+  useEffect(() => {
+    if (items.length === 0 && initialItems.length > 0) {
       window.location.href = `/${countryCode}/store`
     }
-  }
+  }, [items.length, initialItems.length, countryCode])
 
-  // 6. Live Totals calculation
+  // 5. Live Totals calculation
   const liveSubtotal = useMemo(() => {
     return items.reduce((acc, it) => acc + (it.unit_price * it.quantity), 0)
   }, [items])
@@ -420,14 +285,28 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   return (
     <div className="relative lg:sticky lg:top-6 flex flex-col w-full">
       <div className="w-full bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-stone-200/80 shadow-2xs flex flex-col">
-        <Heading
-          level="h2"
-          className="flex flex-row text-lg sm:text-xl font-bold text-gray-900 pb-3 mb-2 border-b border-stone-200/80"
-        >
-          আপনার কার্ট (অর্ডার বিবরণ)
-        </Heading>
+        {/* Header with Title and [ ✏️ অর্ডার পরিবর্তন করুন ] */}
+        <div className="flex items-center justify-between pb-3 mb-2 border-b border-stone-200/80">
+          <Heading
+            level="h2"
+            className="text-base sm:text-lg font-bold text-gray-900"
+          >
+            অর্ডারের সারসংক্ষেপ ({formatSize(String(items.reduce((s, i) => s + i.quantity, 0)))}টি পণ্য)
+          </Heading>
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("cart:open-drawer"))
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 transition-colors cursor-pointer group shadow-2xs select-none"
+            aria-label="অর্ডার পরিবর্তন করুন"
+          >
+            <Pencil className="w-3.5 h-3.5 group-hover:scale-110 transition-transform text-orange-600" />
+            <span>অর্ডার পরিবর্তন করুন</span>
+          </button>
+        </div>
 
-        {/* 1. Products List (Matching Image 1: Clean line separators, no card wrapper) */}
+        {/* 1. Products List (100% Read-Only, Clean & Fast) */}
         <div className="flex flex-col divide-y divide-gray-150">
           {items.map((item) => {
             return (
@@ -447,56 +326,29 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  {/* Row 1: Title & Variant with pr-9 sm:pr-10 so (১ কেজি) has clean space from delete button */}
-                  <div className="flex items-center gap-1.5 min-w-0 pr-9 sm:pr-10">
+                  {/* Row 1: Title & Variant */}
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <h4
-                      className="text-xs sm:text-sm font-normal text-gray-800 truncate min-w-0 flex-1"
+                      className="text-xs sm:text-sm font-medium text-gray-800 truncate min-w-0 flex-1"
                       title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
                     >
                       {item.title}
                     </h4>
                     {item.variantTitle && (
-                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 font-normal select-none mr-1">
+                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 font-normal select-none">
                         ({formatSize(item.variantTitle)})
                       </span>
                     )}
                   </div>
 
-                  {/* Row 2: Stepper × Unit Price = Total */}
+                  {/* Row 2: Quantity Badge × Unit Price = Total */}
                   <div className="flex items-center gap-2 w-full flex-wrap mt-1 sm:mt-1.5">
-                    {/* Compact Proportional Stepper */}
-                    {(() => {
-                      const maxStock = item.raw?.variant?.inventory_quantity ?? item.raw?.inventory_quantity
-                      const isMaxReached = typeof maxStock === "number" && maxStock > 0 && item.quantity >= maxStock
-                      return (
-                        <div className="inline-flex items-center rounded-md border border-gray-200/90 bg-gray-50 overflow-hidden shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => handleDecrement(item)}
-                            className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 hover:bg-gray-100 active:scale-95 transition-colors cursor-pointer select-none"
-                            title="১টি কমান"
-                            aria-label="১টি কমান"
-                          >
-                            <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
-                          </button>
-                          <span className="px-1.5 sm:px-2 h-5 sm:h-5.5 flex items-center justify-center bg-white border-x border-gray-200/90 text-[11px] sm:text-xs font-medium text-gray-800 min-w-[18px] sm:min-w-[20px] select-none">
-                            {formatSize(String(item.quantity))}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleIncrement(item)}
-                            disabled={isMaxReached}
-                            className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 hover:bg-gray-100 active:scale-95 transition-colors cursor-pointer select-none disabled:opacity-35 disabled:cursor-not-allowed"
-                            title={isMaxReached ? "সর্বোচ্চ স্টক যোগ করা হয়েছে" : "১টি বাড়ান"}
-                            aria-label="১টি বাড়ান"
-                          >
-                            <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
-                          </button>
-                        </div>
-                      )
-                    })()}
+                    {/* Read-Only Quantity Badge */}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 select-none">
+                      {formatSize(String(item.quantity))}টি
+                    </span>
 
-                    {/* Formula: [ - qty + ] × unit_price = total */}
+                    {/* Formula: [ qty ] × unit_price = total */}
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
                       <span className="text-gray-500">×</span>
                       <span className="text-gray-700">
@@ -509,17 +361,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
                     </div>
                   </div>
                 </div>
-
-                {/* Red Delete Button (Absolute Top Right Corner with safe spacing) */}
-                <button
-                  type="button"
-                  onClick={() => handleRemove(item)}
-                  className="absolute top-2.5 right-0.5 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                  title="আইটেমটি মুছুন"
-                  aria-label="আইটেমটি মুছুন"
-                >
-                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500" />
-                </button>
               </div>
             )
           })}

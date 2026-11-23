@@ -7,7 +7,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { useParams, useRouter, usePathname } from "next/navigation"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ShoppingCart, ShoppingBag, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag } from "lucide-react"
+import { ShoppingCart, ShoppingBag, X, Truck, Loader2, Minus, Plus, ArrowRight, Tag, Trash2 } from "lucide-react"
 
 // Cloudinary images for known products (in case database thumbnail field is null)
 const KNOWN_HONEY_IMAGES: Record<string, string> = {
@@ -18,6 +18,8 @@ const KNOWN_HONEY_IMAGES: Record<string, string> = {
   "black-seed-flower-honey":
     "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg",
 }
+
+const MAX_ITEM_QUANTITY = 20
 
 function resolveProductImage(opts: {
   thumbnail?: string | null
@@ -101,6 +103,23 @@ export default function CartDropdown({
   const [mounted, setMounted] = useState(false)
   const badgeTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Max Limit Toast notification
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const showToast = (msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToastMessage(msg)
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null)
+    }, 3000)
+  }
+
+  // Rapid spam clicking protection (Circuit Breaker)
+  const [syncingItemId, setSyncingItemId] = useState<string | null>(null)
+  const rapidClicksRef = useRef<Record<string, number>>({})
+  const rapidResetTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({})
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -181,7 +200,12 @@ export default function CartDropdown({
     }
     scheduleServerSync(50)
   }
-  const closeDrawer = () => setIsDrawerOpen(false)
+  const closeDrawer = () => {
+    setIsDrawerOpen(false)
+    if (isCheckoutPage) {
+      router.refresh()
+    }
+  }
 
   // Engine 2: Active Tab Focus Sync - silently checks server when user returns to tab
   useEffect(() => {
@@ -253,6 +277,8 @@ export default function CartDropdown({
     return () => {
       if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+      Object.values(rapidResetTimeoutRef.current).forEach((t) => clearTimeout(t))
     }
   }, [])
 
@@ -449,7 +475,7 @@ export default function CartDropdown({
     }
   }
 
-  const scheduleServerSync = (delayMs: number = 150) => {
+  const scheduleServerSync = (delayMs: number = 350) => {
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current)
     }
@@ -728,37 +754,95 @@ export default function CartDropdown({
     return list
   }, [activePromotions, effectiveDiscount, totalSubtotal, displayItems])
 
-  // Stepper increment [+]
+  // Stepper increment [+] with Max 20 Limit & 5-Click Circuit Breaker
   const handleIncrement = (item: UnifiedCartItem) => {
+    const itemKey = item.variantId || item.id
+    if (item.quantity >= MAX_ITEM_QUANTITY) {
+      showToast("সর্বোচ্চ ২০টি পণ্য অর্ডার করা যাবে")
+      return
+    }
+
+    const nextQty = Math.min(MAX_ITEM_QUANTITY, item.quantity + 1)
     const nextItems = itemsRef.current.map((it) =>
       it.id === item.id || (item.variantId && it.variantId === item.variantId)
-        ? { ...it, quantity: it.quantity + 1 }
+        ? { ...it, quantity: nextQty }
         : it
     )
     setItems(nextItems)
     itemsRef.current = nextItems
     saveLocalSnapshot(nextItems, variantOrderRef.current)
-    scheduleServerSync()
-  }
 
-  // Stepper decrement [-]
-  const handleDecrement = (item: UnifiedCartItem) => {
-    if (item.quantity > 1) {
-      const nextItems = itemsRef.current.map((it) =>
-        it.id === item.id || (item.variantId && it.variantId === item.variantId)
-          ? { ...it, quantity: it.quantity - 1 }
-          : it
-      )
-      setItems(nextItems)
-      itemsRef.current = nextItems
-      saveLocalSnapshot(nextItems, variantOrderRef.current)
-      scheduleServerSync()
+    // Rapid click tracking (circuit breaker)
+    const currentClicks = (rapidClicksRef.current[itemKey] || 0) + 1
+    rapidClicksRef.current[itemKey] = currentClicks
+
+    if (rapidResetTimeoutRef.current[itemKey]) {
+      clearTimeout(rapidResetTimeoutRef.current[itemKey])
+    }
+    rapidResetTimeoutRef.current[itemKey] = setTimeout(() => {
+      rapidClicksRef.current[itemKey] = 0
+    }, 1000)
+
+    if (currentClicks >= 5) {
+      rapidClicksRef.current[itemKey] = 0
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = null
+      }
+      setSyncingItemId(itemKey)
+      performServerSync().finally(() => {
+        setSyncingItemId(null)
+      })
     } else {
-      handleRemove(item)
+      scheduleServerSync(350)
     }
   }
 
-  // Remove item [✕]
+  // Stepper decrement [-] with Min 1 Limit & 5-Click Circuit Breaker
+  const handleDecrement = (item: UnifiedCartItem) => {
+    const itemKey = item.variantId || item.id
+    if (item.quantity <= 1) {
+      // Cannot decrement below 1; deletion requires trash icon
+      return
+    }
+
+    const nextQty = item.quantity - 1
+    const nextItems = itemsRef.current.map((it) =>
+      it.id === item.id || (item.variantId && it.variantId === item.variantId)
+        ? { ...it, quantity: nextQty }
+        : it
+    )
+    setItems(nextItems)
+    itemsRef.current = nextItems
+    saveLocalSnapshot(nextItems, variantOrderRef.current)
+
+    // Rapid click tracking (circuit breaker)
+    const currentClicks = (rapidClicksRef.current[itemKey] || 0) + 1
+    rapidClicksRef.current[itemKey] = currentClicks
+
+    if (rapidResetTimeoutRef.current[itemKey]) {
+      clearTimeout(rapidResetTimeoutRef.current[itemKey])
+    }
+    rapidResetTimeoutRef.current[itemKey] = setTimeout(() => {
+      rapidClicksRef.current[itemKey] = 0
+    }, 1000)
+
+    if (currentClicks >= 5) {
+      rapidClicksRef.current[itemKey] = 0
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = null
+      }
+      setSyncingItemId(itemKey)
+      performServerSync().finally(() => {
+        setSyncingItemId(null)
+      })
+    } else {
+      scheduleServerSync(350)
+    }
+  }
+
+  // Dedicated item deletion (Trash icon)
   const handleRemove = (item: UnifiedCartItem) => {
     const targetKey = item.variantId || item.id
     const nextItems = itemsRef.current.filter((it) => {
@@ -777,6 +861,12 @@ export default function CartDropdown({
     setVariantOrder(nextOrder)
     variantOrderRef.current = nextOrder
     saveLocalSnapshot(nextItems, nextOrder)
+
+    // Reset rapid clicks for removed item
+    rapidClicksRef.current[targetKey] = 0
+    if (rapidResetTimeoutRef.current[targetKey]) {
+      clearTimeout(rapidResetTimeoutRef.current[targetKey])
+    }
 
     window.dispatchEvent(
       new CustomEvent("cart:item-deleted", {
@@ -808,13 +898,29 @@ export default function CartDropdown({
     }).catch((e) => console.warn("[cart-dropdown] immediate deletion warning:", e))
   }
 
-  // Navigation handlers
+  // Navigation handlers (Immediate Flush & Gatekeeper)
   const handleCheckoutClick = async (e: React.MouseEvent) => {
     e.preventDefault()
+    if (isCheckingOut) return
     setIsCheckingOut(true)
+
+    // 1. Immediately cancel pending debounce timer
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
+      syncTimeoutRef.current = null
+    }
+
+    // 2. Perform server sync and await completion
     await performServerSync()
-    closeDrawer()
-    window.location.href = `/${countryCode}/checkout`
+
+    if (isCheckoutPage) {
+      closeDrawer()
+      setIsCheckingOut(false)
+      router.refresh()
+    } else {
+      closeDrawer()
+      window.location.href = `/${countryCode}/checkout`
+    }
   }
 
   // Listen to Global Cart Events
@@ -838,10 +944,16 @@ export default function CartDropdown({
       let nextOrder = variantOrderRef.current
 
       if (existingIndex !== -1) {
-        // Product already in cart: increment in-place!
-        // DO NOT pulse badge for existing product!
+        // Product already in cart: increment in-place up to MAX_ITEM_QUANTITY!
+        const existing = currentItems[existingIndex]
+        if (existing.quantity >= MAX_ITEM_QUANTITY) {
+          showToast("সর্বোচ্চ ২০টি পণ্য অর্ডার করা যাবে")
+          return
+        }
+        const addQty = detail.quantity || 1
+        const nextQty = Math.min(MAX_ITEM_QUANTITY, existing.quantity + addQty)
         nextItems = currentItems.map((it, idx) =>
-          idx === existingIndex ? { ...it, quantity: it.quantity + (detail.quantity || 1) } : it
+          idx === existingIndex ? { ...it, quantity: nextQty } : it
         )
       } else {
         // Brand new item: Put at TOP of variantOrder and items!
@@ -852,6 +964,7 @@ export default function CartDropdown({
           setIsBadgePulsing(false)
         }, 500)
 
+        const initialQty = Math.min(MAX_ITEM_QUANTITY, detail.quantity || 1)
         const newItem: UnifiedCartItem = {
           id: detail.id || `opt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           variantId: targetVariantId,
@@ -859,7 +972,7 @@ export default function CartDropdown({
           product_handle: detail.handle || "sundarban-kholisha-honey",
           thumbnail: detail.thumbnail,
           variantTitle: detail.variant || "১ কেজি",
-          quantity: detail.quantity || 1,
+          quantity: initialQty,
           unit_price: detail.price || 750,
           created_at: new Date().toISOString(),
         }
@@ -872,7 +985,7 @@ export default function CartDropdown({
       setItems(nextItems)
       itemsRef.current = nextItems
       saveLocalSnapshot(nextItems, nextOrder)
-      scheduleServerSync()
+      scheduleServerSync(350)
 
       if (detail.openDrawer === true) {
         openDrawer()
@@ -1050,12 +1163,42 @@ export default function CartDropdown({
                 </button>
               </div>
 
+              {/* Toast Notification Banner (e.g. Max 20 items reached) */}
+              {toastMessage && (
+                <div className="mx-4 mt-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs font-medium flex items-center justify-between shrink-0 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>{toastMessage}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setToastMessage(null)}
+                    className="p-0.5 hover:opacity-75 text-amber-800 dark:text-amber-200 cursor-pointer"
+                    aria-label="বার্তা বন্ধ করুন"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Active Processing Lock Overlay */}
+              {isCheckingOut && (
+                <div className="absolute inset-0 bg-white/75 dark:bg-zinc-900/75 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                  <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    {isCheckoutPage ? "আপডেট সংরক্ষণ করা হচ্ছে..." : "আপনার অর্ডারটি প্রস্তুত হচ্ছে..."}
+                  </p>
+                </div>
+              )}
+
               {/* Drawer Body (Full height compact scrollable list) */}
               {hasItems ? (
                 <>
                   {/* Scrollable Items List - Line separated items matching Image 1 */}
                   <div className="flex-1 overflow-y-auto min-h-0 px-4 py-1 flex flex-col divide-y divide-gray-150 dark:divide-zinc-800">
                     {displayItems.map((item) => {
+                      const itemKey = item.variantId || item.id
+                      const isItemSyncing = syncingItemId === itemKey
                       const imageUrl = resolveProductImage({
                         thumbnail: item.thumbnail,
                         metadata: item.metadata,
@@ -1122,19 +1265,27 @@ export default function CartDropdown({
                                 <button
                                   type="button"
                                   onClick={() => handleDecrement(item)}
-                                  className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer select-none"
+                                  disabled={item.quantity <= 1 || isItemSyncing || isCheckingOut}
+                                  className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer select-none disabled:opacity-35 disabled:cursor-not-allowed"
                                   aria-label="পরিমাণ কমান"
+                                  title={item.quantity <= 1 ? "আইটেম মুছতে ডানের ট্র্যাশ বাটনে ক্লিক করুন" : "পরিমাণ কমান"}
                                 >
                                   <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
                                 </button>
-                                <span className="px-1.5 sm:px-2 h-5 sm:h-5.5 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200/90 dark:border-zinc-700 text-[11px] sm:text-xs font-medium text-gray-800 dark:text-zinc-200 min-w-[18px] sm:min-w-[20px] select-none">
-                                  {formatSize(String(currentQty))}
+                                <span className="px-1.5 sm:px-2 h-5 sm:h-5.5 flex items-center justify-center bg-white dark:bg-zinc-900 border-x border-gray-200/90 dark:border-zinc-700 text-[11px] sm:text-xs font-medium text-gray-800 dark:text-zinc-200 min-w-[20px] sm:min-w-[24px] select-none">
+                                  {isItemSyncing ? (
+                                    <Loader2 className="w-3 h-3 animate-spin text-orange-500" />
+                                  ) : (
+                                    formatSize(String(currentQty))
+                                  )}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => handleIncrement(item)}
-                                  className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer select-none"
+                                  disabled={item.quantity >= MAX_ITEM_QUANTITY || isItemSyncing || isCheckingOut}
+                                  className="w-5 h-5 sm:w-5.5 sm:h-5.5 flex items-center justify-center text-orange-500 hover:text-orange-600 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 active:scale-95 transition-colors cursor-pointer select-none disabled:opacity-35 disabled:cursor-not-allowed"
                                   aria-label="পরিমাণ বাড়ান"
+                                  title={item.quantity >= MAX_ITEM_QUANTITY ? "সর্বোচ্চ ২০টি পণ্য অর্ডার করা যাবে" : "পরিমাণ বাড়ান"}
                                 >
                                   <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-500" />
                                 </button>
@@ -1154,16 +1305,17 @@ export default function CartDropdown({
                             </div>
                           </div>
 
-                          {/* Close button (Right '✕', absolute top right corner with clean spacing) */}
+                          {/* Dedicated Trash Delete Button */}
                           <button
                             type="button"
                             onClick={() => handleRemove(item)}
-                            className="absolute top-2.5 right-0.5 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                            aria-label="মুছে ফেলুন"
-                            title="মুছে ফেলুন"
+                            disabled={isCheckingOut || isItemSyncing}
+                            className="absolute top-2.5 right-0.5 p-1 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-40 disabled:cursor-not-allowed group/trash"
+                            aria-label="কার্ট থেকে মুছে ফেলুন"
+                            title="কার্ট থেকে মুছে ফেলুন"
                             data-testid="cart-item-remove-button"
                           >
-                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 group-hover/trash:text-red-500 transition-colors" />
                           </button>
                         </div>
                       )
@@ -1218,10 +1370,10 @@ export default function CartDropdown({
                       {isCheckingOut ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>চেকআউটে যাওয়া হচ্ছে...</span>
+                          <span>{isCheckoutPage ? "আপডেট সংরক্ষণ হচ্ছে..." : "আপনার অর্ডারটি প্রস্তুত হচ্ছে..."}</span>
                         </>
                       ) : (
-                        <span>অর্ডার করুন</span>
+                        <span>{isCheckoutPage ? "আপডেট সংরক্ষণ করুন" : "অর্ডার সম্পন্ন করুন"}</span>
                       )}
                     </button>
                   </div>

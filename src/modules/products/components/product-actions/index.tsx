@@ -22,6 +22,8 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
+const MAX_ITEM_QUANTITY = 20
+
 const optionsAsKeymap = (
   variantOptions: HttpTypes.StoreProductVariant["options"]
 ) => {
@@ -176,7 +178,8 @@ export default function ProductActions({
   // 2. Increment Stepper [ + ]
   const handleIncrement = () => {
     if (!selectedVariant?.id || isOrdering) return null
-    const nextQty = quantity + 1
+    if (quantity >= MAX_ITEM_QUANTITY) return null
+    const nextQty = Math.min(MAX_ITEM_QUANTITY, quantity + 1)
     setQuantity(nextQty)
 
     if (typeof window !== "undefined") {
@@ -390,9 +393,10 @@ export default function ProductActions({
               <button
                 type="button"
                 onClick={handleIncrement}
-                disabled={isOrdering}
-                className="w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-lg select-none transition-colors duration-150 cursor-pointer"
+                disabled={isOrdering || quantity >= MAX_ITEM_QUANTITY}
+                className="w-12 h-full flex items-center justify-center bg-[#f26522] hover:bg-[#0d2e26] active:scale-95 text-white font-bold text-lg select-none transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label="পরিমাণ বাড়ান"
+                title={quantity >= MAX_ITEM_QUANTITY ? "সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে" : "পরিমাণ বাড়ান"}
               >
                 +
               </button>
