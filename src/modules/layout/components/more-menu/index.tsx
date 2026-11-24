@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { Menu, Info, HelpCircle, PhoneCall, MessageCircle, Mail, User } from "lucide-react"
+import { Menu, Info, HelpCircle, PhoneCall, MessageCircle, Mail } from "lucide-react"
 
 export default function MoreMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -41,20 +41,23 @@ export default function MoreMenu() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Trigger Button: Only Menu Icon (No "আরও" text) */}
+      {/* Trigger Button: Hamburger icon + "আরও" text in Amber */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center justify-center p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-colors group cursor-pointer focus:outline-none"
-        aria-label="মেনু অপশন"
+        className="flex flex-col items-center justify-center p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-colors group cursor-pointer focus:outline-none"
+        aria-label="আরও অপশন"
         aria-expanded={isOpen}
       >
-        <Menu className="w-6 h-6 text-amber-500 group-hover:text-amber-600 transition-colors stroke-[2.5]" />
+        <Menu className="w-5 h-5 text-amber-500 group-hover:text-amber-600 transition-colors stroke-[2.5]" />
+        <span className="hidden md:inline text-[11px] font-bold text-amber-500 group-hover:text-amber-600 transition-colors leading-tight">
+          আরও
+        </span>
       </button>
 
-      {/* Floating Card Dropdown (Left-aligned) */}
+      {/* Floating Card Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm font-medium">
             {/* 1. About Us */}
             <li>
@@ -84,21 +87,7 @@ export default function MoreMenu() {
               </LocalizedClientLink>
             </li>
 
-            {/* 3. Account */}
-            <li>
-              <LocalizedClientLink
-                href="/account"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3.5 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors"
-              >
-                <div className="w-6 h-6 flex items-center justify-center text-emerald-800 dark:text-emerald-400">
-                  <User className="w-5 h-5" />
-                </div>
-                <span>আমার অ্যাকাউন্ট</span>
-              </LocalizedClientLink>
-            </li>
-
-            {/* 4. Faqs */}
+            {/* 3. Faqs */}
             <li>
               <LocalizedClientLink
                 href="/#faq"
