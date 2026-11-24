@@ -38,6 +38,29 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const isApplyLoading = isApplying || (isPending && !removingCode)
   const isRemoveLoading = (code: string) => removingCode === code
 
+  // Broadcast promo busy state across components so checkout submit button is locked until promo finishes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("checkout:promo-busy", {
+          detail: { busy: isPromoBusy },
+        })
+      )
+    }
+  }, [isPromoBusy])
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("checkout:promo-busy", {
+            detail: { busy: false },
+          })
+        )
+      }
+    }
+  }, [])
+
   // Sync with Server Component cart promotions when NOT in the middle of a user action
   useEffect(() => {
     if (!isPromoBusy) {

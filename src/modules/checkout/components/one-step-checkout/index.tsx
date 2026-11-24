@@ -30,6 +30,21 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
   )
 
   const [isUpdatingShipping, startShippingTransition] = useTransition()
+  const [isPromoBusy, setIsPromoBusy] = useState(false)
+
+  // Listen to promo processing state from DiscountCode component
+  useEffect(() => {
+    const handlePromoBusy = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (typeof detail?.busy === "boolean") {
+        setIsPromoBusy(detail.busy)
+      }
+    }
+    window.addEventListener("checkout:promo-busy", handlePromoBusy)
+    return () => {
+      window.removeEventListener("checkout:promo-busy", handlePromoBusy)
+    }
+  }, [])
 
   // Find existing or default shipping option
   const defaultShippingId =
@@ -166,7 +181,15 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
   )
 
   return (
-    <form action={formAction} className="w-full flex flex-col gap-y-4 sm:gap-y-5">
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        if (isPromoBusy) {
+          e.preventDefault()
+        }
+      }}
+      className="w-full flex flex-col gap-y-4 sm:gap-y-5"
+    >
       {/* Hidden Fields for Backend Integrity */}
       <input type="hidden" name="shippingMethodId" value={selectedShippingId} />
       <input type="hidden" name="paymentProviderId" value="pp_system_default" />
@@ -404,14 +427,14 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
         {/* The Action Button with strictly requested text */}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || isPromoBusy}
           data-testid="submit-order-button"
           className={clx(
             "w-full py-3.5 sm:py-4 px-6 rounded-xl font-bold text-base sm:text-lg text-white shadow-md transition-all duration-300 flex items-center justify-center gap-2.5 select-none",
             {
               "bg-amber-600 hover:bg-amber-700 active:scale-[0.99] cursor-pointer hover:shadow-lg":
-                !isPending,
-              "bg-amber-400 cursor-not-allowed opacity-80": isPending,
+                !isPending && !isPromoBusy,
+              "bg-amber-400 cursor-not-allowed opacity-80": isPending || isPromoBusy,
             }
           )}
         >
@@ -419,6 +442,11 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
             <>
               <Loader className="animate-spin w-5 h-5" />
               <span>অর্ডার সম্পন্ন হচ্ছে...</span>
+            </>
+          ) : isPromoBusy ? (
+            <>
+              <Loader className="animate-spin w-5 h-5" />
+              <span>প্রোমো কোড যাচাই হচ্ছে...</span>
             </>
           ) : (
             <span>🛒 অর্ডার নিশ্চিত করুন</span>
