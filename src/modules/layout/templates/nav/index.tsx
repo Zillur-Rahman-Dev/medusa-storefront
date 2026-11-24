@@ -33,8 +33,10 @@ export default async function Nav() {
       {/* 2. Main Header (Compact 64px Modern Header) */}
       <header className="relative h-16 mx-auto border-b transition-colors duration-300 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-zinc-200 dark:border-zinc-800">
         <nav className="content-container flex items-center justify-between w-full h-full gap-2 sm:gap-4 text-sm">
-          {/* Left spacer on mobile to keep middle logo perfectly centered */}
-          <div className="w-14 shrink-0 md:hidden" aria-hidden="true" />
+          {/* Left on mobile: Menu icon (☰) */}
+          <div className="flex md:hidden items-center shrink-0 w-10">
+            <MoreMenu />
+          </div>
 
           {/* Brand Logo - Centered on mobile, Left on desktop */}
           <div className="flex items-center justify-center md:justify-start shrink-0">
@@ -60,8 +62,8 @@ export default async function Nav() {
             <HeaderSearch />
           </div>
 
-          {/* Right: Theme & Menu on mobile; Theme, Account, Cart, More Menu on desktop */}
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 justify-end w-14 md:w-auto">
+          {/* Right: Theme on mobile; Theme, Account, Cart, More Menu on desktop */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 justify-end w-10 md:w-auto">
             {/* Theme Toggle (Dark / Light) */}
             <ThemeToggle />
 
@@ -93,8 +95,10 @@ export default async function Nav() {
               </Suspense>
             </div>
 
-            {/* More Menu (Shows only hamburger icon on mobile, with "আরও" text on desktop) */}
-            <MoreMenu />
+            {/* More Menu on Desktop (Right side with "আরও" text) */}
+            <div className="hidden md:flex">
+              <MoreMenu />
+            </div>
           </div>
         </nav>
       </header>

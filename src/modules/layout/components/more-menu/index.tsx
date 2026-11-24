@@ -57,7 +57,7 @@ export default function MoreMenu() {
 
       {/* Floating Card Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm font-medium">
             {/* 1. About Us */}
             <li>

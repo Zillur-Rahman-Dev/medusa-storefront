@@ -1101,50 +1101,25 @@ export default function CartDropdown({
       {mounted &&
         createPortal(
           <>
-            {/* Desktop Sticky Floating Cart Widget on Right Edge (Untouched) */}
+            {/* Sticky Floating Cart Widget on Right Edge (Mobile & Desktop) */}
             {totalItems > 0 && !isDrawerOpen && !isCheckoutPage && (
               <button
                 type="button"
                 onClick={openDrawer}
-                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] hidden md:flex flex-col rounded-l-[6px] overflow-hidden shadow-xl hover:shadow-2xl border-l border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:-translate-x-0.5"
+                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] flex flex-col rounded-l-[6px] overflow-hidden shadow-xl hover:shadow-2xl border-l border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:-translate-x-0.5 active:scale-95"
                 aria-label="শপিং কার্ট খুলুন"
               >
                 {/* Top Half: Solid Orange with Shopping Bag + Item Count */}
-                <div className="bg-[#f26522] py-2 px-2.5 sm:px-3 flex flex-col items-center justify-center text-white min-w-[76px]">
-                  <ShoppingBag className="w-5 h-5 text-white stroke-[2.2] group-hover:scale-105 transition-transform" />
-                  <span className="text-[11px] font-bold leading-tight mt-0.5 whitespace-nowrap">
+                <div className="bg-[#f26522] py-1.5 md:py-2 px-2 md:px-2.5 flex flex-col items-center justify-center text-white min-w-[62px] md:min-w-[76px]">
+                  <ShoppingBag className="w-4 h-4 md:w-5 md:h-5 text-white stroke-[2.2] group-hover:scale-105 transition-transform" />
+                  <span className="text-[10px] md:text-[11px] font-bold leading-tight mt-0.5 whitespace-nowrap">
                     {formatSize(String(totalItems))} টি পণ্য
                   </span>
                 </div>
 
                 {/* Bottom Half: Pure White with Orange Price */}
-                <div className="bg-white dark:bg-zinc-900 py-1.5 px-2 text-center border-t border-orange-200 dark:border-zinc-800">
-                  <span className="text-[11px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
-                    {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
-                  </span>
-                </div>
-              </button>
-            )}
-
-            {/* Mobile Floating Cart Widget on Left Edge & Vertical Center */}
-            {totalItems > 0 && !isDrawerOpen && !isCheckoutPage && (
-              <button
-                type="button"
-                onClick={openDrawer}
-                className="fixed left-0 top-1/2 -translate-y-1/2 z-[9990] flex md:hidden flex-col rounded-r-[6px] overflow-hidden shadow-xl border-r border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none active:scale-95"
-                aria-label="শপিং কার্ট খুলুন"
-              >
-                {/* Top Half: Solid Orange with Shopping Bag + Item Count */}
-                <div className="bg-[#f26522] py-1.5 px-2 flex flex-col items-center justify-center text-white min-w-[60px]">
-                  <ShoppingBag className="w-4 h-4 text-white stroke-[2.2]" />
-                  <span className="text-[10px] font-bold leading-tight mt-0.5 whitespace-nowrap">
-                    {formatSize(String(totalItems))} টি পণ্য
-                  </span>
-                </div>
-
-                {/* Bottom Half: Pure White with Orange Price */}
-                <div className="bg-white dark:bg-zinc-900 py-1 px-1.5 text-center border-t border-orange-200 dark:border-zinc-800">
-                  <span className="text-[10px] font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
+                <div className="bg-white dark:bg-zinc-900 py-1 md:py-1.5 px-1.5 md:px-2 text-center border-t border-orange-200 dark:border-zinc-800">
+                  <span className="text-[10px] md:text-[11px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
                     {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
                   </span>
                 </div>
