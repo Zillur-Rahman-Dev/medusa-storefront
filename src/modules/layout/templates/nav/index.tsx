@@ -12,6 +12,7 @@ import ThemeToggle from "@modules/layout/components/theme-toggle"
 import HeaderSearch from "@modules/layout/components/header-search"
 import CategoryBar from "@modules/layout/components/category-bar"
 import MoreMenu from "@modules/layout/components/more-menu"
+import MobileSearchRow from "@modules/layout/components/mobile-search-row"
 import { User, ShoppingCart } from "lucide-react"
 
 // Header Visibility Controls (Set true to re-enable anytime in the future)
@@ -103,10 +104,8 @@ export default async function Nav() {
         </nav>
       </header>
 
-      {/* 3. Mobile Search Row (visible on mobile only) */}
-      <div className="md:hidden px-4 py-2 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800">
-        <HeaderSearch />
-      </div>
+      {/* 3. Mobile Search Row (toggled via bottom nav SEARCH button) */}
+      <MobileSearchRow />
 
       {/* 4. Category Navigation Bar (Toggled off, categories are featured on Homepage) */}
       {SHOW_CATEGORY_BAR && <CategoryBar />}

@@ -41,15 +41,10 @@ export default function MobileBottomNav() {
     }
   }, [])
 
-  const handleSearchClick = () => {
+  const handleSearchClick = (e: React.MouseEvent) => {
+    e.preventDefault()
     if (typeof window !== "undefined") {
-      const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement
-      if (searchInput) {
-        searchInput.focus()
-        searchInput.scrollIntoView({ behavior: "smooth", block: "center" })
-      } else {
-        window.scrollTo({ top: 0, behavior: "smooth" })
-      }
+      window.dispatchEvent(new CustomEvent("toggle-mobile-search"))
     }
   }
 

@@ -86,14 +86,6 @@ export default function Footer() {
                   আমার অ্যাকাউন্ট
                 </LocalizedClientLink>
               </li>
-              <li>
-                <LocalizedClientLink
-                  className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                  href="/checkout"
-                >
-                  চেকআউট ও কার্ট
-                </LocalizedClientLink>
-              </li>
             </ul>
           </div>
 
