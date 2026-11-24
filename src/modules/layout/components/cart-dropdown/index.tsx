@@ -1064,62 +1064,30 @@ export default function CartDropdown({
   }, [])
 
   return (
-    <div className="h-full flex items-center">
-      {/* Header Cart Button with Badge Pop & Pulse */}
-      <button
-        type="button"
-        onClick={openDrawer}
-        className="flex flex-col items-center justify-center p-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors relative cursor-pointer focus:outline-none"
-        data-testid="nav-cart-button"
-        aria-label="শপিং কার্ট খুলুন"
-      >
-        <div className="relative">
-          <ShoppingCart className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-          {totalItems > 0 && (
-            <>
-              {/* Pulse Ring for New Product Add */}
-              {isBadgePulsing && (
-                <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-amber-400 animate-ping opacity-75 pointer-events-none" />
-              )}
-              {/* Badge Pop */}
-              <span
-                className={`absolute -top-1.5 -right-2 font-bold text-[10px] min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm text-white select-none transition-all duration-500 ease-out ${
-                  isBadgePulsing
-                    ? "scale-135 bg-amber-500 shadow-md shadow-amber-500/60 ring-2 ring-amber-300"
-                    : "scale-100 bg-amber-500"
-                }`}
-              >
-                {formatSize(String(totalItems))}
-              </span>
-            </>
-          )}
-        </div>
-        <span className="text-[11px] font-semibold mt-0.5 leading-tight">কার্ট</span>
-      </button>
-
+    <>
       {/* Render Backdrop & Drawer directly into document.body to avoid parent CSS containing block constraints */}
       {mounted &&
         createPortal(
           <>
-            {/* Ghorer Bazar Style Sticky Floating Cart Widget on Right Edge (100% Matching Image 1) */}
+            {/* Sticky Floating Cart Widget on Left Edge & Vertical Center (Mobile & Desktop) */}
             {totalItems > 0 && !isDrawerOpen && !isCheckoutPage && (
               <button
                 type="button"
                 onClick={openDrawer}
-                className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] hidden md:flex flex-col rounded-l-[6px] overflow-hidden shadow-xl hover:shadow-2xl border-l border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:-translate-x-0.5"
+                className="fixed left-0 top-1/2 -translate-y-1/2 z-[9990] flex flex-col rounded-r-[8px] overflow-hidden shadow-xl hover:shadow-2xl border-r border-y border-[#f26522] cursor-pointer transition-all duration-200 select-none group hover:translate-x-0.5"
                 aria-label="শপিং কার্ট খুলুন"
               >
                 {/* Top Half: Solid Orange with Shopping Bag + Item Count */}
-                <div className="bg-[#f26522] py-2 px-2.5 sm:px-3 flex flex-col items-center justify-center text-white min-w-[76px]">
+                <div className="bg-[#f26522] py-2 px-2.5 sm:px-3 flex flex-col items-center justify-center text-white min-w-[70px] sm:min-w-[76px]">
                   <ShoppingBag className="w-5 h-5 text-white stroke-[2.2] group-hover:scale-105 transition-transform" />
-                  <span className="text-[11px] font-bold leading-tight mt-0.5 whitespace-nowrap">
+                  <span className="text-[10px] sm:text-[11px] font-bold leading-tight mt-0.5 whitespace-nowrap">
                     {formatSize(String(totalItems))} টি পণ্য
                   </span>
                 </div>
 
                 {/* Bottom Half: Pure White with Orange Price */}
                 <div className="bg-white dark:bg-zinc-900 py-1.5 px-2 text-center border-t border-orange-200 dark:border-zinc-800">
-                  <span className="text-[11px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
+                  <span className="text-[10px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
                     {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
                   </span>
                 </div>
@@ -1404,6 +1372,6 @@ export default function CartDropdown({
           </>,
           document.body
         )}
-    </div>
+    </>
   )
 }
