@@ -19,7 +19,7 @@ const Summary = ({ cart }: SummaryProps) => {
       <Heading level="h2" className="text-[2rem] leading-[2.75rem] font-bold text-gray-900">
         অর্ডার বিবরণ
       </Heading>
-      <CartTotals totals={cart} />
+      <CartTotals totals={{ ...cart, discount_subtotal: 0 }} />
       <LocalizedClientLink
         href="/checkout"
         data-testid="checkout-button"

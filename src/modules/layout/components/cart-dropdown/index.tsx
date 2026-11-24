@@ -1120,7 +1120,7 @@ export default function CartDropdown({
                 {/* Bottom Half: Pure White with Orange Price */}
                 <div className="bg-white dark:bg-zinc-900 py-1 md:py-1.5 px-1.5 md:px-2 text-center border-t border-orange-200 dark:border-zinc-800">
                   <span className="text-[10px] md:text-[11px] sm:text-xs font-black text-[#f26522] tracking-tight leading-none block whitespace-nowrap">
-                    {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
+                    {formatPrice(totalSubtotal)}
                   </span>
                 </div>
               </button>
@@ -1324,41 +1324,17 @@ export default function CartDropdown({
 
                   {/* Subtotal & Orange CHECKOUT Button (Matching Image 2, all content in Bengali) */}
                   <div className="p-4 sm:p-5 border-t border-gray-150 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-y-3 shrink-0">
-                    {effectiveDiscount > 0 ? (
-                      <div className="flex flex-col gap-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-normal text-zinc-600 dark:text-zinc-400">সাবটোটাল:</span>
-                          <span className="text-zinc-500 dark:text-zinc-400 line-through">{formatPrice(totalSubtotal)}</span>
-                        </div>
-                        {drawerPromoBreakdown.map((promo) => (
-                          <div key={promo.code} className="flex items-center justify-between text-sm">
-                            <span className="text-emerald-700 dark:text-emerald-400 font-normal flex items-center gap-1">
-                              <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                              <span>{promo.label}:</span>
-                            </span>
-                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">- {formatPrice(promo.amount)}</span>
-                          </div>
-                        ))}
-                        <div className="flex items-center justify-between text-base pt-1 border-t border-gray-100 dark:border-zinc-800">
-                          <span className="font-normal text-zinc-800 dark:text-zinc-300">মোট:</span>
-                          <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100" data-testid="cart-subtotal">
-                            {formatPrice(Math.max(0, totalSubtotal - effectiveDiscount))}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between text-base">
-                        <span className="font-normal text-zinc-800 dark:text-zinc-300">
-                          মোট:
-                        </span>
-                        <span
-                          className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
-                          data-testid="cart-subtotal"
-                        >
-                          {formatPrice(totalSubtotal)}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-base">
+                      <span className="font-normal text-zinc-800 dark:text-zinc-300">
+                        মোট:
+                      </span>
+                      <span
+                        className="text-lg font-bold text-zinc-900 dark:text-zinc-100"
+                        data-testid="cart-subtotal"
+                      >
+                        {formatPrice(totalSubtotal)}
+                      </span>
+                    </div>
 
                     {/* Full-width vibrant Orange CHECKOUT button */}
                     <button

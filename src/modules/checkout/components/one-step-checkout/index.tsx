@@ -434,7 +434,9 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
             {
               "bg-amber-600 hover:bg-amber-700 active:scale-[0.99] cursor-pointer hover:shadow-lg":
                 !isPending && !isPromoBusy,
-              "bg-amber-400 cursor-not-allowed opacity-80": isPending || isPromoBusy,
+              "bg-amber-400 cursor-not-allowed opacity-80": isPending,
+              "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed shadow-none border border-zinc-200 dark:border-zinc-700":
+                isPromoBusy && !isPending,
             }
           )}
         >
