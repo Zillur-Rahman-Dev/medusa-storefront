@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { Menu, Info, HelpCircle, PhoneCall, MessageCircle } from "lucide-react"
+import { Menu, Info, HelpCircle, PhoneCall, MessageCircle, Mail } from "lucide-react"
 
 export default function MoreMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -73,7 +73,21 @@ export default function MoreMenu() {
               </LocalizedClientLink>
             </li>
 
-            {/* 2. Faqs */}
+            {/* 2. Contact Page */}
+            <li>
+              <LocalizedClientLink
+                href="/contact"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3.5 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 transition-colors"
+              >
+                <div className="w-6 h-6 flex items-center justify-center text-emerald-800 dark:text-emerald-400">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <span>যোগাযোগ</span>
+              </LocalizedClientLink>
+            </li>
+
+            {/* 3. Faqs */}
             <li>
               <LocalizedClientLink
                 href="/#faq"

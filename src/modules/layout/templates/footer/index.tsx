@@ -67,7 +67,7 @@ export default function Footer() {
                   className="hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                   href="/about"
                 >
-                  আমাদের সম্পর্কে ও মধুর গল্প
+                  আমাদের সম্পর্কে
                 </LocalizedClientLink>
               </li>
               <li>

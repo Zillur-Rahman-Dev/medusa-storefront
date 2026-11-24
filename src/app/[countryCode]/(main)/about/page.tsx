@@ -3,7 +3,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { ShieldCheck, Sparkles, HeartHandshake, Trees, ArrowRight, Award, Droplets } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: "আমাদের সম্পর্কে ও মধুর গল্প • PURE HONEY",
+  title: "আমাদের সম্পর্কে • PURE HONEY",
   description:
     "সুন্দরবনের ম্যানগ্রোভ ও গ্রামবাংলার সেরা প্রাকৃতিক মৌচাক থেকে ১০টি অনন্য ফুলের খাঁটি মধু আপনার টেবিলে পৌঁছে দেওয়ার গল্প।",
 }

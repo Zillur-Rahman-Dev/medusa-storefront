@@ -3,7 +3,6 @@
 import { Heading } from "@medusajs/ui"
 import { useEffect, useState, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
-import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { formatPrice, formatSize } from "@lib/util/money"
@@ -310,13 +309,6 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
           >
             {formatPrice(liveTotal)}
           </span>
-        </div>
-
-        <div className="h-px w-full border-b border-gray-200 my-3" />
-
-        {/* 3. Discount Code Section */}
-        <div className="mt-2 mb-1">
-          <DiscountCode cart={cart} />
         </div>
       </div>
     </div>

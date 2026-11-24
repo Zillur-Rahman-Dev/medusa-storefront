@@ -95,7 +95,7 @@ export default function Hero() {
             onTouchEnd={handleTouchEnd}
           >
             {/* Aspect Ratio Container for Slider */}
-            <div className="relative w-full aspect-[618/246] min-h-[175px] sm:min-h-[240px] lg:min-h-[260px] overflow-hidden">
+            <div className="relative w-full aspect-[16/9] sm:aspect-[618/246] min-h-[175px] sm:min-h-[240px] lg:min-h-[260px] overflow-hidden">
               {/* Smooth Sliding Flex Track (Moves horizontally without blinking) */}
               <div
                 className="flex h-full w-full transition-transform duration-700 ease-out will-change-transform"
@@ -175,9 +175,9 @@ export default function Hero() {
           </div>
 
           {/* ======================================================== */}
-          {/* RIGHT COLUMN: Static Promo / Combo Offer Card (4 Cols)  */}
+          {/* RIGHT COLUMN: Static Promo (Desktop only, hidden on mob) */}
           {/* ======================================================== */}
-          <div className="lg:col-span-4 relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 group">
+          <div className="hidden lg:block lg:col-span-4 relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 group">
             <LocalizedClientLink
               href="/store"
               className="block relative w-full h-full aspect-[292/246] lg:aspect-auto min-h-[175px] sm:min-h-[240px] lg:min-h-[260px] overflow-hidden cursor-pointer"
