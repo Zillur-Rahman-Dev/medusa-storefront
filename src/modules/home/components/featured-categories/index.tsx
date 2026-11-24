@@ -63,7 +63,6 @@ export default function FeaturedCategories({ categories = [] }: FeaturedCategori
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
             ফুলের উৎস ও প্রকৃতি অনুযায়ী আপনার পছন্দের খাঁটি কাঁচা মধু বেছে নিন
           </p>
-          <div className="w-12 h-1 bg-amber-500 rounded-full mx-auto mt-2" />
         </div>
 
         {/* Categories Icon Row (Live from Medusa Dashboard) */}

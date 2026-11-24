@@ -229,20 +229,19 @@ export default function NaturalHoneySlider({
         {/* Section Header */}
         <div className="flex items-end justify-between mb-6 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
-            <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1">
+            <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1 sm:mb-2.5">
               প্রকৃতির সেরা উপহার
             </div>
             <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
               ১০০% খাঁটি ও প্রাকৃতিক মধু
             </h2>
-            <div className="w-14 h-1 bg-amber-500 rounded-full mt-2" />
           </div>
 
           <LocalizedClientLink
             href={viewAllHref}
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
           >
-            <span>সকল মধু দেখুন</span>
+            <span>সব দেখুন</span>
             <ArrowRight className="w-4 h-4" />
           </LocalizedClientLink>
         </div>

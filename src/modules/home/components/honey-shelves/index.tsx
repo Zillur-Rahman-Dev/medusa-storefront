@@ -232,8 +232,7 @@ export default function HoneyShelves({ shelves }: HoneyShelvesProps) {
               <h2 className="text-lg sm:text-2xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
                 {shelf.title}
               </h2>
-              <div className="w-12 h-1 bg-amber-500 rounded-full mt-1.5" />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 hidden sm:block">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 sm:mt-2 hidden sm:block">
                 {shelf.subtitle}
               </p>
             </div>
@@ -242,7 +241,7 @@ export default function HoneyShelves({ shelves }: HoneyShelvesProps) {
               href={shelf.handle ? `/categories/${shelf.handle}` : "/store"}
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
             >
-              <span>সকল মধু দেখুন</span>
+              <span>সব দেখুন</span>
               <ArrowRight className="w-4 h-4" />
             </LocalizedClientLink>
           </div>

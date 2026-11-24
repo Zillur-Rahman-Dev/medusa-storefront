@@ -49,14 +49,13 @@ export default async function RelatedProducts({
   return (
     <div className="product-page-constraint py-12">
       <div className="flex flex-col items-center text-center mb-10">
-        <span className="text-xs uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold">
+        <span className="text-xs uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1 sm:mb-2.5">
           সম্পর্কিত পণ্যসমূহ
         </span>
-        <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight mt-1">
+        <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
           আরও অন্যান্য প্রাকৃতিক মধু
         </h2>
-        <div className="w-12 h-1 bg-amber-500 rounded-full mx-auto mt-2" />
-        <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-md">
+        <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 sm:mt-2 max-w-md">
           আমাদের সংগ্রহের অন্যান্য ১০০% খাঁটি কাঁচা মধুর সমাহার থেকে বেছে নিন।
         </p>
       </div>

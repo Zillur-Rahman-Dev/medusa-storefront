@@ -116,20 +116,19 @@ export default function AllHoneyGrid({ products }: AllHoneyGridProps) {
         {/* Section Header matching screenshot */}
         <div className="flex items-end justify-between mb-8 pb-3 border-b border-zinc-200 dark:border-zinc-800">
           <div>
-            <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold">
+            <div className="text-[11px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-bold mb-1 sm:mb-2.5">
               সম্পূর্ণ মধুর সমাহার
             </div>
-            <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight mt-0.5">
+            <h2 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
               আপনার জন্য বিশেষ বাছাই
             </h2>
-            <div className="w-12 h-1 bg-amber-500 rounded-full mt-1.5" />
           </div>
 
           <LocalizedClientLink
             href="/store"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 uppercase tracking-wider transition-colors"
           >
-            <span>সকল মধু দেখুন</span>
+            <span>সব দেখুন</span>
             <ArrowRight className="w-4 h-4" />
           </LocalizedClientLink>
         </div>
