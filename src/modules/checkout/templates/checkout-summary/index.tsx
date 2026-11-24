@@ -3,6 +3,7 @@
 import { Heading } from "@medusajs/ui"
 import { useEffect, useState, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
+import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { formatPrice, formatSize } from "@lib/util/money"
@@ -114,104 +115,85 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [items.length, cart?.items, countryCode])
 
-  // 5. Free Shipping check (from promotion, shipping methods, or amount === 0)
-  const isFreeShipping = useMemo(() => {
-    if (shippingAmount === 0) return true
-    if (cart?.shipping_methods?.[0]?.amount === 0) return true
-    if (
-      activePromotions?.some((p: any) => {
-        const targetType = p.application_method?.target_type
-        const pType = p.type || ""
-        const code = (p.code || "").toLowerCase()
-        return (
-          targetType === "shipping_methods" ||
-          pType === "free_shipping" ||
-          code.includes("free")
-        )
-      })
-    ) {
-      return true
-    }
-    return false
-  }, [shippingAmount, cart?.shipping_methods, activePromotions])
-
-  // 6. Live Totals calculation
+  // 5. Live Totals calculation
   const liveSubtotal = useMemo(() => {
     return items.reduce((acc, it) => acc + (it.unit_price * it.quantity), 0)
   }, [items])
 
-  const effectiveShipping = isFreeShipping ? 0 : shippingAmount
   const liveDiscount = activeDiscountTotal
-  const liveTotal = Math.max(0, liveSubtotal + effectiveShipping - liveDiscount)
+  const liveTotal = Math.max(0, liveSubtotal + shippingAmount - liveDiscount)
 
-  // Individual promo code breakdown calculation (Each promo displayed separately)
+  // Individual promo code breakdown calculation (Each promo code discount displayed separately)
   const promoBreakdown = useMemo(() => {
-    // Exclude shipping promotions from order discount breakdown (shown in shipping row)
-    const orderPromos = (activePromotions || []).filter((p: any) => {
-      const targetType = p.application_method?.target_type
-      const pType = p.type || ""
-      return targetType !== "shipping_methods" && pType !== "free_shipping"
-    })
-
-    if (orderPromos.length === 0) {
+    if (!activePromotions || activePromotions.length === 0 || liveDiscount <= 0) {
       if (liveDiscount > 0) {
-        return [
-          {
-            id: "discount",
-            code: "discount",
-            label: "স্পেশাল ডিসকাউন্ট (🏷️ ছাড়)",
-            amount: liveDiscount,
-          },
-        ]
+        return [{ id: "discount", code: "discount", label: "ডিসকাউন্ট", amount: liveDiscount }]
       }
       return []
     }
 
+    const itemsList = items || []
     let allocatedSum = 0
 
-    const list = orderPromos.map((promo: any, index: number) => {
+    const list = activePromotions.map((promo: any, index: number) => {
       const code = promo.code || `PROMO${index + 1}`
-      const method = promo.application_method || {}
 
-      let promoLabelText = ""
-      if (method.type === "percentage" && method.value) {
-        promoLabelText = `${formatSize(String(method.value))}% ছাড়`
-      } else if (method.type === "fixed" && method.value) {
-        promoLabelText = `৳${formatSize(String(method.value))} ছাড়`
-      } else if (promo.description) {
-        promoLabelText = promo.description
-      } else {
-        promoLabelText = code
+      // Check Medusa line item adjustments
+      let fromAdjustments = 0
+      itemsList.forEach((it) => {
+        const adjs = it.raw?.adjustments || it.adjustments || []
+        adjs.forEach((a: any) => {
+          if (
+            (promo.id && a.promotion_id === promo.id) ||
+            (a.code && a.code.toLowerCase() === code.toLowerCase())
+          ) {
+            fromAdjustments += Number(a.amount || 0)
+          }
+        })
+      })
+
+      if (fromAdjustments > 0) {
+        allocatedSum += fromAdjustments
+        return {
+          id: promo.id || code,
+          code,
+          label: `প্রোমো কোড (${code})`,
+          amount: fromAdjustments,
+        }
       }
 
-      const fullLabel = `স্পেশাল ডিসকাউন্ট (🏷️ ${promoLabelText})`
-
-      let promoAmount = 0
-      if (method.type === "percentage" && method.value) {
-        promoAmount = Math.round((liveSubtotal * Number(method.value)) / 100)
-      } else if (method.type === "fixed" && method.value) {
-        promoAmount = Number(method.value)
+      // Check application_method
+      let calculated = 0
+      if (promo.application_method) {
+        const m = promo.application_method
+        const val = Number(m.value || 0)
+        if (m.type === "percentage") {
+          calculated = Math.round((liveSubtotal * val) / 100)
+        } else {
+          calculated = val
+        }
       } else {
-        promoAmount = Math.round(liveDiscount / orderPromos.length)
+        calculated = Math.round(liveDiscount / activePromotions.length)
       }
 
-      allocatedSum += promoAmount
+      allocatedSum += calculated
       return {
         id: promo.id || code,
         code,
-        label: fullLabel,
-        amount: promoAmount,
+        label: `প্রোমো কোড (${code})`,
+        amount: calculated,
       }
     })
 
-    // Balance allocated sums so total strictly equals liveDiscount
-    if (liveDiscount > 0 && allocatedSum > 0 && allocatedSum !== liveDiscount && list.length > 0) {
-      const diff = liveDiscount - allocatedSum
+    // Balance amounts so sum strictly equals liveDiscount
+    const currentSum = list.reduce((s, p) => s + p.amount, 0)
+    if (currentSum > 0 && currentSum !== liveDiscount && list.length > 0) {
+      const diff = liveDiscount - currentSum
       list[list.length - 1].amount = Math.max(0, list[list.length - 1].amount + diff)
     }
 
     return list
-  }, [activePromotions, liveDiscount, liveSubtotal])
+  }, [activePromotions, liveDiscount, liveSubtotal, items])
 
   return (
     <div className="relative lg:sticky lg:top-6 flex flex-col w-full">
@@ -367,35 +349,21 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             </span>
           </div>
 
-          {/* Delivery charge: ~৳৭০~ ফ্রি (৳০) [ 🚚 ফ্রি ডেলিভারি ] when free shipping */}
           <div className="flex items-center justify-between text-xs sm:text-sm">
             <span className="text-gray-700 dark:text-zinc-300 font-normal">ডেলিভারি চার্জ</span>
-            {isFreeShipping ? (
-              <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                <span className="line-through text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm">
-                  ৳৭০
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
-                  ফ্রি (৳০)
-                </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  🚚 ফ্রি ডেলিভারি
-                </span>
-              </div>
-            ) : (
-              <span data-testid="cart-shipping" className="text-gray-900 dark:text-zinc-100 font-medium">
-                {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
-              </span>
-            )}
+            <span data-testid="cart-shipping" className="text-gray-900 dark:text-zinc-100 font-normal">
+              {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
+            </span>
           </div>
 
-          {/* Separate rows for each applied promo */}
+          {/* Separate rows for each applied promo code */}
           {promoBreakdown.map((promo) => (
-            <div key={promo.id || promo.code} className="flex items-center justify-between text-xs sm:text-sm">
+            <div key={promo.code || promo.id} className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-emerald-700 dark:text-emerald-400 font-normal flex items-center gap-1">
-                <span>{promo.label}:</span>
+                <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{promo.label}</span>
               </span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold" data-testid={`cart-discount-${promo.code}`}>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium" data-testid={`cart-discount-${promo.code}`}>
                 - {formatPrice(promo.amount)}
               </span>
             </div>
@@ -412,6 +380,13 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
           >
             {formatPrice(liveTotal)}
           </span>
+        </div>
+
+        <div className="h-px w-full border-b border-gray-200 dark:border-zinc-800 my-3" />
+
+        {/* 3. Discount Code Section (Promo Apply Option Back) */}
+        <div className="mt-2 mb-1">
+          <DiscountCode cart={cart} />
         </div>
       </div>
     </div>
