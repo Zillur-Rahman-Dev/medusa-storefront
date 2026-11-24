@@ -443,11 +443,6 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
               <Loader className="animate-spin w-5 h-5" />
               <span>অর্ডার সম্পন্ন হচ্ছে...</span>
             </>
-          ) : isPromoBusy ? (
-            <>
-              <Loader className="animate-spin w-5 h-5" />
-              <span>প্রোমো কোড যাচাই হচ্ছে...</span>
-            </>
           ) : (
             <span>🛒 অর্ডার নিশ্চিত করুন</span>
           )}
