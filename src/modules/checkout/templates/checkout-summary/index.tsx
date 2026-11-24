@@ -114,109 +114,179 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     }
   }, [items.length, cart?.items, countryCode])
 
-  // 5. Live Totals calculation
+  // 5. Free Shipping check (from promotion, shipping methods, or amount === 0)
+  const isFreeShipping = useMemo(() => {
+    if (shippingAmount === 0) return true
+    if (cart?.shipping_methods?.[0]?.amount === 0) return true
+    if (
+      activePromotions?.some((p: any) => {
+        const targetType = p.application_method?.target_type
+        const pType = p.type || ""
+        const code = (p.code || "").toLowerCase()
+        return (
+          targetType === "shipping_methods" ||
+          pType === "free_shipping" ||
+          code.includes("free")
+        )
+      })
+    ) {
+      return true
+    }
+    return false
+  }, [shippingAmount, cart?.shipping_methods, activePromotions])
+
+  // 6. Live Totals calculation
   const liveSubtotal = useMemo(() => {
     return items.reduce((acc, it) => acc + (it.unit_price * it.quantity), 0)
   }, [items])
 
+  const effectiveShipping = isFreeShipping ? 0 : shippingAmount
   const liveDiscount = activeDiscountTotal
-  const liveTotal = Math.max(0, liveSubtotal + shippingAmount - liveDiscount)
+  const liveTotal = Math.max(0, liveSubtotal + effectiveShipping - liveDiscount)
 
-  // Individual promo code breakdown calculation
+  // Individual promo code breakdown calculation (Each promo displayed separately)
   const promoBreakdown = useMemo(() => {
-    if (!activePromotions || activePromotions.length === 0 || liveDiscount <= 0) {
+    // Exclude shipping promotions from order discount breakdown (shown in shipping row)
+    const orderPromos = (activePromotions || []).filter((p: any) => {
+      const targetType = p.application_method?.target_type
+      const pType = p.type || ""
+      return targetType !== "shipping_methods" && pType !== "free_shipping"
+    })
+
+    if (orderPromos.length === 0) {
       if (liveDiscount > 0) {
-        return [{ id: "discount", code: "discount", label: "ডিসকাউন্ট", amount: liveDiscount }]
+        return [
+          {
+            id: "discount",
+            code: "discount",
+            label: "স্পেশাল ডিসকাউন্ট (🏷️ ছাড়)",
+            amount: liveDiscount,
+          },
+        ]
       }
       return []
     }
 
-    const itemsList = items || []
     let allocatedSum = 0
 
-    const list = activePromotions.map((promo: any, index: number) => {
+    const list = orderPromos.map((promo: any, index: number) => {
       const code = promo.code || `PROMO${index + 1}`
+      const method = promo.application_method || {}
 
-      // Check Medusa line item adjustments
-      let fromAdjustments = 0
-      itemsList.forEach((it) => {
-        const adjs = it.raw?.adjustments || it.adjustments || []
-        adjs.forEach((a: any) => {
-          if (
-            (promo.id && a.promotion_id === promo.id) ||
-            (a.code && a.code.toLowerCase() === code.toLowerCase())
-          ) {
-            fromAdjustments += Number(a.amount || 0)
-          }
-        })
-      })
-
-      if (fromAdjustments > 0) {
-        allocatedSum += fromAdjustments
-        return {
-          id: promo.id || code,
-          code,
-          label: `প্রোমো কোড (${code})`,
-          amount: fromAdjustments,
-        }
-      }
-
-      // Check application_method
-      let calculated = 0
-      if (promo.application_method) {
-        const m = promo.application_method
-        const val = Number(m.value || 0)
-        if (m.type === "percentage") {
-          calculated = Math.round((liveSubtotal * val) / 100)
-        } else {
-          calculated = val
-        }
+      let promoLabelText = ""
+      if (method.type === "percentage" && method.value) {
+        promoLabelText = `${formatSize(String(method.value))}% ছাড়`
+      } else if (method.type === "fixed" && method.value) {
+        promoLabelText = `৳${formatSize(String(method.value))} ছাড়`
+      } else if (promo.description) {
+        promoLabelText = promo.description
       } else {
-        calculated = Math.round(liveDiscount / activePromotions.length)
+        promoLabelText = code
       }
 
-      allocatedSum += calculated
+      const fullLabel = `স্পেশাল ডিসকাউন্ট (🏷️ ${promoLabelText})`
+
+      let promoAmount = 0
+      if (method.type === "percentage" && method.value) {
+        promoAmount = Math.round((liveSubtotal * Number(method.value)) / 100)
+      } else if (method.type === "fixed" && method.value) {
+        promoAmount = Number(method.value)
+      } else {
+        promoAmount = Math.round(liveDiscount / orderPromos.length)
+      }
+
+      allocatedSum += promoAmount
       return {
         id: promo.id || code,
         code,
-        label: `প্রোমো কোড (${code})`,
-        amount: calculated,
+        label: fullLabel,
+        amount: promoAmount,
       }
     })
 
-    // Balance amounts so sum strictly equals liveDiscount
-    const currentSum = list.reduce((s, p) => s + p.amount, 0)
-    if (currentSum > 0 && currentSum !== liveDiscount && list.length > 0) {
-      const diff = liveDiscount - currentSum
+    // Balance allocated sums so total strictly equals liveDiscount
+    if (liveDiscount > 0 && allocatedSum > 0 && allocatedSum !== liveDiscount && list.length > 0) {
+      const diff = liveDiscount - allocatedSum
       list[list.length - 1].amount = Math.max(0, list[list.length - 1].amount + diff)
     }
 
     return list
-  }, [activePromotions, liveDiscount, liveSubtotal, items])
+  }, [activePromotions, liveDiscount, liveSubtotal])
 
   return (
     <div className="relative lg:sticky lg:top-6 flex flex-col w-full">
-      <div className="w-full bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-stone-200/80 shadow-2xs flex flex-col">
+      <div className="w-full bg-white dark:bg-zinc-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-stone-200/80 dark:border-zinc-800 shadow-2xs flex flex-col">
         {/* Header with Title (100% Read-Only Summary) */}
-        <div className="flex items-center justify-between pb-3 mb-2 border-b border-stone-200/80">
+        <div className="flex items-center justify-between pb-3 mb-2 border-b border-stone-200/80 dark:border-zinc-800">
           <Heading
             level="h2"
-            className="text-base sm:text-lg font-bold text-gray-900"
+            className="text-base sm:text-lg font-bold text-gray-900 dark:text-zinc-100"
           >
             অর্ডারের সারসংক্ষেপ ({formatSize(String(items.reduce((s, i) => s + i.quantity, 0)))}টি পণ্য)
           </Heading>
         </div>
 
         {/* 1. Products List (100% Read-Only, Clean & Fast) */}
-        <div className="flex flex-col divide-y divide-gray-150">
+        <div className="flex flex-col divide-y divide-gray-150 dark:divide-zinc-800">
           {items.map((item) => {
+            const raw = item.raw || {}
+            const quantity = item.quantity || 1
+
+            // Extract adjustments and discounts on this line item
+            const adjustments = raw.adjustments || []
+            const adjAmount = adjustments.reduce((s: number, a: any) => s + Number(a.amount || 0), 0)
+            const lineDiscount = adjAmount || Number(raw.discount_total || 0)
+
+            let originalUnitPrice = item.unit_price
+            let currentUnitPrice = item.unit_price
+            let discountPercent = 0
+            let isFreeItem = false
+
+            if (raw.original_total && raw.total && raw.original_total > raw.total) {
+              originalUnitPrice = Math.round(raw.original_total / quantity)
+              currentUnitPrice = Math.round(raw.total / quantity)
+              discountPercent = Math.round(((raw.original_total - raw.total) / raw.original_total) * 100)
+            } else if (lineDiscount > 0) {
+              const computedOrigTotal = item.unit_price * quantity
+              if (raw.total && raw.total < computedOrigTotal) {
+                currentUnitPrice = Math.round(raw.total / quantity)
+                originalUnitPrice = item.unit_price
+              } else {
+                currentUnitPrice = Math.max(0, Math.round((computedOrigTotal - lineDiscount) / quantity))
+                originalUnitPrice = item.unit_price
+              }
+              discountPercent = originalUnitPrice > 0
+                ? Math.round(((originalUnitPrice - currentUnitPrice) / originalUnitPrice) * 100)
+                : 0
+            } else if (raw.original_unit_price && raw.original_unit_price > item.unit_price) {
+              originalUnitPrice = raw.original_unit_price
+              currentUnitPrice = item.unit_price
+              discountPercent = Math.round(((originalUnitPrice - currentUnitPrice) / originalUnitPrice) * 100)
+            } else if (raw.compare_at_unit_price && raw.compare_at_unit_price > item.unit_price) {
+              originalUnitPrice = raw.compare_at_unit_price
+              currentUnitPrice = item.unit_price
+              discountPercent = Math.round(((originalUnitPrice - currentUnitPrice) / originalUnitPrice) * 100)
+            }
+
+            // Check Buy X Get Y / Free item (গ)
+            const hasFreePromo = adjustments.some((a: any) => {
+              const code = (a.code || "").toLowerCase()
+              const desc = (a.description || "").toLowerCase()
+              return code.includes("free") || desc.includes("free") || code.includes("gift") || desc.includes("gift")
+            })
+
+            if (currentUnitPrice === 0 || discountPercent === 100 || hasFreePromo || raw.metadata?.is_free) {
+              isFreeItem = true
+              currentUnitPrice = 0
+            }
+
             return (
               <div
                 key={item.id || item.variantId}
                 className="relative py-3 sm:py-3.5 flex items-center gap-2.5 sm:gap-3 transition-colors"
               >
                 {/* Thumbnail - Clean square */}
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 overflow-hidden bg-white shrink-0 p-0.5 flex items-center justify-center">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shrink-0 p-0.5 flex items-center justify-center">
                   <Thumbnail
                     thumbnail={item.thumbnail}
                     images={item.images}
@@ -227,38 +297,57 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  {/* Row 1: Title & Variant */}
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <h4
-                      className="text-xs sm:text-sm font-medium text-gray-800 truncate min-w-0 flex-1"
-                      title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
-                    >
-                      {item.title}
-                    </h4>
-                    {item.variantTitle && (
-                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 font-normal select-none">
-                        ({formatSize(item.variantTitle)})
+                  {/* Row 1: Title & Variant (Left) + Promo Tag (Top Right) */}
+                  <div className="flex items-start justify-between gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <h4
+                        className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
+                        title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
+                      >
+                        {item.title}
+                      </h4>
+                      {item.variantTitle && (
+                        <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
+                          ({formatSize(item.variantTitle)})
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Top-Right Promo Badge:
+                        ক) & খ) [ 🏷️ -১০% ]
+                        গ) [ 🎁 ১টি ফ্রি ] */}
+                    {isFreeItem ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 shrink-0 select-none">
+                        <span>🎁</span>
+                        <span>{quantity > 1 ? `${formatSize(String(quantity))}টি ফ্রি` : "১টি ফ্রি"}</span>
                       </span>
-                    )}
+                    ) : discountPercent > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 shrink-0 select-none">
+                        <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>-{formatSize(String(discountPercent))}%</span>
+                      </span>
+                    ) : null}
                   </div>
 
-                  {/* Row 2: Quantity Badge × Unit Price = Total */}
-                  <div className="flex items-center gap-2 w-full flex-wrap mt-1 sm:mt-1.5">
-                    {/* Read-Only Quantity Badge */}
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200 text-xs font-semibold text-stone-700 select-none">
-                      {formatSize(String(item.quantity))}টি
-                    </span>
+                  {/* Row 2: Quantity × Unit Price (Left) + Item Total (Right) */}
+                  <div className="flex items-center justify-between w-full mt-1 sm:mt-1.5">
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 flex-wrap select-none">
+                      <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                        {formatSize(String(quantity))} টি
+                      </span>
+                      <span className="text-zinc-400">×</span>
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        {formatPrice(currentUnitPrice)}
+                      </span>
+                      {discountPercent > 0 && originalUnitPrice > currentUnitPrice && (
+                        <span className="line-through text-zinc-400 dark:text-zinc-500 text-[11px] sm:text-xs ml-0.5">
+                          {formatPrice(originalUnitPrice)}
+                        </span>
+                      )}
+                    </div>
 
-                    {/* Formula: [ qty ] × unit_price = total */}
-                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-normal select-none">
-                      <span className="text-gray-500">×</span>
-                      <span className="text-gray-700">
-                        {formatPrice(item.unit_price)}
-                      </span>
-                      <span className="text-gray-500">=</span>
-                      <span className="text-gray-900 font-medium">
-                        {formatPrice(item.unit_price * item.quantity)}
-                      </span>
+                    <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 shrink-0 ml-2 select-none">
+                      {formatPrice(currentUnitPrice * quantity)}
                     </div>
                   </div>
                 </div>
@@ -267,44 +356,58 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
           })}
         </div>
 
-        <div className="h-px w-full border-b border-gray-200 my-4" />
+        <div className="h-px w-full border-b border-gray-200 dark:border-zinc-800 my-4" />
 
         {/* 2. Live Totals Section */}
         <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-normal">পণ্যের মোট মূল্য</span>
-            <span data-testid="cart-subtotal" className="text-gray-900 font-normal">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-gray-700 dark:text-zinc-300 font-normal">পণ্যের মোট মূল্য</span>
+            <span data-testid="cart-subtotal" className="text-gray-900 dark:text-zinc-100 font-semibold">
               {formatPrice(liveSubtotal)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-normal">ডেলিভারি চার্জ</span>
-            <span data-testid="cart-shipping" className="text-gray-900 font-normal">
-              {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
-            </span>
+          {/* Delivery charge: ~৳৭০~ ফ্রি (৳০) [ 🚚 ফ্রি ডেলিভারি ] when free shipping */}
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-gray-700 dark:text-zinc-300 font-normal">ডেলিভারি চার্জ</span>
+            {isFreeShipping ? (
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <span className="line-through text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm">
+                  ৳৭০
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
+                  ফ্রি (৳০)
+                </span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  🚚 ফ্রি ডেলিভারি
+                </span>
+              </div>
+            ) : (
+              <span data-testid="cart-shipping" className="text-gray-900 dark:text-zinc-100 font-medium">
+                {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
+              </span>
+            )}
           </div>
 
-          {/* Separate rows for each applied promo code */}
+          {/* Separate rows for each applied promo */}
           {promoBreakdown.map((promo) => (
-            <div key={promo.code} className="flex items-center justify-between">
-              <span className="text-emerald-700 font-normal flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>{promo.label}</span>
+            <div key={promo.id || promo.code} className="flex items-center justify-between text-xs sm:text-sm">
+              <span className="text-emerald-700 dark:text-emerald-400 font-normal flex items-center gap-1">
+                <span>{promo.label}:</span>
               </span>
-              <span className="text-emerald-600 font-medium" data-testid={`cart-discount-${promo.code}`}>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold" data-testid={`cart-discount-${promo.code}`}>
                 - {formatPrice(promo.amount)}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="h-px w-full border-b border-gray-200 my-3" />
+        <div className="h-px w-full border-b border-gray-200 dark:border-zinc-800 my-3" />
 
         <div className="flex items-center justify-between text-ui-fg-base mb-1 txt-medium">
-          <span className="text-base sm:text-lg text-gray-900 font-medium">সর্বমোট বিল</span>
+          <span className="text-base sm:text-lg text-gray-900 dark:text-zinc-100 font-medium">সর্বমোট বিল</span>
           <span
-            className="text-xl sm:text-2xl text-amber-700 font-bold"
+            className="text-xl sm:text-2xl text-amber-700 dark:text-amber-500 font-bold"
             data-testid="cart-total"
           >
             {formatPrice(liveTotal)}
