@@ -64,7 +64,12 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
   }, [cart?.items])
 
   const [shippingAmount, setShippingAmount] = useState<number>(() => {
-    return cart?.shipping_methods?.[0]?.amount ?? 60
+    return cart?.shipping_methods?.[0]?.amount ?? 70
+  })
+  const [originalShippingAmount, setOriginalShippingAmount] = useState<number>(() => {
+    return (cart?.shipping_methods?.[0]?.amount && cart.shipping_methods[0].amount > 0)
+      ? cart.shipping_methods[0].amount
+      : 70
   })
 
   // Direct server-managed promotions & discount state (single source of truth)
@@ -100,6 +105,9 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
       const detail = (e as CustomEvent).detail || {}
       if (typeof detail.amount === "number") {
         setShippingAmount(detail.amount)
+        if (detail.amount > 0) {
+          setOriginalShippingAmount(detail.amount)
+        }
       }
     }
     window.addEventListener("checkout:shipping-changed", handleShippingChanged)
@@ -122,6 +130,11 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
   const liveDiscount = activeDiscountTotal
   const liveTotal = Math.max(0, liveSubtotal + shippingAmount - liveDiscount)
+
+  const isFreeShipping = shippingAmount === 0 || activePromotions.some((p: any) => {
+    const type = p.application_method?.target_type || p.type
+    return type === "shipping_methods" || p.application_method?.type === "free_shipping"
+  })
 
   // Individual promo code breakdown calculation (Each promo code discount displayed separately)
   const promoBreakdown = useMemo(() => {
@@ -262,74 +275,87 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
               currentUnitPrice = 0
             }
 
+            const originalTotal = originalUnitPrice * quantity
+            const currentTotal = isFreeItem ? 0 : (currentUnitPrice * quantity)
+            const hasDiscount = originalTotal > currentTotal
+
             return (
               <div
                 key={item.id || item.variantId}
                 className="relative py-3 sm:py-3.5 flex items-center gap-2.5 sm:gap-3 transition-colors"
               >
-                {/* Thumbnail - Clean square */}
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shrink-0 p-0.5 flex items-center justify-center">
+                {/* Thumbnail - Clean square with optional "ফ্রি" badge on top right corner */}
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shrink-0 p-0.5 flex items-center justify-center">
                   <Thumbnail
                     thumbnail={item.thumbnail}
                     images={item.images}
                     productHandle={item.product_handle}
                     size="square"
                   />
+                  {isFreeItem && (
+                    <span className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-bl-md leading-none shadow-xs select-none">
+                      ফ্রি
+                    </span>
+                  )}
                 </div>
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  {/* Row 1: Title & Variant (Left) + Promo Tag (Top Right) */}
-                  <div className="flex items-start justify-between gap-1.5 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <h4
-                        className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
-                        title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
-                      >
-                        {item.title}
-                      </h4>
-                      {item.variantTitle && (
-                        <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
-                          ({formatSize(item.variantTitle)})
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Top-Right Promo Badge:
-                        ক) & খ) [ 🏷️ -১০% ]
-                        গ) [ 🎁 ১টি ফ্রি ] */}
-                    {isFreeItem ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 shrink-0 select-none">
-                        <span>🎁</span>
-                        <span>{quantity > 1 ? `${formatSize(String(quantity))}টি ফ্রি` : "১টি ফ্রি"}</span>
+                  {/* Row 1: Title & Variant */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h4
+                      className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
+                      title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
+                    >
+                      {item.title}
+                    </h4>
+                    {item.variantTitle && (
+                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
+                        ({formatSize(item.variantTitle)})
                       </span>
-                    ) : discountPercent > 0 ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 shrink-0 select-none">
-                        <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>-{formatSize(String(discountPercent))}%</span>
-                      </span>
-                    ) : null}
+                    )}
                   </div>
 
-                  {/* Row 2: Quantity × Unit Price (Left) + Item Total (Right) */}
+                  {/* Row 2: Quantity × Unit Price (Left) + Strikethrough Total & Discounted Total / ফ্রি (Right) */}
                   <div className="flex items-center justify-between w-full mt-1 sm:mt-1.5">
+                    {/* Left: Quantity × Unit Price */}
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 flex-wrap select-none">
                       <span className="font-medium text-zinc-900 dark:text-zinc-100">
                         {formatSize(String(quantity))} টি
                       </span>
                       <span className="text-zinc-400">×</span>
                       <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                        {formatPrice(currentUnitPrice)}
+                        {formatPrice(isFreeItem ? 0 : currentUnitPrice)}
                       </span>
-                      {discountPercent > 0 && originalUnitPrice > currentUnitPrice && (
-                        <span className="line-through text-zinc-400 dark:text-zinc-500 text-[11px] sm:text-xs ml-0.5">
-                          {formatPrice(originalUnitPrice)}
-                        </span>
-                      )}
                     </div>
 
-                    <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 shrink-0 ml-2 select-none">
-                      {formatPrice(currentUnitPrice * quantity)}
+                    {/* Right: ~OriginalTotal~ CurrentTotal (or "ফ্রি" if free) */}
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2 select-none">
+                      {isFreeItem ? (
+                        <>
+                          {originalTotal > 0 && (
+                            <span className="line-through text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm">
+                              {formatPrice(originalTotal)}
+                            </span>
+                          )}
+                          <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            ফ্রি
+                          </span>
+                        </>
+                      ) : hasDiscount ? (
+                        <>
+                          <span className="line-through text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm">
+                            {formatPrice(originalTotal)}
+                          </span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                            {formatPrice(currentTotal)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          {formatPrice(currentTotal)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -351,9 +377,20 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
           <div className="flex items-center justify-between text-xs sm:text-sm">
             <span className="text-gray-700 dark:text-zinc-300 font-normal">ডেলিভারি চার্জ</span>
-            <span data-testid="cart-shipping" className="text-gray-900 dark:text-zinc-100 font-normal">
-              {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
-            </span>
+            {isFreeShipping ? (
+              <div data-testid="cart-shipping" className="flex items-center gap-1.5 select-none">
+                <span className="line-through text-zinc-400 dark:text-zinc-500 text-xs sm:text-sm">
+                  {formatPrice(originalShippingAmount > 0 ? originalShippingAmount : 70)}
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
+                  ফ্রি
+                </span>
+              </div>
+            ) : (
+              <span data-testid="cart-shipping" className="text-gray-900 dark:text-zinc-100 font-normal select-none">
+                {shippingAmount > 0 ? formatPrice(shippingAmount) : "০ ৳"}
+              </span>
+            )}
           </div>
 
           {/* Separate rows for each applied promo code */}
