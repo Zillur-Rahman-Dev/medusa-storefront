@@ -3,11 +3,72 @@
 import { Heading } from "@medusajs/ui"
 import { useEffect, useState, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Image from "next/image"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import Divider from "@modules/common/components/divider"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { formatPrice, formatSize } from "@lib/util/money"
 import { Tag } from "lucide-react"
+
+// Cloudinary images for known products (in case database thumbnail field is null or unoptimized)
+const KNOWN_HONEY_IMAGES: Record<string, string> = {
+  "sundarban-kholisha-honey":
+    "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167286/c5582ba6-d0c3-43b3-afbf-57ead15f9b54_imgi_138_c9eefb3810ff098b0fc9651e2e21f012.jpg.jpg",
+  "mustard-flower-honey":
+    "/images/hero/slider-mustard.jpg",
+  "black-seed-flower-honey":
+    "https://res.cloudinary.com/dqseoiw8p/image/upload/v1794167194/2f318c58-a2a2-48bc-80e6-56ccd4b5a553_imgi_176_1751782381-whatsapp-image-2025-07-05-at-9.47.28-pm.jpg.jpg",
+}
+
+function resolveProductImage(opts: {
+  thumbnail?: string | null
+  metadata?: any
+  handle?: string | null
+  title?: string | null
+}): string | null {
+  if (
+    opts.thumbnail &&
+    typeof opts.thumbnail === "string" &&
+    opts.thumbnail.startsWith("http")
+  ) {
+    return opts.thumbnail
+  }
+
+  if (opts.metadata?.thumbnail && typeof opts.metadata.thumbnail === "string") {
+    return opts.metadata.thumbnail
+  }
+
+  const handle = opts.handle || ""
+  const title = opts.title || ""
+
+  if (KNOWN_HONEY_IMAGES[handle]) {
+    return KNOWN_HONEY_IMAGES[handle]
+  }
+
+  if (
+    handle.includes("sundarban") ||
+    handle.includes("kholisha") ||
+    title.includes("খলিশা")
+  ) {
+    return KNOWN_HONEY_IMAGES["sundarban-kholisha-honey"]
+  }
+  if (
+    handle.includes("mustard") ||
+    handle.includes("sorisha") ||
+    title.includes("সরিষা")
+  ) {
+    return KNOWN_HONEY_IMAGES["mustard-flower-honey"]
+  }
+  if (
+    handle.includes("black-seed") ||
+    handle.includes("kalijira") ||
+    title.includes("কালোজিরা")
+  ) {
+    return KNOWN_HONEY_IMAGES["black-seed-flower-honey"]
+  }
+
+  return opts.thumbnail || null
+}
 
 export type CheckoutItem = {
   id: string
@@ -278,22 +339,36 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             const originalTotal = originalUnitPrice * quantity
             const currentTotal = isFreeItem ? 0 : (currentUnitPrice * quantity)
             const hasDiscount = originalTotal > currentTotal
+            const savingsAmount = Math.max(0, originalTotal - currentTotal)
+
+            const imageUrl = resolveProductImage({
+              thumbnail: item.thumbnail,
+              metadata: raw.metadata,
+              handle: item.product_handle,
+              title: item.title,
+            }) || (item.images && item.images.length > 0 ? item.images[0].url : null)
 
             return (
               <div
                 key={item.id || item.variantId}
                 className="relative py-3 sm:py-3.5 flex items-center gap-2.5 sm:gap-3 transition-colors"
               >
-                {/* Thumbnail - Clean square with optional "ফ্রি" badge on top right corner */}
-                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shrink-0 p-0.5 flex items-center justify-center">
-                  <Thumbnail
-                    thumbnail={item.thumbnail}
-                    images={item.images}
-                    productHandle={item.product_handle}
-                    size="square"
-                  />
+                {/* Thumbnail - Full cover on all devices */}
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-gray-200/80 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shrink-0 flex items-center justify-center">
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover object-center"
+                      sizes="(max-width: 640px) 48px, 56px"
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="text-xl sm:text-2xl select-none">🍯</span>
+                  )}
                   {isFreeItem && (
-                    <span className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-bl-md leading-none shadow-xs select-none">
+                    <span className="absolute top-0 right-0 z-10 bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-bl-md leading-none shadow-xs select-none">
                       ফ্রি
                     </span>
                   )}
@@ -301,17 +376,31 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  {/* Row 1: Title & Variant */}
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <h4
-                      className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
-                      title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
-                    >
-                      {item.title}
-                    </h4>
-                    {item.variantTitle && (
-                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
-                        ({formatSize(item.variantTitle)})
+                  {/* Row 1: Title & Variant (Left) + Savings Tag (Right) */}
+                  <div className="flex items-start justify-between gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <h4
+                        className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
+                        title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
+                      >
+                        {item.title}
+                      </h4>
+                      {item.variantTitle && (
+                        <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
+                          ({formatSize(item.variantTitle)})
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Savings Tag: Small text and tag format */}
+                    {hasDiscount && !isFreeItem && savingsAmount > 0 && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 shrink-0 select-none">
+                        {formatPrice(savingsAmount)} সাশ্রয়
+                      </span>
+                    )}
+                    {isFreeItem && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 shrink-0 select-none">
+                        🎁 ফ্রি উপহার
                       </span>
                     )}
                   </div>
