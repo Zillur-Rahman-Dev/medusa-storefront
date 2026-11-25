@@ -444,7 +444,7 @@ export default function ClientStoreView({
           </h1>
           <div className="flex items-center gap-1.5 text-xs sm:text-sm">
             <LocalizedClientLink href="/" className="hover:text-[#f26522] transition-colors">
-              Home
+              হোম
             </LocalizedClientLink>
             <span>&gt;</span>
             <span className="text-zinc-900 dark:text-zinc-100 font-semibold">{breadcrumb || title || "স্টোর"}</span>

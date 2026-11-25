@@ -26,8 +26,8 @@ export default function SortFilter({ sortBy, onChange }: SortFilterProps) {
       <div className="pb-2 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center justify-between">
           <div className="relative inline-block pb-1">
-            <span className="text-xs sm:text-sm font-black tracking-wider text-zinc-900 dark:text-zinc-100 uppercase">
-              SORT BY
+            <span className="text-xs sm:text-sm font-black tracking-wider text-zinc-900 dark:text-zinc-100">
+              সাজান
             </span>
             {/* Orange underline */}
             <div className="absolute left-0 bottom-0 w-full h-[2.5px] bg-orange-500 rounded-full" />

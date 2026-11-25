@@ -68,7 +68,7 @@ export default function MobileBottomNav() {
           className="flex flex-col items-center justify-center gap-0.5 py-1 text-white hover:text-amber-100 active:scale-95 transition-all"
         >
           <Home className="w-5 h-5 stroke-[2.2]" />
-          <span className="text-[10px] font-bold tracking-wider uppercase">HOME</span>
+          <span className="text-[10px] font-bold tracking-wider">হোম</span>
         </LocalizedClientLink>
 
         {/* 2. CART */}
@@ -85,7 +85,7 @@ export default function MobileBottomNav() {
               </span>
             )}
           </div>
-          <span className="text-[10px] font-bold tracking-wider uppercase">CART</span>
+          <span className="text-[10px] font-bold tracking-wider">কার্ট</span>
         </button>
 
         {/* 3. SEARCH */}
@@ -95,7 +95,7 @@ export default function MobileBottomNav() {
           className="flex flex-col items-center justify-center gap-0.5 py-1 text-white hover:text-amber-100 active:scale-95 transition-all cursor-pointer focus:outline-none"
         >
           <Search className="w-5 h-5 stroke-[2.2]" />
-          <span className="text-[10px] font-bold tracking-wider uppercase">SEARCH</span>
+          <span className="text-[10px] font-bold tracking-wider">খুঁজুন</span>
         </button>
 
         {/* 4. ACCOUNT */}
@@ -104,7 +104,7 @@ export default function MobileBottomNav() {
           className="flex flex-col items-center justify-center gap-0.5 py-1 text-white hover:text-amber-100 active:scale-95 transition-all"
         >
           <User className="w-5 h-5 stroke-[2.2]" />
-          <span className="text-[10px] font-bold tracking-wider uppercase">ACCOUNT</span>
+          <span className="text-[10px] font-bold tracking-wider">অ্যাকাউন্ট</span>
         </LocalizedClientLink>
       </div>
     </div>

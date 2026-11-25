@@ -92,7 +92,7 @@ export default function ProductPreview({
       {/* Top Badges matching Image 1 */}
       <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
         <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#ea580c] rounded-[3px] shadow-2xs select-none">
-          Best Selling
+          সেরা বিক্রিত
         </span>
       </div>
 

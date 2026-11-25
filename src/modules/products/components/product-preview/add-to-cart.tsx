@@ -173,7 +173,7 @@ export default function PreviewAddToCart({
       className="w-full h-9 py-1.5 px-3 rounded-[4px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors duration-150 active:scale-[0.98] shadow-2xs border border-[#f26522] bg-white text-[#f26522] hover:bg-[#f26522] hover:text-white cursor-pointer"
     >
       <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-inherit" />
-      <span>Add To Cart</span>
+      <span>কার্টে যোগ করুন</span>
     </button>
   )
 }

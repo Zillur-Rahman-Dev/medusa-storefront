@@ -162,7 +162,7 @@ export default function HoneyProductCard({
           </span>
         ) : (
           <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#ea580c] rounded-[3px] shadow-2xs select-none">
-            Best Selling
+            সেরা বিক্রিত
           </span>
         )}
       </div>
@@ -265,7 +265,7 @@ export default function HoneyProductCard({
             className="w-full h-9 py-1.5 px-2 sm:px-3 rounded-[4px] text-xs sm:text-sm font-semibold border border-[#f26522] bg-white text-[#f26522] hover:bg-[#f26522] hover:text-white transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-inherit" />
-            <span>Add To Cart</span>
+            <span>কার্টে যোগ করুন</span>
           </button>
         )}
       </div>

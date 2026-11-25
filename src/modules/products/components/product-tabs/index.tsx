@@ -295,7 +295,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
               পণ্যের বিবরণ ও তথ্য
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Product Description & Specifications
+              পণ্যের বিবরণ ও বৈশিষ্ট্য
             </p>
           </div>
         </div>

@@ -415,7 +415,7 @@ export default function ProductActions({
               className="w-full h-11 sm:h-12 px-4 rounded-[4px] font-semibold text-sm sm:text-base border border-[#f26522] bg-white dark:bg-zinc-900 text-[#f26522] hover:bg-[#f26522] hover:text-white transition-colors duration-150 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-60 cursor-pointer shadow-2xs"
             >
               <ShoppingCart className="w-5 h-5 text-inherit" />
-              <span>Add To Cart</span>
+              <span>কার্টে যোগ করুন</span>
             </button>
           )}
 

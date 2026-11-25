@@ -137,7 +137,7 @@ export default function HeaderSearch() {
         {/* Search button */}
         <button
           type="submit"
-          aria-label="Search"
+          aria-label="খুঁজুন"
           className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1 shadow-sm transition-colors"
         >
           {isLoading ? (
@@ -145,7 +145,7 @@ export default function HeaderSearch() {
           ) : (
             <Search className="w-3.5 h-3.5" />
           )}
-          <span className="hidden sm:inline">সার্চ</span>
+          <span className="hidden sm:inline">খুঁজুন</span>
         </button>
       </form>
 

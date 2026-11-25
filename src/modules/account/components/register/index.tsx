@@ -21,30 +21,30 @@ const Register = ({ setCurrentView }: Props) => {
       data-testid="register-page"
     >
       <h1 className="text-large-semi uppercase mb-6">
-        Become a Medusa Store Member
+        নতুন অ্যাকাউন্ট তৈরি করুন
       </h1>
       <p className="text-center text-base-regular text-ui-fg-base mb-4">
-        Create your Medusa Store Member profile, and get access to an enhanced
-        shopping experience.
+        আপনার তথ্য দিয়ে সহজে অ্যাকাউন্ট তৈরি করুন।
+
       </p>
       <form className="w-full flex flex-col" action={formAction}>
         <div className="flex flex-col w-full gap-y-2">
           <Input
-            label="First name"
+            label="নামের প্রথম অংশ"
             name="first_name"
             required
             autoComplete="given-name"
             data-testid="first-name-input"
           />
           <Input
-            label="Last name"
+            label="নামের শেষ অংশ"
             name="last_name"
             required
             autoComplete="family-name"
             data-testid="last-name-input"
           />
           <Input
-            label="Email"
+            label="ইমেইল"
             name="email"
             required
             type="email"
@@ -52,14 +52,14 @@ const Register = ({ setCurrentView }: Props) => {
             data-testid="email-input"
           />
           <Input
-            label="Phone"
+            label="মোবাইল নম্বর"
             name="phone"
             type="tel"
             autoComplete="tel"
             data-testid="phone-input"
           />
           <Input
-            label="Password"
+            label="পাসওয়ার্ড"
             name="password"
             required
             type="password"
@@ -86,16 +86,16 @@ const Register = ({ setCurrentView }: Props) => {
           .
         </span>
         <SubmitButton className="w-full mt-6" data-testid="register-button">
-          Join
+          অ্যাকাউন্ট তৈরি করুন
         </SubmitButton>
       </form>
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
-        Already a member?{" "}
+        ইতিমধ্যে অ্যাকাউন্ট আছে?{" "}
         <button
           onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
           className="underline"
         >
-          Sign in
+          সাইন ইন করুন
         </button>
         .
       </span>

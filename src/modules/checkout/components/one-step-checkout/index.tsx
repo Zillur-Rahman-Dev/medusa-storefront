@@ -390,7 +390,7 @@ const OneStepCheckout: React.FC<OneStepCheckoutProps> = ({
             <div className="flex items-center gap-2.5 sm:gap-3">
               <MedusaRadio checked={true} />
               <span className="font-bold text-gray-900 text-sm sm:text-base">
-                💵 ক্যাশ অন ডেলিভারি (Cash on Delivery)
+                💵 ক্যাশ অন ডেলিভারি
               </span>
             </div>
             <span className="text-[11px] sm:text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">

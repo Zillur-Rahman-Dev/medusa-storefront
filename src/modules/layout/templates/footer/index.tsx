@@ -2,6 +2,11 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { PhoneCall, Mail, MapPin } from "lucide-react"
 
 export default function Footer() {
+  const currentYearBn = new Date()
+    .getFullYear()
+    .toString()
+    .replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[parseInt(d)])
+
   return (
     <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300 w-full mt-auto">
       <div className="content-container flex flex-col w-full pt-12 pb-24 sm:py-20">
@@ -128,7 +133,7 @@ export default function Footer() {
 
         {/* Bottom Copyright */}
         <div className="mt-14 pt-6 border-t border-zinc-200 dark:border-zinc-850 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-500">
-          <p>© {new Date().getFullYear()} PURE HONEY. সর্বস্বত্ব সংরক্ষিত।</p>
+          <p>© {currentYearBn} PURE HONEY. সর্বস্বত্ব সংরক্ষিত।</p>
           <p className="flex items-center gap-1">
             <span>১০০% খাঁটি ও প্রাকৃতিক খাবারের প্রতিশ্রুতি সহ</span>
             <span className="text-amber-600">❤️</span>
