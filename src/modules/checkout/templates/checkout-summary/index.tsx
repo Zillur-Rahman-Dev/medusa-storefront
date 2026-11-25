@@ -197,6 +197,24 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
     return type === "shipping_methods" || p.application_method?.type === "free_shipping"
   })
 
+  // Total order savings calculation (Discounts + Free shipping + Compare-at savings)
+  const totalSavings = useMemo(() => {
+    let savings = liveDiscount
+    if (isFreeShipping && originalShippingAmount > 0) {
+      savings += originalShippingAmount
+    }
+    for (const it of items) {
+      const raw = it.raw || {}
+      const qty = it.quantity || 1
+      if (raw.compare_at_unit_price && raw.compare_at_unit_price > it.unit_price) {
+        savings += (raw.compare_at_unit_price - it.unit_price) * qty
+      } else if (raw.original_unit_price && raw.original_unit_price > it.unit_price) {
+        savings += (raw.original_unit_price - it.unit_price) * qty
+      }
+    }
+    return Math.max(0, savings)
+  }, [liveDiscount, isFreeShipping, originalShippingAmount, items])
+
   // Individual promo code breakdown calculation (Each promo code discount displayed separately)
   const promoBreakdown = useMemo(() => {
     if (!activePromotions || activePromotions.length === 0 || liveDiscount <= 0) {
@@ -376,31 +394,17 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  {/* Row 1: Title & Variant (Left) + Savings Tag (Right) */}
-                  <div className="flex items-start justify-between gap-1.5 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <h4
-                        className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
-                        title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
-                      >
-                        {item.title}
-                      </h4>
-                      {item.variantTitle && (
-                        <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
-                          ({formatSize(item.variantTitle)})
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Savings Tag: Small text and tag format */}
-                    {hasDiscount && !isFreeItem && savingsAmount > 0 && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 shrink-0 select-none">
-                        {formatPrice(savingsAmount)} সাশ্রয়
-                      </span>
-                    )}
-                    {isFreeItem && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 shrink-0 select-none">
-                        🎁 ফ্রি উপহার
+                  {/* Row 1: Title & Variant */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h4
+                      className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-zinc-100 truncate min-w-0"
+                      title={`${item.title} ${item.variantTitle ? `(${formatSize(item.variantTitle)})` : ""}`}
+                    >
+                      {item.title}
+                    </h4>
+                    {item.variantTitle && (
+                      <span className="shrink-0 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-normal select-none">
+                        ({formatSize(item.variantTitle)})
                       </span>
                     )}
                   </div>
@@ -507,6 +511,14 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
             {formatPrice(liveTotal)}
           </span>
         </div>
+
+        {/* Total Savings Green Banner */}
+        {totalSavings > 0 && (
+          <div className="mt-2.5 p-2.5 sm:p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 text-center shadow-2xs select-none animate-in fade-in duration-300">
+            <span>🎉</span>
+            <span>এই অর্ডারে আপনি মোট {formatPrice(totalSavings)} সাশ্রয় করেছেন!</span>
+          </div>
+        )}
 
         <div className="h-px w-full border-b border-gray-200 dark:border-zinc-800 my-3" />
 
