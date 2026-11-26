@@ -11,9 +11,13 @@ import AllHoneyGrid from "@modules/home/components/all-honey-grid"
 import HoneyGuide from "@modules/home/components/honey-guide"
 import Testimonials from "@modules/home/components/testimonials"
 import FAQ from "@modules/home/components/faq"
+import DynamicSectionRenderer, {
+  DynamicCollectionItem,
+} from "@modules/home/components/dynamic-section-renderer"
 
 import { listProducts } from "@lib/data/products"
 import { listCategories } from "@lib/data/categories"
+import { listCollections } from "@lib/data/collections"
 import { mapMedusaProductToHoneyItem } from "@lib/util/honey-product"
 
 export const metadata: Metadata = {
@@ -29,9 +33,11 @@ export default async function Home() {
   let topSellingProducts: any[] = []
   let shelves: any[] = []
   let liveCategories: any[] = []
+  let liveCollections: any[] = []
+  let dynamicCollections: DynamicCollectionItem[] = []
 
   try {
-    const [productsRes, categoriesRes] = await Promise.allSettled([
+    const [productsRes, categoriesRes, collectionsRes] = await Promise.allSettled([
       listProducts({
         countryCode: "bd",
         queryParams: {
@@ -41,10 +47,15 @@ export default async function Home() {
         },
       }),
       listCategories(),
+      listCollections({ limit: "50" }),
     ])
 
     if (categoriesRes.status === "fulfilled" && categoriesRes.value) {
       liveCategories = categoriesRes.value
+    }
+
+    if (collectionsRes.status === "fulfilled" && collectionsRes.value?.collections) {
+      liveCollections = collectionsRes.value.collections
     }
 
     const allRawProducts =
@@ -132,6 +143,23 @@ export default async function Home() {
           ),
         },
       ].filter((s) => s.products.length > 0)
+
+      // Dynamic Modular Collections (Driven via Medusa Admin Metadata)
+      if (liveCollections && liveCollections.length > 0) {
+        dynamicCollections = liveCollections.map((col) => {
+          const colRaw = allRawProducts.filter(
+            (p) => p.collection?.id === col.id || p.collection?.handle === col.handle
+          )
+          const colProducts = colRaw.map((p) => mapMedusaProductToHoneyItem(p))
+          return {
+            id: col.id,
+            title: col.title,
+            handle: col.handle,
+            metadata: col.metadata,
+            products: colProducts.length > 0 ? colProducts : allHoneyItems.slice(0, 4),
+          }
+        })
+      }
     }
   } catch (err) {
     console.error("Failed to fetch live home products from Medusa backend:", err)
@@ -144,6 +172,9 @@ export default async function Home() {
 
       {/* 2. Featured Categories (Live from Medusa Dashboard) */}
       <FeaturedCategories categories={liveCategories} />
+
+      {/* 2.1 Dynamic Campaign Sections (Controlled via Medusa Collections Metadata) */}
+      <DynamicSectionRenderer collections={dynamicCollections} />
 
       {/* 3. Top Selling Products (Live from 'top-selling' collection in Dashboard) */}
       <TopSelling
