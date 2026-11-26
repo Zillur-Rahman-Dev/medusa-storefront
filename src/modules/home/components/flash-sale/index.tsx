@@ -22,6 +22,13 @@ export default function FlashSale({
   countdownEnd,
   viewAllHref = "/store",
 }: FlashSaleProps) {
+  // Check if campaign is already expired on initial load
+  const isInitiallyExpired = countdownEnd
+    ? new Date(countdownEnd).getTime() <= Date.now()
+    : false
+
+  const [isExpired, setIsExpired] = useState(isInitiallyExpired)
+
   // Default to 48 hours if no end date provided from Campaign
   const targetTime = countdownEnd
     ? new Date(countdownEnd).getTime()
@@ -35,10 +42,16 @@ export default function FlashSale({
   })
 
   useEffect(() => {
+    // If already expired, no need to run timer
+    if (countdownEnd && new Date(countdownEnd).getTime() <= Date.now()) {
+      setIsExpired(true)
+      return
+    }
+
     const updateCountdown = () => {
       const difference = targetTime - Date.now()
       if (difference <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+        setIsExpired(true)
         return
       }
 
@@ -53,7 +66,7 @@ export default function FlashSale({
     updateCountdown()
     const interval = setInterval(updateCountdown, 1000)
     return () => clearInterval(interval)
-  }, [targetTime])
+  }, [targetTime, countdownEnd])
 
   const formatDigit = (n: number) => {
     const str = String(n).padStart(2, "0")
@@ -61,10 +74,11 @@ export default function FlashSale({
     return str.replace(/\d/g, (d) => bnDigits[parseInt(d)])
   }
 
-  if (!products || products.length === 0) return null
+  // Auto-hide completely when campaign expires or if no products
+  if (isExpired || !products || products.length === 0) return null
 
   return (
-    <section className="w-full py-8 sm:py-12 bg-gradient-to-b from-amber-500/10 via-orange-500/5 to-transparent border-y border-amber-200/60 dark:border-amber-900/40">
+    <section className="w-full py-8 sm:py-12 bg-gradient-to-b from-amber-500/10 via-orange-500/5 to-transparent border-y border-amber-200/60 dark:border-amber-900/40 animate-fade-in transition-all">
       <div className="content-container">
         {/* Header with Title and Countdown Timer */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-amber-200/70 dark:border-amber-900/50">

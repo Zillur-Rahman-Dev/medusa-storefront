@@ -86,7 +86,12 @@ export default function DynamicSectionRenderer({
           case "campaign_sale":
           case "flash_sale":
           case "campaign":
-          case "limited_time":
+          case "limited_time": {
+            const countdownEnd = meta.end_date || meta.countdown_end || meta.campaign_end
+            // Server-side check: Auto-hide if campaign end date is already in the past
+            if (countdownEnd && new Date(countdownEnd).getTime() <= Date.now()) {
+              return null
+            }
             return (
               <FlashSale
                 key={col.id}
@@ -94,10 +99,11 @@ export default function DynamicSectionRenderer({
                 title={displayTitle || "সীমিত সময়ের স্পেশাল ফ্ল্যাশ সেল!"}
                 subtitle={meta.subheadline || "ক্যাম্পেইনের বিশেষ অফার - সীমিত সময়ের জন্য সর্বোচ্চ ছাড়"}
                 badge={meta.badge || "ফ্ল্যাশ ডিল"}
-                countdownEnd={meta.end_date || meta.countdown_end || meta.campaign_end}
+                countdownEnd={countdownEnd}
                 viewAllHref={`/collections/${col.handle}`}
               />
             )
+          }
 
           // =========================================================================
           // ৩. Free Shipping Promotion (ফ্রি ডেলিভারি অফার ও ব্যানার)
