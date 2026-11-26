@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import Image from "next/image"
-import { Package, Plus, Check, ShoppingCart, Loader2, Trash2 } from "lucide-react"
+import { Package, Plus, Check, ShoppingCart, Loader2, Trash2, Sparkles } from "lucide-react"
 import { formatPrice } from "@lib/util/money"
 import { addToCart } from "@lib/data/cart"
 import { HoneyProductItem } from "@modules/products/components/honey-product-card"
@@ -11,16 +11,20 @@ type MixMatchBoxProps = {
   products?: HoneyProductItem[]
   title?: string
   subtitle?: string
+  badge?: string
   boxSize?: number // default 3 items
-  discountPercent?: number // default 15%
+  discountPercent?: number // e.g. 15%
+  discountAmount?: number // e.g. 300 taka
 }
 
 export default function MixMatchBox({
   products = [],
   title = "নিজের পছন্দমতো ৩টি মধুর কম্বো বক্স তৈরি করুন",
-  subtitle = "যেকোনো ৩টি খাঁটি মধু নিজের ইচ্ছামতো পছন্দ করুন এবং উপভোগ করুন ফ্ল্যাট ১৫% বিশেষ ছাড়!",
+  subtitle = "যেকোনো ৩টি খাঁটি মধু নিজের ইচ্ছামতো পছন্দ করুন এবং উপভোগ করুন বিশেষ কম্বো ছাড়!",
+  badge = "কম্বো অফার / Buy X Get Y",
   boxSize = 3,
   discountPercent = 15,
+  discountAmount,
 }: MixMatchBoxProps) {
   const [selectedJars, setSelectedJars] = useState<HoneyProductItem[]>([])
   const [isAdding, setIsAdding] = useState(false)
@@ -46,8 +50,20 @@ export default function MixMatchBox({
 
   const rawSubtotal = selectedJars.reduce((acc, it) => acc + (it.price || 1000), 0)
   const isBoxFull = selectedJars.length === boxSize
-  const discountedTotal = isBoxFull ? Math.round(rawSubtotal * (1 - discountPercent / 100)) : rawSubtotal
-  const savings = rawSubtotal - discountedTotal
+
+  // Calculate discount based on Amount or Percent
+  let discountedTotal = rawSubtotal
+  let savings = 0
+
+  if (isBoxFull) {
+    if (discountAmount && discountAmount > 0) {
+      savings = discountAmount
+      discountedTotal = Math.max(0, rawSubtotal - discountAmount)
+    } else {
+      discountedTotal = Math.round(rawSubtotal * (1 - discountPercent / 100))
+      savings = rawSubtotal - discountedTotal
+    }
+  }
 
   const handleAddBoxToCart = async () => {
     if (!isBoxFull) return
@@ -84,7 +100,7 @@ export default function MixMatchBox({
         <div className="text-center max-w-2xl mx-auto space-y-2 mb-8">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-600 text-white shadow-xs">
             <Package className="w-3.5 h-3.5" />
-            কাস্টম বক্স বিল্ডার
+            {badge}
           </span>
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 dark:text-zinc-100">
             {title}
@@ -94,12 +110,15 @@ export default function MixMatchBox({
           </p>
         </div>
 
-        {/* 3 Visual Box Slots */}
+        {/* Visual Box Slots */}
         <div className="max-w-2xl mx-auto mb-8 p-4 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border-2 border-dashed border-amber-300 dark:border-amber-800 shadow-sm">
           <div className="flex items-center justify-between mb-3 text-xs font-bold text-zinc-600 dark:text-zinc-400">
             <span>আপনার বক্সের অবস্থা: ({selectedJars.length}/{boxSize})</span>
             {isBoxFull ? (
-              <span className="text-emerald-600 font-bold">🎉 বক্সটি সম্পূর্ণ হয়েছে!</span>
+              <span className="text-emerald-600 font-bold flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                বক্সটি সম্পূর্ণ হয়েছে!
+              </span>
             ) : (
               <span className="text-amber-600">আর {boxSize - selectedJars.length}টি মধু সিলেক্ট করুন</span>
             )}
@@ -163,7 +182,7 @@ export default function MixMatchBox({
                       {formatPrice(rawSubtotal)}
                     </span>
                     <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-md">
-                      {discountPercent}% ছাড়!
+                      {discountAmount ? `৳${discountAmount} ছাড়!` : `${discountPercent}% ছাড়!`}
                     </span>
                   </>
                 )}
@@ -190,7 +209,7 @@ export default function MixMatchBox({
               ) : (
                 <>
                   <ShoppingCart className="w-4 h-4" />
-                  <span>{isBoxFull ? "কাস্টম বক্স কার্টে নিন" : `আরও ${boxSize - selectedJars.length}টি জার বাছুন`}</span>
+                  <span>{isBoxFull ? "কাস্টম কম্বো বক্স কার্টে নিন" : `আরও ${boxSize - selectedJars.length}টি জার বাছুন`}</span>
                 </>
               )}
             </button>
@@ -200,7 +219,7 @@ export default function MixMatchBox({
         {/* Honey Picker Carousel / Grid */}
         <div className="space-y-3">
           <h4 className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 text-center">
-            নিচ থেকে আপনার পছন্দের ৩টি মধু ক্লিক করুন:
+            নিচ থেকে আপনার পছন্দের ৩টি মধু ক্লিক করে বক্সে যোগ করুন:
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {products.slice(0, 10).map((prod) => {

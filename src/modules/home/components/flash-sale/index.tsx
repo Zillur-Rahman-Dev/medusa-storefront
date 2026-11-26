@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { Clock, Zap, ArrowRight, Flame } from "lucide-react"
+import { Clock, ArrowRight, Flame } from "lucide-react"
 import HoneyProductCard, { HoneyProductItem } from "@modules/products/components/honey-product-card"
 
 type FlashSaleProps = {
@@ -16,18 +16,19 @@ type FlashSaleProps = {
 
 export default function FlashSale({
   products = [],
-  title = "রমজান স্পেশাল ফ্ল্যাশ সেল!",
-  subtitle = "সীমিত সময়ের জন্য বাছাইকৃত খাঁটি মধুতে অবিশ্বাস্য ছাড়",
+  title = "সীমিত সময়ের স্পেশাল ফ্ল্যাশ সেল!",
+  subtitle = "মেডুসা ক্যাম্পেইনের বিশেষ অফার - সীমিত সময়ের জন্য সর্বোচ্চ ছাড়",
   badge = "ফ্ল্যাশ ডিল",
   countdownEnd,
   viewAllHref = "/store",
 }: FlashSaleProps) {
-  // 12-hour default countdown if not provided
+  // Default to 48 hours if no end date provided from Campaign
   const targetTime = countdownEnd
     ? new Date(countdownEnd).getTime()
-    : Date.now() + 1000 * 60 * 60 * 12
+    : Date.now() + 1000 * 60 * 60 * 48
 
   const [timeLeft, setTimeLeft] = useState({
+    days: 0,
     hours: 11,
     minutes: 45,
     seconds: 30,
@@ -37,15 +38,16 @@ export default function FlashSale({
     const updateCountdown = () => {
       const difference = targetTime - Date.now()
       if (difference <= 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 })
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
         return
       }
 
-      const hours = Math.floor(difference / (1000 * 60 * 60))
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
       const seconds = Math.floor((difference % (1000 * 60)) / 1000)
 
-      setTimeLeft({ hours, minutes, seconds })
+      setTimeLeft({ days, hours, minutes, seconds })
     }
 
     updateCountdown()
@@ -73,7 +75,7 @@ export default function FlashSale({
                 {badge}
               </span>
               <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                সীমিত সময়ের অফার
+                ক্যাম্পেইন অফার
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
@@ -88,18 +90,38 @@ export default function FlashSale({
           <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 p-2 sm:p-2.5 rounded-2xl border border-red-200 dark:border-red-900/60 shadow-sm self-start md:self-auto">
             <Clock className="w-4 h-4 text-red-600 animate-spin-slow shrink-0" />
             <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">অফার শেষ হতে:</span>
-            <div className="flex items-center gap-1 font-mono font-black text-sm sm:text-base text-white">
-              <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
-                {formatDigit(timeLeft.hours)}
-              </span>
-              <span className="text-red-600 dark:text-red-400 font-bold">:</span>
-              <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
-                {formatDigit(timeLeft.minutes)}
-              </span>
-              <span className="text-red-600 dark:text-red-400 font-bold">:</span>
-              <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
-                {formatDigit(timeLeft.seconds)}
-              </span>
+            <div className="flex items-center gap-1 font-mono font-black text-xs sm:text-sm text-white">
+              {timeLeft.days > 0 && (
+                <>
+                  <div className="flex flex-col items-center">
+                    <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
+                      {formatDigit(timeLeft.days)}
+                    </span>
+                    <span className="text-[9px] text-zinc-500 font-sans font-bold">দিন</span>
+                  </div>
+                  <span className="text-red-600 dark:text-red-400 font-bold self-start mt-1">:</span>
+                </>
+              )}
+              <div className="flex flex-col items-center">
+                <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
+                  {formatDigit(timeLeft.hours)}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-sans font-bold">ঘণ্টা</span>
+              </div>
+              <span className="text-red-600 dark:text-red-400 font-bold self-start mt-1">:</span>
+              <div className="flex flex-col items-center">
+                <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
+                  {formatDigit(timeLeft.minutes)}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-sans font-bold">মিনিট</span>
+              </div>
+              <span className="text-red-600 dark:text-red-400 font-bold self-start mt-1">:</span>
+              <div className="flex flex-col items-center">
+                <span className="px-2 py-1 bg-red-600 rounded-lg shadow-2xs">
+                  {formatDigit(timeLeft.seconds)}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-sans font-bold">সেকেন্ড</span>
+              </div>
             </div>
           </div>
         </div>
@@ -112,11 +134,11 @@ export default function FlashSale({
               {/* Urgency Stock Bar */}
               <div className="mt-2 px-1">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-500 mb-1">
-                  <span>স্টক সীমিত</span>
-                  <span className="text-red-600 font-bold">৮০% শেষ</span>
+                  <span>ক্যাম্পেইন স্টক</span>
+                  <span className="text-red-600 font-bold">৮৫% শেষ</span>
                 </div>
                 <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-red-500 rounded-full w-4/5" />
+                  <div className="h-full bg-red-500 rounded-full w-[85%]" />
                 </div>
               </div>
             </div>
@@ -129,7 +151,7 @@ export default function FlashSale({
               href={viewAllHref}
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 transition-colors"
             >
-              <span>ফ্ল্যাশ সেলের সব মধু দেখুন</span>
+              <span>ক্যাম্পেইনের সব মধু দেখুন</span>
               <ArrowRight className="w-4 h-4" />
             </LocalizedClientLink>
           </div>
