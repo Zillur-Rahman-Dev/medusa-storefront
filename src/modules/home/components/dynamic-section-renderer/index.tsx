@@ -32,11 +32,13 @@ export default function DynamicSectionRenderer({
 }: DynamicSectionRendererProps) {
   if (!collections || collections.length === 0) return null
 
-  // 1. Filter only collections that have active: true in Medusa Metadata
+  // Filter collections: active if layout is specified, unless explicitly set to active: false
   const activeSections = collections
     .filter((col) => {
       const meta = col.metadata || {}
-      return meta.active === true || meta.active === "true"
+      const layout = String(meta.layout || "").toLowerCase().trim()
+      if (!layout) return false
+      return meta.active !== false && meta.active !== "false"
     })
     .sort((a, b) => {
       const orderA = Number(a.metadata?.order) || 99
@@ -54,6 +56,8 @@ export default function DynamicSectionRenderer({
         const meta = col.metadata || {}
         const layout = String(meta.layout || "").toLowerCase().trim()
         const products = col.products || []
+        // Collection Title from Medusa Dashboard is always the first priority
+        const displayTitle = col.title || meta.headline
 
         switch (layout) {
           // =========================================================================
@@ -67,7 +71,7 @@ export default function DynamicSectionRenderer({
               <MixMatchBox
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title || "নিজের পছন্দমতো ৩টি মধুর কম্বো বক্স তৈরি করুন"}
+                title={displayTitle || "নিজের পছন্দমতো ৩টি মধুর কম্বো বক্স তৈরি করুন"}
                 subtitle={meta.subheadline || "যেকোনো ৩টি খাঁটি মধু নিজের ইচ্ছামতো পছন্দ করুন এবং উপভোগ করুন বিশেষ ছাড়!"}
                 badge={meta.badge || "কম্বো অফার / Buy X Get Y"}
                 boxSize={meta.box_size ? Number(meta.box_size) : 3}
@@ -87,8 +91,8 @@ export default function DynamicSectionRenderer({
               <FlashSale
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title || "সীমিত সময়ের স্পেশাল ফ্ল্যাশ সেল!"}
-                subtitle={meta.subheadline || "মেডুসা ক্যাম্পেইনের বিশেষ অফার - সীমিত সময়ের জন্য সর্বোচ্চ ছাড়"}
+                title={displayTitle || "সীমিত সময়ের স্পেশাল ফ্ল্যাশ সেল!"}
+                subtitle={meta.subheadline || "ক্যাম্পেইনের বিশেষ অফার - সীমিত সময়ের জন্য সর্বোচ্চ ছাড়"}
                 badge={meta.badge || "ফ্ল্যাশ ডিল"}
                 countdownEnd={meta.end_date || meta.countdown_end || meta.campaign_end}
                 viewAllHref={`/collections/${col.handle}`}
@@ -104,7 +108,7 @@ export default function DynamicSectionRenderer({
               <FreeShippingPromotion
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title || "সারা দেশে ফ্রি হোম ডেলিভারি অফার!"}
+                title={displayTitle || "সারা দেশে ফ্রি হোম ডেলিভারি অফার!"}
                 subtitle={meta.subheadline || "সীমিত সময়ের অফার: যেকোনো ২টি মধু অর্ডার করলেই ডেলিভারি চার্জ সম্পূর্ণ ফ্রি!"}
                 badge={meta.badge || "ফ্রি ডেলিভারি"}
                 thresholdText={meta.threshold_text || meta.min_amount || "২টি বা তার বেশি মধু অর্ডারে"}
@@ -124,7 +128,7 @@ export default function DynamicSectionRenderer({
               <BundleCombo
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title || "ফ্যামিলি মেগা কম্বো প্যাকেজ"}
+                title={displayTitle || "ফ্যামিলি মেগা কম্বো প্যাকেজ"}
                 subtitle={meta.subheadline || "খলিশা + সরিষা + কালোজিরা মধুর পূর্ণাঙ্গ স্বাস্থ্য প্যাকেজ"}
                 discountBadge={meta.discount_badge || "১৫% স্পেশাল সাশ্রয়"}
                 comboPrice={meta.combo_price ? Number(meta.combo_price) : undefined}
@@ -138,7 +142,7 @@ export default function DynamicSectionRenderer({
             return (
               <VideoReels
                 key={col.id}
-                title={meta.headline || col.title}
+                title={displayTitle || "ভিডিও রিলস ও প্রাকৃতিক মধুর যাত্রা"}
                 subtitle={meta.subheadline}
               />
             )
@@ -148,7 +152,7 @@ export default function DynamicSectionRenderer({
               <SplitBanner
                 key={col.id}
                 products={products}
-                bannerTitle={meta.banner_title || col.title}
+                bannerTitle={meta.banner_title || displayTitle}
                 bannerSubtitle={meta.banner_subtitle}
                 bannerBadge={meta.banner_badge}
                 bannerImage={meta.banner_image}
@@ -162,7 +166,7 @@ export default function DynamicSectionRenderer({
               <ProblemSolution
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title}
+                title={displayTitle}
                 subtitle={meta.subheadline}
               />
             )
@@ -172,7 +176,7 @@ export default function DynamicSectionRenderer({
               <HarvestJourney
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title}
+                title={displayTitle}
                 subtitle={meta.subheadline}
               />
             )
@@ -182,7 +186,7 @@ export default function DynamicSectionRenderer({
               <PreOrderBanner
                 key={col.id}
                 products={products}
-                title={meta.headline || col.title}
+                title={displayTitle}
                 subtitle={meta.subheadline}
                 harvestDate={meta.harvest_date}
                 benefitBadge={meta.benefit_badge}

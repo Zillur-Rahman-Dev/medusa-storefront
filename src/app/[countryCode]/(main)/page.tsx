@@ -47,7 +47,7 @@ export default async function Home() {
         },
       }),
       listCategories(),
-      listCollections({ limit: "50" }),
+      listCollections({ limit: "50", fields: "*products,+metadata" }),
     ])
 
     if (categoriesRes.status === "fulfilled" && categoriesRes.value) {
